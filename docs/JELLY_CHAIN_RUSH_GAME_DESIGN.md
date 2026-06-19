@@ -589,6 +589,17 @@ Must include:
 * Multipliers must be visible under candies
 * Effects should not hide the board
 
+## Main Visual Reference
+
+The main visual target is stored at:
+
+docs/reference/main-game-reference.png
+
+The game should follow this reference for layout, candy-island mood, UI hierarchy, readable 7x7 board, floor multipliers under candies, Candy Island progression panel, and bottom navigation.
+
+Important:
+This reference is a visual direction, not a requirement to copy any copyrighted game UI. Jelly Chain Rush must keep its own original assets, layout details, icons, and branding.
+
 Bottom navigation:
 
 English:
