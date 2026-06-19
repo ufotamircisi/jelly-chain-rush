@@ -58,6 +58,11 @@ export function findConnectedGroup(board: BoardGrid, start: BoardPosition): Boar
 }
 
 export function hasAnyValidGroup(board: BoardGrid): boolean {
+  return findValidGroups(board, 1).length > 0;
+}
+
+export function findValidGroups(board: BoardGrid, limit = Number.POSITIVE_INFINITY): BoardPosition[][] {
+  const groups: BoardPosition[][] = [];
   const seen = new Set<string>();
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
@@ -73,12 +78,15 @@ export function hasAnyValidGroup(board: BoardGrid): boolean {
       }
 
       if (group.length >= 3) {
-        return true;
+        groups.push(group);
+        if (groups.length >= limit) {
+          return groups;
+        }
       }
     }
   }
 
-  return false;
+  return groups;
 }
 
 export interface BlastResult {

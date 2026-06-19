@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { BUILDINGS } from '../data/buildings';
 import { getCandyDefinition } from '../data/candies';
 import { getMultiplierLabel } from '../data/multipliers';
-import { blastGroup, findConnectedGroup, hasAnyValidGroup, regenerateCandies } from '../game/boardModel';
+import { blastGroup, findConnectedGroup, findValidGroups, hasAnyValidGroup, regenerateCandies } from '../game/boardModel';
 import { createGameState } from '../game/gameState';
 import { createTranslator, SUPPORTED_LOCALES, type TranslationKey } from '../locales';
 import { loadSave, saveData, updateLanguage } from '../save/saveData';
@@ -30,7 +30,9 @@ export class MainScene extends Phaser.Scene {
   private t!: (key: TranslationKey) => string;
   private screen: ScreenKey = 'play';
   private boardContainer?: Phaser.GameObjects.Container;
+  private shakeButton?: Phaser.GameObjects.Container;
   private cellContainers = new Map<string, Phaser.GameObjects.Container>();
+  private isShaking = false;
 
   constructor() {
     super('MainScene');
@@ -102,7 +104,7 @@ export class MainScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.addButton(270, 790, 310, 78, this.t('shakeButton'), () => this.handleShake(), 0xff5aa6, 0xffffff, 32);
+    this.shakeButton = this.addButton(270, 790, 310, 78, this.t('shakeButton'), () => this.handleShake(), 0xff5aa6, 0xffffff, 32);
   }
 
   private drawCounters(): void {
@@ -166,6 +168,18 @@ export class MainScene extends Phaser.Scene {
   }
 
   private handleShake(): void {
+    if (this.isShaking) {
+      return;
+    }
+
+    const availableGroups = findValidGroups(this.state.board, 3);
+    if (availableGroups.length > 0) {
+      this.showFloatingText(270, 724, this.t('shakeBlocked'), '#ffffff');
+      this.highlightAvailableGroups(availableGroups);
+      this.showBlockedButtonFeedback();
+      return;
+    }
+
     if (this.state.shakesRemaining <= 0) {
       this.showFloatingText(270, 724, this.t('noShakes'), '#7b2bbf');
       return;
@@ -176,6 +190,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    this.isShaking = true;
     this.state.shakesRemaining -= 1;
     this.state.energy -= SHAKE_COST_ENERGY;
     this.save = { ...this.save, energy: this.state.energy, diamonds: this.state.diamonds, currentLevel: this.state.level };
@@ -191,9 +206,14 @@ export class MainScene extends Phaser.Scene {
         repeat: 5,
         onComplete: () => {
           this.state.board = regenerateCandies(this.state.board);
+          this.isShaking = false;
           this.drawScreen();
         }
       });
+    } else {
+      this.state.board = regenerateCandies(this.state.board);
+      this.isShaking = false;
+      this.drawScreen();
     }
   }
 
@@ -225,6 +245,52 @@ export class MainScene extends Phaser.Scene {
         duration: 110
       });
     }
+  }
+
+  private highlightAvailableGroups(groups: BoardPosition[][]): void {
+    for (const group of groups) {
+      for (const position of group) {
+        const container = this.cellContainers.get(this.positionKey(position));
+        if (!container) continue;
+        this.tweens.killTweensOf(container);
+        container.setScale(1);
+        container.setAlpha(1);
+        this.tweens.add({
+          targets: container,
+          scale: 1.16,
+          alpha: 0.62,
+          duration: 110,
+          yoyo: true,
+          repeat: 2,
+          onComplete: () => {
+            container.setScale(1);
+            container.setAlpha(1);
+          }
+        });
+      }
+    }
+  }
+
+  private showBlockedButtonFeedback(): void {
+    if (!this.shakeButton) {
+      return;
+    }
+
+    this.tweens.killTweensOf(this.shakeButton);
+    this.shakeButton.setScale(1);
+    this.tweens.add({
+      targets: this.shakeButton,
+      x: { from: 262, to: 278 },
+      scaleX: 0.98,
+      scaleY: 1.04,
+      duration: 55,
+      yoyo: true,
+      repeat: 3,
+      onComplete: () => {
+        this.shakeButton?.setPosition(270, 790);
+        this.shakeButton?.setScale(1);
+      }
+    });
   }
 
   private showInvalidFeedback(position: BoardPosition): void {
@@ -325,7 +391,7 @@ export class MainScene extends Phaser.Scene {
     fill: number,
     textColor: number,
     fontSize: number
-  ): void {
+  ): Phaser.GameObjects.Container {
     const container = this.add.container(x, y);
     const bg = this.add.rectangle(0, 0, width, height, fill, 0.94).setStrokeStyle(3, 0xffffff, 0.72);
     const text = this.add.text(0, 0, label, {
@@ -338,7 +404,27 @@ export class MainScene extends Phaser.Scene {
     container.add([bg, text]);
     container.setSize(width, height);
     container.setInteractive(new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height), Phaser.Geom.Rectangle.Contains);
-    container.on('pointerdown', onClick);
+    container.input!.cursor = 'pointer';
+    container.on('pointerover', () => {
+      bg.setAlpha(1);
+      container.setScale(1.03);
+    });
+    container.on('pointerout', () => {
+      bg.setAlpha(0.94);
+      container.setScale(1);
+    });
+    container.on('pointerdown', () => {
+      this.tweens.killTweensOf(container);
+      container.setScale(0.96);
+      onClick();
+    });
+    container.on('pointerup', () => {
+      container.setScale(1.03);
+    });
+    container.on('pointerupoutside', () => {
+      container.setScale(1);
+    });
+    return container;
   }
 
   private drawPill(x: number, y: number, label: string, color: number): void {

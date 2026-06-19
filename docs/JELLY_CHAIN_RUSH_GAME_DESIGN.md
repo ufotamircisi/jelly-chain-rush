@@ -133,12 +133,18 @@ Each level starts with:
 
 When the player presses **SHAKE! / ÇALKALA!**:
 
+* First check whether any valid 3+ connected candy group exists
+* If at least one valid group exists, do not shake, do not spend shake rights, and do not spend energy
+* Show a localized warning and briefly highlight available matches
+* The button should show clear feedback even when the shake is blocked
 * Board moves left/right briefly
 * Board slightly moves up/down
 * Subtle screen vibration/haptic placeholder can be added
 * Candies drop into place after the shake animation
 
 The shake should feel physical and satisfying.
+
+The player can only shake when no valid 3+ orthogonally connected candy group remains.
 
 ---
 
@@ -628,13 +634,13 @@ Helper text:
 
 English:
 
-* Blast 3+ connected candies
-* Shake when no matches remain
+* Tap 3+ connected candies
+* No matches left. Shake!
 
 Turkish:
 
 * 3+ birleşimi patlat
-* Birleşim kalmadıysa Çalkala
+* Birleşim kalmadı. Çalkala!
 
 ---
 
