@@ -28,20 +28,58 @@ export type BoardGrid = BoardCell[][];
 
 export type ScreenKey = 'play' | 'island' | 'market';
 
+export type GoalType = 'score' | 'candy' | 'multiplier';
+
+export interface LevelGoal {
+  type: GoalType;
+  target: number;
+  candy?: CandyType;
+}
+
+export interface LevelDefinition {
+  level: number;
+  targetScore: number;
+  goals: LevelGoal[];
+}
+
+export interface PlayerStats {
+  levelsCompleted: number;
+  totalBlasts: number;
+  highestMultiplierEver: number;
+}
+
+export interface DailyLoginState {
+  streak: number;
+  lastClaimDate: string;
+}
+
 export interface SaveData {
   currentLevel: number;
+  highestUnlockedLevel: number;
   energy: number;
   diamonds: number;
+  superChests: number;
+  chests: number;
+  completedBuildingIds: number[];
+  buildingClaimDates: Record<string, string>;
+  dailyLogin: DailyLoginState;
+  stats: PlayerStats;
   language: LocaleCode;
 }
 
+export type LevelStatus = 'playing' | 'won' | 'failed';
+
 export interface GameState {
   level: number;
-  goalScore: number;
+  definition: LevelDefinition;
   score: number;
   shakesRemaining: number;
   energy: number;
   diamonds: number;
+  candyBlasts: Partial<Record<CandyType, number>>;
+  highestMultiplierIndex: number;
+  continued: boolean;
+  status: LevelStatus;
   board: BoardGrid;
 }
 
@@ -50,4 +88,16 @@ export interface BuildingDefinition {
   nameKey: string;
   energy: number;
   diamonds: number;
+}
+
+export interface RewardSummary {
+  stars: number;
+  starEnergy: number;
+  starDiamonds: number;
+  multiplierLabel: string;
+  multiplierEnergy: number;
+  multiplierDiamonds: number;
+  superChest: boolean;
+  totalEnergy: number;
+  totalDiamonds: number;
 }

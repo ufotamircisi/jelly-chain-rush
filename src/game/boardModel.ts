@@ -1,5 +1,5 @@
 import { randomCandyType } from '../data/candies';
-import { getMultiplierScoreFactor, upgradeMultiplier } from '../data/multipliers';
+import { getMultiplierScoreFactor, MULTIPLIER_VALUES, upgradeMultiplier } from '../data/multipliers';
 import { BOARD_COLUMNS, BOARD_ROWS, type BoardCell, type BoardGrid, type BoardPosition } from '../types';
 
 const BASE_CELL_SCORE = 100;
@@ -138,6 +138,18 @@ export function blastGroup(board: BoardGrid, group: BoardPosition[]): BlastResul
 export function calculateScore(groupSize: number, multiplierTotal: number): number {
   const bonus = getGroupBonus(groupSize);
   return Math.round(BASE_CELL_SCORE * groupSize * bonus * Math.max(1, multiplierTotal / groupSize));
+}
+
+export function getHighestMultiplierIndex(board: BoardGrid): number {
+  return board.reduce(
+    (highest, row) => Math.max(highest, ...row.map((cell) => cell.multiplierIndex)),
+    0
+  );
+}
+
+export function getMultiplierIndexForValue(value: number): number {
+  const index = MULTIPLIER_VALUES.findIndex((multiplier) => multiplier === value);
+  return index >= 0 ? index : 0;
 }
 
 function createCell(row: number, col: number): BoardCell {
