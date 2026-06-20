@@ -54,6 +54,27 @@ const MULTIPLIER_TINTS = [
   0xffd33f
 ];
 
+const ISLAND_BUILDING_LAYOUT: Record<number, { x: number; y: number; size: 'small' | 'medium' | 'large' }> = {
+  1: { x: 292, y: 792, size: 'small' },
+  2: { x: 158, y: 724, size: 'small' },
+  3: { x: 420, y: 710, size: 'small' },
+  4: { x: 238, y: 630, size: 'small' },
+  5: { x: 520, y: 606, size: 'medium' },
+  6: { x: 124, y: 540, size: 'medium' },
+  7: { x: 340, y: 520, size: 'medium' },
+  8: { x: 472, y: 450, size: 'medium' },
+  9: { x: 220, y: 414, size: 'medium' },
+  10: { x: 374, y: 350, size: 'medium' },
+  11: { x: 104, y: 300, size: 'large' },
+  12: { x: 544, y: 292, size: 'medium' },
+  13: { x: 274, y: 250, size: 'large' },
+  14: { x: 456, y: 210, size: 'medium' },
+  15: { x: 610, y: 154, size: 'large' },
+  16: { x: 188, y: 148, size: 'large' },
+  17: { x: 356, y: 112, size: 'large' },
+  18: { x: 496, y: 62, size: 'large' }
+};
+
 export class MainScene extends Phaser.Scene {
   private save!: SaveData;
   private state!: GameState;
@@ -105,6 +126,7 @@ export class MainScene extends Phaser.Scene {
     });
 
     this.el('collect-all-button').addEventListener('click', () => this.collectIslandRewards());
+    this.bindIslandMapPan();
 
     for (const key of ['play', 'island', 'market'] as ScreenKey[]) {
       this.el(`nav-${key}`).addEventListener('click', () => {
@@ -179,37 +201,64 @@ export class MainScene extends Phaser.Scene {
   }
 
   private renderIsland(): void {
-    const list = this.el('building-list');
-    list.innerHTML = '';
+    const map = this.el('building-list');
+    const highestCompletedId = Math.max(0, ...this.save.completedBuildingIds);
+    const nextBuildableId = Math.min(highestCompletedId + 1, BUILDINGS.length);
+    map.innerHTML = `
+      <div class="island-land" aria-hidden="true"></div>
+      <div class="island-lagoon island-lagoon-a" aria-hidden="true"></div>
+      <div class="island-lagoon island-lagoon-b" aria-hidden="true"></div>
+      <div class="candy-road candy-road-a" aria-hidden="true"></div>
+      <div class="candy-road candy-road-b" aria-hidden="true"></div>
+      <div class="candy-road candy-road-c" aria-hidden="true"></div>
+      <div class="candy-road candy-road-d" aria-hidden="true"></div>
+    `;
+
     for (const building of BUILDINGS) {
       const completed = this.save.completedBuildingIds.includes(building.id);
       const ready = completed && this.isBuildingReady(building.id);
+      const buildable = !completed && building.id === nextBuildableId;
+      const layout = ISLAND_BUILDING_LAYOUT[building.id];
       const card = document.createElement('article');
-      card.className = `building-card${ready ? ' is-ready' : completed ? ' is-completed' : ' is-locked'}`;
-      const state = ready ? this.t('ready') : completed ? this.t('completed') : this.t('locked');
+      card.className = `building-card building-${layout.size}${ready ? ' is-ready' : completed ? ' is-completed' : buildable ? ' is-buildable' : ' is-locked'}`;
+      card.style.left = `${layout.x}px`;
+      card.style.top = `${layout.y}px`;
+      const state = ready ? this.t('ready') : completed ? this.t('completed') : buildable ? this.t('build') : this.t('locked');
       const icon = this.getBuildingIcon(building.id);
       const action = ready
         ? `<button class="building-action" data-claim="${building.id}">${this.t('claim')}</button>`
         : completed
           ? `<p>${this.t('claimedToday')}</p>`
-          : `<button class="building-action" data-build="${building.id}">${this.t('build')} ${this.getBuildCost(building.id)}</button>`;
+          : buildable
+            ? `<button class="building-action" data-build="${building.id}">${this.t('build')} ${this.getBuildCost(building.id)}</button>`
+            : `<p>${this.t('buildCost')}: ${this.getBuildCost(building.id)}</p>`;
 
       card.innerHTML = `
         <span class="building-state${ready ? ' ready' : ''}">${state}</span>
+        ${completed ? '<span class="building-check" aria-hidden="true">✓</span>' : ''}
+        ${!completed && !buildable ? '<span class="building-cloud" aria-hidden="true"></span>' : ''}
         <div class="building-icon" aria-hidden="true">${icon}</div>
         <h3>${this.t(building.nameKey as TranslationKey)}</h3>
         <p>${this.t('daily')}: +${building.energy} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}</p>
         ${action}
       `;
-      list.appendChild(card);
+      map.appendChild(card);
     }
 
-    list.querySelectorAll<HTMLButtonElement>('[data-claim]').forEach((button) => {
+    map.querySelectorAll<HTMLButtonElement>('[data-claim]').forEach((button) => {
       button.addEventListener('click', () => this.claimBuildingReward(Number(button.dataset.claim)));
     });
-    list.querySelectorAll<HTMLButtonElement>('[data-build]').forEach((button) => {
+    map.querySelectorAll<HTMLButtonElement>('[data-build]').forEach((button) => {
       button.addEventListener('click', () => this.buildBuilding(Number(button.dataset.build)));
     });
+
+    if (!map.dataset.initialScrollSet) {
+      map.dataset.initialScrollSet = 'true';
+      window.requestAnimationFrame(() => {
+        map.scrollLeft = 140;
+        map.scrollTop = map.scrollHeight - map.clientHeight;
+      });
+    }
   }
 
   private renderMarket(): void {
@@ -251,6 +300,44 @@ export class MainScene extends Phaser.Scene {
       if (label) label.textContent = this.t(key);
       this.el(`${key}-view`).classList.toggle('is-active', this.screen === key);
     }
+  }
+
+  private bindIslandMapPan(): void {
+    const map = this.el('building-list');
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startScrollLeft = 0;
+    let startScrollTop = 0;
+
+    map.addEventListener('pointerdown', (event) => {
+      if ((event.target as HTMLElement).closest('button')) return;
+      dragging = true;
+      startX = event.clientX;
+      startY = event.clientY;
+      startScrollLeft = map.scrollLeft;
+      startScrollTop = map.scrollTop;
+      map.classList.add('is-dragging');
+      map.setPointerCapture(event.pointerId);
+    });
+
+    map.addEventListener('pointermove', (event) => {
+      if (!dragging) return;
+      map.scrollLeft = startScrollLeft - (event.clientX - startX);
+      map.scrollTop = startScrollTop - (event.clientY - startY);
+    });
+
+    const stopDragging = (event: PointerEvent) => {
+      if (!dragging) return;
+      dragging = false;
+      map.classList.remove('is-dragging');
+      if (map.hasPointerCapture(event.pointerId)) {
+        map.releasePointerCapture(event.pointerId);
+      }
+    };
+
+    map.addEventListener('pointerup', stopDragging);
+    map.addEventListener('pointercancel', stopDragging);
   }
 
   private renderModalForStatus(): void {
@@ -735,7 +822,7 @@ export class MainScene extends Phaser.Scene {
     this.state.energy = this.save.energy;
     this.state.diamonds = this.save.diamonds;
     saveData(this.save);
-    this.showWarning(`${this.t('gained')}: +${energy} ${this.t('energy')} +${diamonds} ${this.t('diamonds')}`);
+    this.showWarning(`${this.t('dailyProductionCollected')} +${energy} ${this.t('energy')} +${diamonds} ${this.t('diamonds')}`);
     this.renderOverlay();
   }
 

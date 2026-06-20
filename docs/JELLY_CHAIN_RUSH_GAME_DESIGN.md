@@ -454,6 +454,8 @@ Buildings are unlocked from smallest to biggest.
 
 The island gives long-term progression beyond puzzle levels.
 
+Candy Island should be presented as a scrollable green island map, not a plain list/card-only screen. The map should show ocean or water around the island, candy-colored paths between buildings, and buildings placed across the island from small early stands near the front to larger landmarks farther back. If the full island does not fit in one mobile view, the island area should scroll or pan while bottom navigation remains fixed.
+
 Building states:
 
 * Locked
@@ -606,10 +608,12 @@ Must include:
 
 Must include:
 
-* Candy Island map/cards
+* Scrollable Candy Island map
+* Green island with surrounding water
+* Candy-colored paths between building nodes
 * 18 buildings
 * Building states
-* Daily production
+* Daily energy and diamond production
 * Ready bubbles
 * Collect All button
 

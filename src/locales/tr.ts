@@ -77,6 +77,7 @@ const tr: typeof en = {
   completed: 'Tamamlandı',
   building: 'Bina',
   daily: 'Günlük',
+  dailyProductionCollected: 'Günlük üretim toplandı!',
   claimLater: 'Günlük üretim daha sonra',
   language: 'Dil',
   marketOneShake: '+1 çalkalama = 100 elmas',

@@ -78,7 +78,9 @@ Side panels should show:
 
 ## Candy Island
 
-The Candy Island section should include:
+The Candy Island section should be a scrollable green island map, not a plain list/card-only screen. It should include ocean/water around the island, candy-colored paths between buildings, and building nodes placed across the island from early small stands near the front to larger landmarks farther back.
+
+The Candy Island map should include:
 
 * Şeker Tezgahı
 * Jelibon Standı
@@ -88,6 +90,9 @@ The Candy Island section should include:
 * Şeker Fabrikası
 * daily reward bubbles
 * Tümünü Topla / Collect All
+* daily energy and diamond production for completed buildings
+
+If all buildings do not fit in one mobile view, the island area should scroll or pan while the bottom navigation remains fixed.
 
 ## Bottom Navigation
 

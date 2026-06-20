@@ -75,6 +75,7 @@ const en = {
   completed: 'Completed',
   building: 'Building',
   daily: 'Daily',
+  dailyProductionCollected: 'Daily production collected!',
   claimLater: 'Daily production later',
   language: 'Language',
   marketOneShake: '+1 shake = 100 diamonds',
