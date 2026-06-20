@@ -26,7 +26,7 @@ import {
 } from '../types';
 
 const GAME_SIZE = 380;
-const BOARD_SIZE = 360;
+const BOARD_SIZE = 370;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
@@ -101,6 +101,9 @@ export class MainScene extends Phaser.Scene {
   }
 
   private renderOverlay(): void {
+    this.el('phone-frame').classList.toggle('is-gameplay-active', this.screen === 'play');
+    this.el('phone-frame').classList.toggle('is-island-active', this.screen === 'island');
+    this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
     this.setText('game-title', this.t('title'));
     this.setText('language-button', `${this.t('language')}: ${this.locale.toUpperCase()}`);
     this.setText('level-label', this.t('level'));
@@ -167,8 +170,9 @@ export class MainScene extends Phaser.Scene {
       const completed = this.save.completedBuildingIds.includes(building.id);
       const ready = completed && this.isBuildingReady(building.id);
       const card = document.createElement('article');
-      card.className = 'building-card';
+      card.className = `building-card${ready ? ' is-ready' : completed ? ' is-completed' : ' is-locked'}`;
       const state = ready ? this.t('ready') : completed ? this.t('completed') : this.t('locked');
+      const icon = this.getBuildingIcon(building.id);
       const action = ready
         ? `<button class="building-action" data-claim="${building.id}">${this.t('claim')}</button>`
         : completed
@@ -177,7 +181,7 @@ export class MainScene extends Phaser.Scene {
 
       card.innerHTML = `
         <span class="building-state${ready ? ' ready' : ''}">${state}</span>
-        <div class="building-icon"></div>
+        <div class="building-icon" aria-hidden="true">${icon}</div>
         <h3>${this.t(building.nameKey as TranslationKey)}</h3>
         <p>${this.t('daily')}: +${building.energy} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}</p>
         ${action}
@@ -207,7 +211,11 @@ export class MainScene extends Phaser.Scene {
     for (const item of items) {
       const card = document.createElement('article');
       card.className = 'market-card';
-      card.innerHTML = `<strong>${item.label}</strong><button type="button">${item.active ? this.t('buyOneShake').replace('+1 ', '') : this.t('claimLater')}</button>`;
+      card.innerHTML = `
+        <span class="market-icon" aria-hidden="true">${item.active ? '⚡' : '✦'}</span>
+        <strong>${item.label}</strong>
+        <button type="button">${item.active ? this.t('claim') : this.t('claimLater')}</button>
+      `;
       const button = card.querySelector('button');
       button?.addEventListener('click', () => {
         if (item.active) {
@@ -254,9 +262,9 @@ export class MainScene extends Phaser.Scene {
         const y = row * CELL_SIZE + CELL_SIZE / 2;
         const container = this.add.container(x, y);
         this.drawMultiplierFloor(container, cell.multiplierIndex);
-        container.add(this.add.text(0, 16, getMultiplierLabel(cell.multiplierIndex), {
+        container.add(this.add.text(0, 17, getMultiplierLabel(cell.multiplierIndex), {
           fontFamily: 'Arial',
-          fontSize: cell.multiplierIndex >= 10 ? '12px' : '13px',
+          fontSize: cell.multiplierIndex >= 10 ? '13px' : '14px',
           color: cell.multiplierIndex >= 10 ? '#7a3d00' : '#ffffff',
           fontStyle: 'bold',
           stroke: cell.multiplierIndex >= 10 ? '#fff1a6' : '#4d2382',
@@ -275,22 +283,30 @@ export class MainScene extends Phaser.Scene {
   private drawMultiplierFloor(container: Phaser.GameObjects.Container, multiplierIndex: number): void {
     const color = MULTIPLIER_TINTS[multiplierIndex] ?? 0xdff8ff;
     const g = this.add.graphics();
-    const size = CELL_SIZE - 5;
+    const size = CELL_SIZE - 6;
     const x = -size / 2;
     const y = -size / 2;
-    g.fillStyle(color, multiplierIndex > 0 ? 0.54 : 0.3);
-    g.fillRoundedRect(x, y, size, size, 7);
-    g.lineStyle(multiplierIndex >= 10 ? 3 : 2, multiplierIndex >= 10 ? 0xfff4a3 : 0xffffff, multiplierIndex > 0 ? 0.76 : 0.44);
-    g.strokeRoundedRect(x, y, size, size, 7);
-    g.fillStyle(0xffffff, 0.22);
-    g.fillRoundedRect(x + 4, y + 4, size - 8, 11, 5);
+    g.fillStyle(color, multiplierIndex > 0 ? 0.62 : 0.36);
+    g.fillRoundedRect(x, y, size, size, 8);
+    g.lineStyle(multiplierIndex >= 10 ? 3 : 2, multiplierIndex >= 10 ? 0xfff4a3 : 0xffffff, multiplierIndex > 0 ? 0.84 : 0.52);
+    g.strokeRoundedRect(x, y, size, size, 8);
+    if (multiplierIndex >= 10) {
+      g.lineStyle(2, 0xffb11f, 0.95);
+      g.strokeRoundedRect(x + 3, y + 3, size - 6, size - 6, 6);
+      g.fillStyle(0xffdd58, 0.28);
+    } else if (multiplierIndex >= 9) {
+      g.fillStyle(0xffffff, 0.3);
+    } else {
+      g.fillStyle(0xffffff, 0.22);
+    }
+    g.fillRoundedRect(x + 4, y + 4, size - 8, 12, 6);
     container.add(g);
   }
 
   private drawCandyIcon(container: Phaser.GameObjects.Container, candyType: CandyType): void {
     const candy = getCandyDefinition(candyType);
     const g = this.add.graphics();
-    const y = -7;
+    const y = -8;
 
     if (candyType === 'greenGummy') {
       g.fillStyle(0x23bd4f, 1);
@@ -779,6 +795,11 @@ export class MainScene extends Phaser.Scene {
 
   private getBuildCost(buildingId: number): number {
     return 75 + (buildingId - 1) * 50;
+  }
+
+  private getBuildingIcon(buildingId: number): string {
+    const icons = ['🍬', '🧸', '🍭', '🍨', '🏪', '🏠', '🍮', '🧁', '🎨', '⭐', '🏭', '📦', '🚂', '🌉', '⚓', '🏝️', 'x1000', '🏰'];
+    return icons[buildingId - 1] ?? '🍬';
   }
 
   private openModal(html: string): void {
