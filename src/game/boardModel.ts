@@ -25,6 +25,8 @@ export interface CascadeStep {
   matched: BoardPosition[];
   scoreDelta: number;
   candyCounts: Partial<Record<CandyType, number>>;
+  largestGroupSize: number;
+  highestMultiplierIndex: number;
 }
 
 export interface CascadeResult {
@@ -36,6 +38,17 @@ export interface CascadeResult {
 
 export function findLineMatches(board: BoardGrid): BoardPosition[] {
   const matched = new Map<string, BoardPosition>();
+  for (const group of findLineMatchGroups(board)) {
+    for (const position of group) {
+      matched.set(positionKey(position), position);
+    }
+  }
+
+  return [...matched.values()];
+}
+
+export function findLineMatchGroups(board: BoardGrid): BoardPosition[][] {
+  const groups: BoardPosition[][] = [];
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
     let runStart = 0;
@@ -48,10 +61,12 @@ export function findLineMatches(board: BoardGrid): BoardPosition[] {
 
       const runLength = col - runStart;
       if (previous !== 'energyStar' && runLength >= 3) {
+        const group: BoardPosition[] = [];
         for (let matchCol = runStart; matchCol < col; matchCol += 1) {
           const position = { row, col: matchCol };
-          matched.set(positionKey(position), position);
+          group.push(position);
         }
+        groups.push(group);
       }
       runStart = col;
     }
@@ -68,16 +83,18 @@ export function findLineMatches(board: BoardGrid): BoardPosition[] {
 
       const runLength = row - runStart;
       if (previous !== 'energyStar' && runLength >= 3) {
+        const group: BoardPosition[] = [];
         for (let matchRow = runStart; matchRow < row; matchRow += 1) {
           const position = { row: matchRow, col };
-          matched.set(positionKey(position), position);
+          group.push(position);
         }
+        groups.push(group);
       }
       runStart = row;
     }
   }
 
-  return [...matched.values()];
+  return groups;
 }
 
 export function hasLineMatches(board: BoardGrid): boolean {
@@ -128,21 +145,23 @@ export function resolveMatchesAndCascades(board: BoardGrid): CascadeResult {
   const steps: CascadeStep[] = [];
 
   for (let cascadeIndex = 0; cascadeIndex < 30; cascadeIndex += 1) {
-    const matched = findLineMatches(nextBoard);
-    if (matched.length === 0) {
+    const groups = findLineMatchGroups(nextBoard);
+    if (groups.length === 0) {
       break;
     }
 
-    const step = blastMatchedCells(nextBoard, matched);
+    const step = blastMatchedCells(nextBoard, groups);
     nextBoard = step.board;
     scoreDelta += step.scoreDelta;
     for (const [candy, count] of Object.entries(step.candyCounts) as [CandyType, number][]) {
       candyCounts[candy] = (candyCounts[candy] ?? 0) + count;
     }
     steps.push({
-      matched,
+      matched: step.matched,
       scoreDelta: step.scoreDelta,
-      candyCounts: step.candyCounts
+      candyCounts: step.candyCounts,
+      largestGroupSize: step.largestGroupSize,
+      highestMultiplierIndex: step.highestMultiplierIndex
     });
   }
 
@@ -159,17 +178,37 @@ export function calculateScore(groupSize: number, multiplierTotal: number): numb
   return Math.round(BASE_CELL_SCORE * groupSize * bonus * Math.max(1, multiplierTotal / groupSize));
 }
 
-function blastMatchedCells(board: BoardGrid, matched: BoardPosition[]): { board: BoardGrid; scoreDelta: number; candyCounts: Partial<Record<CandyType, number>> } {
+function blastMatchedCells(
+  board: BoardGrid,
+  groups: BoardPosition[][]
+): {
+  board: BoardGrid;
+  matched: BoardPosition[];
+  scoreDelta: number;
+  candyCounts: Partial<Record<CandyType, number>>;
+  largestGroupSize: number;
+  highestMultiplierIndex: number;
+} {
+  const matched = uniquePositions(groups.flat());
   const removalKeys = new Set(matched.map(positionKey));
   const nextBoard = cloneBoard(board);
   const candyCounts: Partial<Record<CandyType, number>> = {};
-  let multiplierTotal = 0;
+  let scoreDelta = 0;
+  let highestMultiplierIndex = 0;
 
   for (const position of matched) {
     const cell = nextBoard[position.row][position.col];
-    multiplierTotal += getMultiplierScoreFactor(cell.multiplierIndex);
     candyCounts[cell.candy] = (candyCounts[cell.candy] ?? 0) + 1;
+    highestMultiplierIndex = Math.max(highestMultiplierIndex, cell.multiplierIndex);
     cell.multiplierIndex = upgradeMultiplier(cell.multiplierIndex);
+  }
+
+  for (const group of groups) {
+    const multiplierTotal = group.reduce((total, position) => {
+      const sourceCell = board[position.row][position.col];
+      return total + getMultiplierScoreFactor(sourceCell.multiplierIndex);
+    }, 0);
+    scoreDelta += calculateScore(group.length, multiplierTotal);
   }
 
   for (let col = 0; col < BOARD_COLUMNS; col += 1) {
@@ -189,8 +228,11 @@ function blastMatchedCells(board: BoardGrid, matched: BoardPosition[]): { board:
 
   return {
     board: nextBoard,
-    scoreDelta: calculateScore(matched.length, multiplierTotal),
-    candyCounts
+    matched,
+    scoreDelta,
+    candyCounts,
+    largestGroupSize: Math.max(...groups.map((group) => group.length)),
+    highestMultiplierIndex
   };
 }
 
@@ -219,12 +261,19 @@ function cloneBoard(board: BoardGrid): BoardGrid {
   return board.map((row) => row.map((cell) => ({ ...cell })));
 }
 
+function uniquePositions(positions: BoardPosition[]): BoardPosition[] {
+  const matched = new Map<string, BoardPosition>();
+  for (const position of positions) {
+    matched.set(positionKey(position), position);
+  }
+  return [...matched.values()];
+}
+
 function getGroupBonus(groupSize: number): number {
-  if (groupSize >= 8) return 3;
-  if (groupSize >= 7) return 2.5;
-  if (groupSize >= 6) return 2;
-  if (groupSize >= 5) return 1.5;
-  if (groupSize >= 4) return 1.2;
+  if (groupSize >= 7) return 4;
+  if (groupSize >= 6) return 3;
+  if (groupSize >= 5) return 2;
+  if (groupSize >= 4) return 1.4;
   return 1;
 }
 

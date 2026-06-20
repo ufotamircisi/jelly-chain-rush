@@ -4,6 +4,7 @@ import { getCandyDefinition } from '../data/candies';
 import { getMultiplierLabel } from '../data/multipliers';
 import {
   areAdjacent,
+  type CascadeStep,
   getHighestMultiplierIndex,
   hasValidSwipeMove,
   regenerateCandies,
@@ -469,7 +470,8 @@ export class MainScene extends Phaser.Scene {
   private handleSwipe(first: BoardPosition, second: BoardPosition): void {
     if (!areAdjacent(first, second)) {
       this.showInvalidFeedback(first);
-      this.showWarning(this.t('invalidSwipe'));
+      this.playInvalidSound();
+      this.showWarning(this.t('noMatch'));
       return;
     }
 
@@ -484,7 +486,8 @@ export class MainScene extends Phaser.Scene {
         this.drawBoard();
         this.showInvalidFeedback(first);
         this.showInvalidFeedback(second);
-        this.showWarning(this.t('invalidSwipe'));
+        this.playInvalidSound();
+        this.showWarning(this.t('noMatch'));
         this.renderOverlay();
       });
       return;
@@ -546,10 +549,10 @@ export class MainScene extends Phaser.Scene {
       this.save.stats.totalBlasts += result.steps.length;
       this.save.stats.highestMultiplierEver = Math.max(this.save.stats.highestMultiplierEver, this.getHighestMultiplierValue());
       saveData(this.save);
-      this.showScorePopup(`+${result.scoreDelta.toLocaleString()}`);
+      this.playCascadeFeedback(result.steps);
     }
 
-    const delay = Math.max(180, result.steps.length * 180);
+    const delay = Math.max(260, result.steps.length * 430);
     this.time.delayedCall(delay, () => {
       this.isResolving = false;
       this.drawBoard();
@@ -829,23 +832,161 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private showScorePopup(label: string): void {
-    const text = this.add.text(GAME_SIZE / 2, 38, label, {
+  private playCascadeFeedback(steps: CascadeStep[]): void {
+    steps.forEach((step, index) => {
+      this.time.delayedCall(index * 410, () => {
+        this.playBlastFeedback(step, index);
+      });
+    });
+  }
+
+  private playBlastFeedback(step: CascadeStep, cascadeIndex: number): void {
+    const center = this.getBlastCenter(step.matched);
+    const size = step.largestGroupSize;
+    const highMultiplier = step.highestMultiplierIndex >= 7;
+    const specialMultiplier = step.highestMultiplierIndex >= 9;
+    const powerful = size >= 5 || highMultiplier;
+    const huge = size >= 6 || specialMultiplier;
+
+    for (const position of step.matched) {
+      const candy = this.candyContainers.get(this.positionKey(position));
+      if (!candy) continue;
+      this.tweens.killTweensOf(candy);
+      this.tweens.add({
+        targets: candy,
+        scale: powerful ? 1.28 : 1.12,
+        alpha: 0,
+        duration: powerful ? 220 : 160,
+        ease: 'Back.easeIn'
+      });
+    }
+
+    this.emitSparkles(center.x, center.y, size, highMultiplier, specialMultiplier);
+    this.showBlastRing(center.x, center.y, size, specialMultiplier);
+    this.showScorePopup(`+${this.formatScore(step.scoreDelta)}`, center.x, center.y - 8, size, highMultiplier, specialMultiplier);
+    this.playBlastSound(size, specialMultiplier);
+
+    if (powerful && this.boardContainer) {
+      this.tweens.add({
+        targets: this.boardContainer,
+        x: BOARD_X + (huge ? 6 : 4),
+        y: BOARD_Y + (huge ? 4 : 2),
+        duration: 45,
+        yoyo: true,
+        repeat: huge ? 3 : 1,
+        onComplete: () => this.boardContainer?.setPosition(BOARD_X, BOARD_Y)
+      });
+    }
+
+    if (size >= 6) {
+      this.showBurstLabel(this.t('bigBlast'), center.x, center.y - 38, true);
+    } else if (size >= 5) {
+      this.showBurstLabel(this.t('bigBlast'), center.x, center.y - 36, false);
+    }
+
+    if (cascadeIndex >= 1) {
+      this.showBurstLabel(this.t(cascadeIndex >= 2 ? 'megaChain' : 'chain'), GAME_SIZE / 2, 42, cascadeIndex >= 2);
+      this.playChainSound(cascadeIndex);
+    }
+  }
+
+  private emitSparkles(x: number, y: number, size: number, highMultiplier: boolean, specialMultiplier: boolean): void {
+    const count = size >= 6 ? 18 : size >= 5 ? 14 : size >= 4 ? 10 : 7;
+    const color = specialMultiplier ? 0xffd33f : highMultiplier ? 0xffffff : 0xfff1a6;
+
+    for (let index = 0; index < count; index += 1) {
+      const angle = (Math.PI * 2 * index) / count + (Math.random() * 0.36 - 0.18);
+      const minDistance = size >= 5 ? 34 : 22;
+      const maxDistance = size >= 6 ? 74 : 48;
+      const distance = minDistance + Math.random() * (maxDistance - minDistance);
+      const sparkle = this.add.star(x, y, 5, 3, specialMultiplier ? 8 : 6, color, 0.95).setScale(0.55);
+      this.tweens.add({
+        targets: sparkle,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        scale: 0,
+        alpha: 0,
+        duration: size >= 5 ? 420 : 300,
+        ease: 'Cubic.easeOut',
+        onComplete: () => sparkle.destroy()
+      });
+    }
+  }
+
+  private showBlastRing(x: number, y: number, size: number, specialMultiplier: boolean): void {
+    const ring = this.add.circle(x, y, 10, specialMultiplier ? 0xffd33f : 0xffffff, 0);
+    ring.setStrokeStyle(size >= 5 ? 5 : 3, specialMultiplier ? 0xffd33f : 0xffffff, specialMultiplier ? 0.95 : 0.78);
+    this.tweens.add({
+      targets: ring,
+      radius: size >= 6 ? 66 : size >= 5 ? 54 : size >= 4 ? 42 : 30,
+      alpha: 0,
+      duration: size >= 5 ? 420 : 280,
+      ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy()
+    });
+  }
+
+  private showScorePopup(label: string, x: number, y: number, size: number, highMultiplier: boolean, specialMultiplier: boolean): void {
+    const fontSize = specialMultiplier ? 34 : highMultiplier || size >= 5 ? 30 : size >= 4 ? 25 : 21;
+    const text = this.add.text(x, y, label, {
       fontFamily: 'Arial',
-      fontSize: '24px',
-      color: '#ffffff',
+      fontSize: `${fontSize}px`,
+      color: specialMultiplier ? '#fff1a6' : '#ffffff',
       fontStyle: 'bold',
-      stroke: '#7b2bbf',
-      strokeThickness: 4
+      stroke: specialMultiplier ? '#ff7c1f' : highMultiplier ? '#1c7ed6' : '#7b2bbf',
+      strokeThickness: specialMultiplier || highMultiplier ? 6 : 4
     }).setOrigin(0.5);
 
+    text.setScale(size >= 5 || highMultiplier ? 0.65 : 0.84);
     this.tweens.add({
       targets: text,
-      y: 0,
+      y: y - (size >= 5 || highMultiplier ? 58 : 42),
+      scale: size >= 5 || highMultiplier ? 1.18 : 1,
       alpha: 0,
-      duration: 850,
+      duration: size >= 5 || highMultiplier ? 1050 : 820,
+      ease: 'Back.easeOut',
       onComplete: () => text.destroy()
     });
+  }
+
+  private showBurstLabel(label: string, x: number, y: number, intense: boolean): void {
+    const text = this.add.text(x, y, label, {
+      fontFamily: 'Arial',
+      fontSize: intense ? '26px' : '21px',
+      color: intense ? '#fff1a6' : '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#7b2bbf',
+      strokeThickness: intense ? 6 : 4
+    }).setOrigin(0.5);
+
+    text.setScale(0.7);
+    this.tweens.add({
+      targets: text,
+      y: y - 36,
+      scale: intense ? 1.18 : 1,
+      alpha: 0,
+      duration: 860,
+      ease: 'Back.easeOut',
+      onComplete: () => text.destroy()
+    });
+  }
+
+  private getBlastCenter(positions: BoardPosition[]): { x: number; y: number } {
+    if (positions.length === 0) {
+      return { x: GAME_SIZE / 2, y: GAME_SIZE / 2 };
+    }
+
+    const sum = positions.reduce(
+      (total, position) => ({
+        x: total.x + BOARD_X + position.col * CELL_SIZE + CELL_SIZE / 2,
+        y: total.y + BOARD_Y + position.row * CELL_SIZE + CELL_SIZE / 2
+      }),
+      { x: 0, y: 0 }
+    );
+    return {
+      x: sum.x / positions.length,
+      y: sum.y / positions.length
+    };
   }
 
   private showWarning(label: string): void {
@@ -892,6 +1033,89 @@ export class MainScene extends Phaser.Scene {
       oscillator.start(now + index * 0.09);
       oscillator.stop(now + index * 0.09 + 0.2);
     });
+  }
+
+  private playBlastSound(size: number, specialMultiplier: boolean): void {
+    const audio = this.getAudioContext();
+    if (!audio) return;
+
+    const now = audio.currentTime;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    const baseFrequency = specialMultiplier ? 760 : size >= 5 ? 520 : size >= 4 ? 420 : 320;
+
+    oscillator.type = size >= 5 ? 'triangle' : 'sine';
+    oscillator.frequency.setValueAtTime(baseFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(90, baseFrequency * 0.36), now + 0.2);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(specialMultiplier ? 0.22 : size >= 5 ? 0.18 : 0.12, now + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + (size >= 5 ? 0.28 : 0.18));
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    oscillator.start(now);
+    oscillator.stop(now + (size >= 5 ? 0.3 : 0.2));
+
+    if (size >= 5 || specialMultiplier) {
+      this.playTone(baseFrequency * 1.5, 0.08, 0.12, 0.05);
+    }
+  }
+
+  private playChainSound(cascadeIndex: number): void {
+    const base = cascadeIndex >= 2 ? 980 : 820;
+    this.playTone(base, 0.1, 0.1, 0.02);
+    this.time.delayedCall(70, () => this.playTone(base * 1.25, 0.08, 0.09, 0.02));
+  }
+
+  private playInvalidSound(): void {
+    const audio = this.getAudioContext();
+    if (!audio) return;
+
+    const now = audio.currentTime;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(180, now);
+    oscillator.frequency.exponentialRampToValueAtTime(120, now + 0.14);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    oscillator.start(now);
+    oscillator.stop(now + 0.18);
+  }
+
+  private playTone(frequency: number, duration: number, volume: number, delay = 0): void {
+    const audio = this.getAudioContext();
+    if (!audio) return;
+
+    const start = audio.currentTime + delay;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain);
+    gain.connect(audio.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.02);
+  }
+
+  private getAudioContext(): AudioContext | undefined {
+    const AudioContextClass = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return undefined;
+
+    this.audioContext ??= new AudioContextClass();
+    if (this.audioContext.state === 'suspended') {
+      void this.audioContext.resume();
+    }
+    return this.audioContext;
+  }
+
+  private formatScore(score: number): string {
+    return score.toLocaleString(this.locale === 'tr' ? 'tr-TR' : 'en-US');
   }
 
   private formatGoal(goal: LevelGoal): string {
