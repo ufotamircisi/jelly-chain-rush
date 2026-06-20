@@ -80,7 +80,9 @@ const en = {
   daily: 'Daily',
   production: 'Production',
   dailyProductionCollected: 'Daily production collected!',
-  claimLater: 'Daily production later',
+  claimLater: 'Nothing ready',
+  marketAction: 'Get',
+  comingSoon: 'Coming soon',
   language: 'Language',
   marketOneShake: '+1 shake = 100 diamonds',
   marketFiveShakes: '+5 shakes = 300 diamonds',
@@ -104,7 +106,25 @@ const en = {
   buildingCandyHarbor: 'Candy Harbor',
   buildingGrandCandySquare: 'Grand Candy Square',
   buildingMultiplierTower: 'x1000 Multiplier Tower',
-  buildingMegaCandyPalace: 'Mega Candy Palace'
+  buildingMegaCandyPalace: 'Mega Candy Palace',
+  mapCandyStand: 'Candy',
+  mapGummyStand: 'Gummy',
+  mapLollipopCart: 'Lollipop',
+  mapIceCreamBooth: 'Ice Cream',
+  mapCandyShop: 'Shop',
+  mapMarshmallowHouse: 'Marshmallow',
+  mapCaramelWorkshop: 'Caramel',
+  mapGummyWorkshop: 'Workshop',
+  mapColorMixingLab: 'Color Lab',
+  mapEnergyStarGenerator: 'Energy',
+  mapCandyFactory: 'Factory',
+  mapPackingCenter: 'Packing',
+  mapCandyTrainStation: 'Train',
+  mapChocolateBridge: 'Bridge',
+  mapCandyHarbor: 'Harbor',
+  mapGrandCandySquare: 'Square',
+  mapMultiplierTower: 'x1000',
+  mapMegaCandyPalace: 'Palace'
 };
 
 export default en;

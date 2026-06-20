@@ -82,7 +82,9 @@ const tr: typeof en = {
   daily: 'Günlük',
   production: 'Üretim',
   dailyProductionCollected: 'Günlük üretim toplandı!',
-  claimLater: 'Günlük üretim daha sonra',
+  claimLater: 'Hazır değil',
+  marketAction: 'Al',
+  comingSoon: 'Yakında',
   language: 'Dil',
   marketOneShake: '+1 çalkalama = 100 elmas',
   marketFiveShakes: '+5 çalkalama = 300 elmas',
@@ -106,7 +108,25 @@ const tr: typeof en = {
   buildingCandyHarbor: 'Şeker Limanı',
   buildingGrandCandySquare: 'Büyük Şeker Meydanı',
   buildingMultiplierTower: 'x1000 Çarpan Kulesi',
-  buildingMegaCandyPalace: 'Mega Şeker Sarayı'
+  buildingMegaCandyPalace: 'Mega Şeker Sarayı',
+  mapCandyStand: 'Şeker',
+  mapGummyStand: 'Jelibon',
+  mapLollipopCart: 'Lollipop',
+  mapIceCreamBooth: 'Dondurma',
+  mapCandyShop: 'Dükkan',
+  mapMarshmallowHouse: 'Marshmallow',
+  mapCaramelWorkshop: 'Karamel',
+  mapGummyWorkshop: 'Atölye',
+  mapColorMixingLab: 'Renk Lab',
+  mapEnergyStarGenerator: 'Enerji',
+  mapCandyFactory: 'Fabrika',
+  mapPackingCenter: 'Paketleme',
+  mapCandyTrainStation: 'Tren',
+  mapChocolateBridge: 'Köprü',
+  mapCandyHarbor: 'Liman',
+  mapGrandCandySquare: 'Meydan',
+  mapMultiplierTower: 'x1000',
+  mapMegaCandyPalace: 'Saray'
 };
 
 export default tr;

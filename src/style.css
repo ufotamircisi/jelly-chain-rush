@@ -6,13 +6,15 @@ html,
 body,
 #app-shell {
   width: 100%;
-  min-height: 100%;
+  height: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 body {
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background:
     radial-gradient(circle at 16% 9%, rgba(255, 255, 255, 0.86), transparent 15rem),
     radial-gradient(circle at 86% 18%, rgba(255, 173, 218, 0.46), transparent 15rem),
@@ -28,15 +30,18 @@ button {
 .app-shell {
   display: flex;
   justify-content: center;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .phone-frame {
   position: relative;
   width: min(100vw, 430px);
-  min-height: 100vh;
-  min-height: 100svh;
-  padding: 6px 10px 76px;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  padding: 5px 10px 70px;
   overflow: hidden;
   color: #3d2362;
   background:
@@ -97,7 +102,7 @@ button {
 }
 
 .game-header {
-  min-height: 124px;
+  min-height: 116px;
   padding-top: 2px;
 }
 
@@ -120,9 +125,9 @@ button {
   position: relative;
   z-index: 1;
   max-width: 248px;
-  margin: 0 auto 6px;
+  margin: 0 auto 4px;
   text-align: center;
-  font-size: 31px;
+  font-size: 28px;
   line-height: 0.9;
   letter-spacing: 0;
   color: #ff5aa6;
@@ -136,7 +141,7 @@ button {
   position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 5px;
+  gap: 4px;
   min-height: 0;
 }
 
@@ -153,8 +158,8 @@ button {
 
 .counter-card {
   position: static;
-  min-height: 40px;
-  padding: 5px 6px;
+  min-height: 36px;
+  padding: 4px 5px;
   text-align: center;
 }
 
@@ -170,7 +175,7 @@ button {
   display: block;
   margin-top: 1px;
   color: #2c559e;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 900;
   line-height: 1.05;
 }
@@ -219,15 +224,15 @@ button {
 }
 
 .view-island {
-  height: calc(100svh - 198px);
-  min-height: 520px;
+  height: calc(100dvh - 186px);
+  min-height: 0;
   overflow: hidden;
 }
 
 .goal-panel {
   width: 100%;
-  margin: 0 0 5px;
-  padding: 6px 8px;
+  margin: 0 0 4px;
+  padding: 5px 7px;
   background: linear-gradient(180deg, rgba(255, 126, 193, 0.96), rgba(255, 230, 244, 0.94));
 }
 
@@ -267,8 +272,8 @@ button {
   display: flex;
   justify-content: center;
   width: 100%;
-  margin: 0 auto 4px;
-  padding: 5px;
+  margin: 0 auto 3px;
+  padding: 4px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.28);
   box-shadow: 0 12px 25px rgba(61, 35, 98, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.52);
@@ -287,8 +292,8 @@ button {
 
 .helper-text,
 .warning-text {
-  min-height: 23px;
-  margin: 2px 0;
+  min-height: 20px;
+  margin: 1px 0;
   text-align: center;
   color: #fff;
   font-size: 15px;
@@ -330,8 +335,8 @@ button {
 
 .reward-panel {
   width: 100%;
-  margin: 5px 0 0;
-  padding: 6px 8px;
+  margin: 4px 0 0;
+  padding: 5px 7px;
   background: linear-gradient(180deg, rgba(255, 248, 185, 0.96), rgba(255, 225, 247, 0.9));
 }
 
@@ -354,14 +359,14 @@ button {
 .shake-button {
   display: block;
   width: min(342px, 92%);
-  min-height: 58px;
-  margin: 6px auto 0;
+  min-height: 54px;
+  margin: 5px auto 0;
   border: 4px solid rgba(255, 255, 255, 0.82);
   border-radius: 999px;
   color: #fff;
   background: linear-gradient(180deg, #adff47 0%, #54d325 52%, #1da63a 100%);
   box-shadow: 0 12px 0 #168e32, 0 19px 29px rgba(36, 107, 40, 0.34), inset 0 6px 0 rgba(255, 255, 255, 0.46);
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 900;
   letter-spacing: 0;
   text-shadow: 0 3px 0 #168e32;
@@ -398,15 +403,15 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  gap: 10px;
-  margin: -8px 0 8px;
+  gap: 8px;
+  margin: -6px 0 7px;
 }
 
 .section-heading h2,
 .market-title {
   margin: 0;
   color: #fff;
-  font-size: 32px;
+  font-size: 27px;
   font-weight: 900;
   text-shadow: 0 3px 0 #7b2bbf;
   -webkit-text-stroke: 1px #7b2bbf;
@@ -418,7 +423,7 @@ button {
   z-index: 4;
   border: 3px solid rgba(255, 255, 255, 0.78);
   border-radius: 999px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   color: #7b2bbf;
   background: linear-gradient(180deg, #fff6a6, #ffbd2f);
   box-shadow: 0 7px 0 #d98210, inset 0 3px 0 rgba(255, 255, 255, 0.42);
@@ -427,8 +432,8 @@ button {
 
 .building-list {
   position: relative;
-  height: calc(100% - 56px);
-  min-height: 460px;
+  height: calc(100% - 48px);
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   border: 3px solid rgba(255, 255, 255, 0.68);
@@ -635,15 +640,15 @@ button {
   position: relative;
   z-index: 1;
   display: block;
-  width: 92px;
-  margin-top: 4px;
+  width: 76px;
+  margin-top: 3px;
   border: 2px solid rgba(255, 255, 255, 0.72);
   border-radius: 10px;
-  padding: 3px 4px;
+  padding: 2px 3px;
   color: #3d2362;
   background: rgba(255, 255, 255, 0.86);
   box-shadow: 0 4px 8px rgba(61, 35, 98, 0.12);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 900;
   line-height: 1.05;
   text-align: center;
@@ -818,22 +823,22 @@ button {
 }
 
 .market-title {
-  margin: -8px 0 16px;
+  margin: -6px 0 10px;
   text-align: center;
 }
 
 .market-list {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .market-card {
   display: grid;
   grid-template-columns: 46px 1fr auto;
   align-items: center;
-  gap: 12px;
-  min-height: 76px;
-  padding: 14px;
+  gap: 10px;
+  min-height: 64px;
+  padding: 10px 12px;
 }
 
 .market-icon {
@@ -850,7 +855,7 @@ button {
 
 .market-card strong {
   color: #3d2362;
-  font-size: 17px;
+  font-size: 15px;
   line-height: 1.12;
 }
 
@@ -872,14 +877,14 @@ button {
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   width: min(100vw, 430px);
-  padding: 7px 10px max(7px, env(safe-area-inset-bottom));
+  padding: 6px 10px max(6px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
   background: linear-gradient(180deg, rgba(42, 96, 215, 0.82), rgba(21, 55, 153, 0.98));
   box-shadow: 0 -8px 22px rgba(25, 47, 123, 0.28);
 }
 
 .nav-tab {
-  min-height: 52px;
+  min-height: 48px;
   border: 2px solid rgba(255, 255, 255, 0.28);
   border-radius: 18px;
   color: #fff;
@@ -965,12 +970,12 @@ button {
   }
 
   .game-header {
-    min-height: 116px;
+    min-height: 108px;
   }
 
   .game-logo {
     max-width: 220px;
-    font-size: 28px;
+    font-size: 25px;
   }
 
   .counter-card {
@@ -1010,18 +1015,18 @@ button {
   }
 
   .shake-button {
-    min-height: 54px;
-    font-size: 28px;
+    min-height: 50px;
+    font-size: 26px;
   }
 }
 
 @media (max-height: 760px) {
   .game-header {
-    min-height: 108px;
+    min-height: 100px;
   }
 
   .game-logo {
-    font-size: 25px;
+    font-size: 23px;
   }
 
   .board-stage {
@@ -1045,6 +1050,6 @@ button {
   }
 
   .nav-tab {
-    min-height: 46px;
+    min-height: 44px;
   }
 }

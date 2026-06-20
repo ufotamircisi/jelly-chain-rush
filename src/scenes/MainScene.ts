@@ -230,7 +230,7 @@ export class MainScene extends Phaser.Scene {
       card.innerHTML = `
         <button class="building-node-button" type="button" data-detail="${building.id}" aria-label="${this.t(building.nameKey as TranslationKey)}">
           <span class="building-icon" aria-hidden="true">${icon}</span>
-          <strong>${this.t(building.nameKey as TranslationKey)}</strong>
+          <strong>${this.getBuildingMapLabel(building.id)}</strong>
           <span class="building-state${ready ? ' ready' : ''}">${state}</span>
           ${completed ? '<span class="building-check" aria-hidden="true">✓</span>' : ''}
         </button>
@@ -274,7 +274,7 @@ export class MainScene extends Phaser.Scene {
       card.innerHTML = `
         <span class="market-icon" aria-hidden="true">${item.active ? '⚡' : '✦'}</span>
         <strong>${item.label}</strong>
-        <button type="button">${item.active ? this.t('claim') : this.t('claimLater')}</button>
+        <button type="button">${item.active ? this.t('marketAction') : this.t('comingSoon')}</button>
       `;
       const button = card.querySelector('button');
       button?.addEventListener('click', () => {
@@ -1438,6 +1438,30 @@ export class MainScene extends Phaser.Scene {
   private getBuildingIcon(buildingId: number): string {
     const icons = ['🍬', '🧸', '🍭', '🍨', '🏪', '🏠', '🍮', '🧁', '🎨', '⭐', '🏭', '📦', '🚂', '🌉', '⚓', '🏝️', 'x1000', '🏰'];
     return icons[buildingId - 1] ?? '🍬';
+  }
+
+  private getBuildingMapLabel(buildingId: number): string {
+    const keys: TranslationKey[] = [
+      'mapCandyStand',
+      'mapGummyStand',
+      'mapLollipopCart',
+      'mapIceCreamBooth',
+      'mapCandyShop',
+      'mapMarshmallowHouse',
+      'mapCaramelWorkshop',
+      'mapGummyWorkshop',
+      'mapColorMixingLab',
+      'mapEnergyStarGenerator',
+      'mapCandyFactory',
+      'mapPackingCenter',
+      'mapCandyTrainStation',
+      'mapChocolateBridge',
+      'mapCandyHarbor',
+      'mapGrandCandySquare',
+      'mapMultiplierTower',
+      'mapMegaCandyPalace'
+    ];
+    return this.t(keys[buildingId - 1] ?? 'building');
   }
 
   private openModal(html: string): void {
