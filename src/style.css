@@ -379,8 +379,11 @@ button {
 }
 
 .shake-button:disabled {
+  color: rgba(255, 255, 255, 0.78);
+  background: linear-gradient(180deg, #b8c8b2 0%, #80a879 52%, #5f8b67 100%);
+  box-shadow: 0 7px 0 #557b58, 0 12px 18px rgba(36, 107, 40, 0.18), inset 0 4px 0 rgba(255, 255, 255, 0.24);
   cursor: default;
-  filter: saturate(0.82) brightness(0.96);
+  filter: saturate(0.54) brightness(0.92);
 }
 
 .shake-button:active,

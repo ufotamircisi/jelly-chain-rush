@@ -29,7 +29,7 @@ const en = {
   multiplierRewards: 'Multiplier Rewards',
   futureRemoveAds: 'Comfort option later',
   futureDiamondPacks: 'Future diamond bundles',
-  noEnergy: 'Need more energy',
+  noEnergy: 'No energy',
   noShakes: 'No shakes left',
   notEnoughDiamonds: 'Not enough diamonds',
   levelWin: 'Level Complete!',

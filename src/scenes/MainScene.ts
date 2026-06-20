@@ -105,7 +105,7 @@ export class MainScene extends Phaser.Scene {
     this.bindOverlay();
     this.drawBoard();
     this.renderOverlay();
-    this.time.delayedCall(1, () => this.startDropSequence({ playChime: true }));
+    this.time.delayedCall(1, () => this.startInitialDrop());
 
     if (this.isDailyRewardAvailable()) {
       this.renderDailyRewardModal();
@@ -139,7 +139,7 @@ export class MainScene extends Phaser.Scene {
 
   private renderOverlay(): void {
     this.el('phone-frame').classList.toggle('is-gameplay-active', this.screen === 'play');
-    this.el('shake-button').toggleAttribute('disabled', this.isShaking || this.isDropping || this.isResolving || this.state.status !== 'playing');
+    this.el('shake-button').toggleAttribute('disabled', !this.canUseShake());
     this.el('phone-frame').classList.toggle('is-island-active', this.screen === 'island');
     this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
     this.setText('game-title', this.t('title'));
@@ -587,22 +587,10 @@ export class MainScene extends Phaser.Scene {
 
   private handleShake(): void {
     if (this.isShaking || this.isDropping || this.isResolving || this.state.status !== 'playing') return;
-
-    if (this.state.shakesRemaining <= 0) {
-      this.triggerLevelFail();
-      return;
-    }
-
-    if (this.state.energy < SHAKE_COST_ENERGY) {
-      this.showWarning(this.t('noEnergy'));
-      return;
-    }
+    if (!this.consumeShakeCost()) return;
 
     this.isShaking = true;
     this.dragStart = undefined;
-    this.state.shakesRemaining -= 1;
-    this.state.energy -= SHAKE_COST_ENERGY;
-    this.syncSaveCurrency();
     this.renderOverlay();
     this.playStartChime();
 
@@ -618,6 +606,25 @@ export class MainScene extends Phaser.Scene {
         this.startDropSequence();
       }
     });
+  }
+
+  private consumeShakeCost(): boolean {
+    if (this.state.shakesRemaining <= 0) {
+      this.triggerLevelFail();
+      return false;
+    }
+
+    if (this.state.energy < SHAKE_COST_ENERGY) {
+      this.showWarning(this.t('noEnergy'));
+      this.blockShakeButton();
+      this.renderOverlay();
+      return false;
+    }
+
+    this.state.shakesRemaining -= 1;
+    this.state.energy -= SHAKE_COST_ENERGY;
+    this.syncSaveCurrency();
+    return true;
   }
 
   private startDropSequence(options: { playChime?: boolean } = {}): void {
@@ -637,6 +644,12 @@ export class MainScene extends Phaser.Scene {
       this.showWarning(this.t('chainInProgress'));
       this.resolveCurrentCascades();
     });
+  }
+
+  private startInitialDrop(): void {
+    if (this.isDropping || this.isResolving || this.state.status !== 'playing') return;
+    if (!this.consumeShakeCost()) return;
+    this.startDropSequence({ playChime: true });
   }
 
   private handleCellPointerDown(position: BoardPosition): void {
@@ -807,9 +820,19 @@ export class MainScene extends Phaser.Scene {
     return this.state.status === 'playing' && !this.isShaking && !this.isDropping && !this.isResolving;
   }
 
+  private canUseShake(): boolean {
+    return this.state.status === 'playing'
+      && !this.isShaking
+      && !this.isDropping
+      && !this.isResolving
+      && this.state.shakesRemaining > 0
+      && this.state.energy >= SHAKE_COST_ENERGY;
+  }
+
   private getHelperText(): string {
     if (this.isShaking || this.isDropping) return this.t('shakeDropHelper');
     if (this.isResolving) return this.t('chainInProgress');
+    if (this.state.energy < SHAKE_COST_ENERGY) return this.t('noEnergy');
     if (hasValidSwipeMove(this.state.board)) return this.t('swipeHelper');
     return this.t('shakeHelper');
   }
@@ -864,7 +887,7 @@ export class MainScene extends Phaser.Scene {
     this.closeModal();
     this.drawBoard();
     this.renderOverlay();
-    this.time.delayedCall(1, () => this.startDropSequence({ playChime: true }));
+    this.time.delayedCall(1, () => this.startInitialDrop());
   }
 
   private startNextLevel(): void {
@@ -878,7 +901,7 @@ export class MainScene extends Phaser.Scene {
     this.closeModal();
     this.drawBoard();
     this.renderOverlay();
-    this.time.delayedCall(1, () => this.startDropSequence({ playChime: true }));
+    this.time.delayedCall(1, () => this.startInitialDrop());
   }
 
   private renderWinModal(): void {

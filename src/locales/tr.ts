@@ -31,7 +31,7 @@ const tr: typeof en = {
   multiplierRewards: 'Çarpan Ödülleri',
   futureRemoveAds: 'Konfor seçeneği sonra',
   futureDiamondPacks: 'Elmas paketleri yakında',
-  noEnergy: 'Daha fazla enerji gerekli',
+  noEnergy: 'Enerji yok',
   noShakes: 'Çalkalama kalmadı',
   notEnoughDiamonds: 'Yeterli elmas yok',
   levelWin: 'Seviye Tamamlandı!',
