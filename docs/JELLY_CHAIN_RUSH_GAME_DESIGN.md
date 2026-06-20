@@ -307,8 +307,14 @@ Energy:
 
 If player lacks energy:
 
-* Show energy refill screen.
-* For MVP, use simple local refill or placeholder.
+* Disable SHAKE / ÇALKALA until the player has at least 10 energy.
+* Show a small Get Energy / Enerji Al action near the disabled main button.
+* Send the player to the Market energy recovery options when they need energy.
+* Market MVP energy recovery options:
+  * +50 energy = 50 diamonds
+  * +100 energy = 90 diamonds
+  * +250 energy = 200 diamonds
+* Purchases subtract diamonds, add energy immediately, and show feedback.
 * Later balance can include time-based refill and 2-hour wait.
 
 ---
@@ -546,15 +552,25 @@ Building list:
 
 ---
 
-## 19. Market Placeholder
+## 19. Market
 
-For MVP, market is placeholder only.
+For MVP, the market supports diamond exchanges for energy recovery and extra shakes.
 
-Show future items:
+Energy recovery:
+
+* +50 energy = 50 diamonds
+* +100 energy = 90 diamonds
+* +250 energy = 200 diamonds
+
+Extra shakes:
 
 * +1 shake = 100 diamonds
 * +5 shakes = 300 diamonds
 * +10 shakes = 600 diamonds
+
+Coming soon:
+
+* Free energy placeholder
 * Boosters placeholder
 * Remove ads placeholder
 * Diamond packs placeholder
@@ -629,8 +645,9 @@ Must include:
 
 Must include:
 
-* Diamond placeholder packs
+* Energy recovery options with diamonds
 * Extra shake purchases with diamonds
+* Free energy coming soon placeholder
 * Booster placeholders
 * Remove ads placeholder
 

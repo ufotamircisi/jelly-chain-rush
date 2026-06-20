@@ -128,6 +128,10 @@ export class MainScene extends Phaser.Scene {
 
     this.el('collect-all-button').addEventListener('click', () => this.collectIslandRewards());
     this.el('multiplier-rewards-button').addEventListener('click', () => this.renderMultiplierRewardsModal());
+    this.el('get-energy-button').addEventListener('click', () => {
+      this.screen = 'market';
+      this.renderOverlay();
+    });
     this.bindIslandMapPan();
 
     for (const key of ['play', 'island', 'market'] as ScreenKey[]) {
@@ -165,6 +169,8 @@ export class MainScene extends Phaser.Scene {
     this.setText('multiplier-next-reward', this.t('nextMultiplierReward'));
     this.setText('multiplier-rewards-button', this.t('viewRewards'));
     this.setText('shake-button', this.t('shakeButton'));
+    this.setText('get-energy-button', this.t('getEnergy'));
+    this.el('get-energy-button').classList.toggle('is-visible', this.screen === 'play' && this.state.status === 'playing' && this.state.energy < SHAKE_COST_ENERGY);
     this.setText('island-title', this.t('islandTitle'));
     this.setText('collect-all-button', this.t('collectAll'));
     this.setText('market-title', this.t('market'));
@@ -274,33 +280,61 @@ export class MainScene extends Phaser.Scene {
 
   private renderMarket(): void {
     const list = this.el('market-list');
-    const items = [
-      { label: this.t('marketOneShake'), shakes: 1, cost: 100, active: true },
-      { label: this.t('marketFiveShakes'), shakes: 5, cost: 300, active: true },
-      { label: this.t('marketTenShakes'), shakes: 10, cost: 600, active: true },
-      { label: this.t('marketBoosters'), shakes: 0, cost: 0, active: false },
-      { label: this.t('futureDiamondPacks'), shakes: 0, cost: 0, active: false }
-    ];
     list.innerHTML = '';
+
+    this.renderMarketSection(
+      list,
+      this.t('energy'),
+      [
+        { label: this.t('marketEnergySmall'), icon: '⚡', onClick: () => this.buyMarketEnergy(50, 50), active: true },
+        { label: this.t('marketEnergyMedium'), icon: '⚡', onClick: () => this.buyMarketEnergy(100, 90), active: true },
+        { label: this.t('marketEnergyLarge'), icon: '⚡', onClick: () => this.buyMarketEnergy(250, 200), active: true }
+      ]
+    );
+
+    this.renderMarketSection(
+      list,
+      this.t('shakes'),
+      [
+        { label: this.t('marketOneShake'), icon: '↯', onClick: () => this.buyMarketShakes(1, 100), active: true },
+        { label: this.t('marketFiveShakes'), icon: '↯', onClick: () => this.buyMarketShakes(5, 300), active: true },
+        { label: this.t('marketTenShakes'), icon: '↯', onClick: () => this.buyMarketShakes(10, 600), active: true }
+      ]
+    );
+
+    this.renderMarketSection(
+      list,
+      this.t('comingSoon'),
+      [
+        { label: this.t('freeEnergyComingSoon'), icon: '✦', onClick: () => this.showWarning(this.t('comingSoon')), active: false },
+        { label: this.t('marketBoosters'), icon: '✦', onClick: () => this.showWarning(this.t('comingSoon')), active: false },
+        { label: this.t('futureDiamondPacks'), icon: '✦', onClick: () => this.showWarning(this.t('comingSoon')), active: false }
+      ]
+    );
+  }
+
+  private renderMarketSection(
+    list: HTMLElement,
+    title: string,
+    items: { label: string; icon: string; onClick: () => void; active: boolean }[]
+  ): void {
+    const section = document.createElement('section');
+    section.className = 'market-section';
+    section.innerHTML = `<h3>${title}</h3>`;
 
     for (const item of items) {
       const card = document.createElement('article');
       card.className = 'market-card';
       card.innerHTML = `
-        <span class="market-icon" aria-hidden="true">${item.active ? '⚡' : '✦'}</span>
+        <span class="market-icon" aria-hidden="true">${item.icon}</span>
         <strong>${item.label}</strong>
         <button type="button">${item.active ? this.t('marketAction') : this.t('comingSoon')}</button>
       `;
-      const button = card.querySelector('button');
-      button?.addEventListener('click', () => {
-        if (item.active) {
-          this.buyMarketShakes(item.shakes, item.cost);
-        } else {
-          this.showWarning(this.t('marketSafePlaceholder'));
-        }
-      });
-      list.appendChild(card);
+      card.querySelector('button')?.addEventListener('click', item.onClick);
+      section.appendChild(card);
     }
+
+    list.appendChild(section);
   }
 
   private renderNav(): void {
@@ -1044,7 +1078,29 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    this.showWarning(this.t('marketSafePlaceholder'));
+    if (this.state.diamonds < cost) {
+      this.showWarning(this.t('notEnoughDiamonds'));
+      return;
+    }
+
+    this.state.diamonds -= cost;
+    this.state.shakesRemaining += shakes;
+    this.syncSaveCurrency();
+    this.showWarning(`${this.t('gained')}: +${shakes} ${this.t('shake')}`);
+    this.renderOverlay();
+  }
+
+  private buyMarketEnergy(energy: number, cost: number): void {
+    if (this.state.diamonds < cost) {
+      this.showWarning(this.t('notEnoughDiamonds'));
+      return;
+    }
+
+    this.state.diamonds -= cost;
+    this.state.energy += energy;
+    this.syncSaveCurrency();
+    this.showWarning(`+${energy} ${this.t('energy')} ${this.t('energyAdded')}`);
+    this.renderOverlay();
   }
 
   private highlightGroup(group: BoardPosition[]): void {
@@ -1299,9 +1355,12 @@ export class MainScene extends Phaser.Scene {
 
   private showWarning(label: string): void {
     const warning = this.el('warning-text');
+    const marketFeedback = this.el('market-feedback');
     warning.textContent = label;
+    marketFeedback.textContent = label;
     window.setTimeout(() => {
       if (warning.textContent === label) warning.textContent = '';
+      if (marketFeedback.textContent === label) marketFeedback.textContent = '';
     }, 1400);
   }
 
