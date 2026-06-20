@@ -127,6 +127,7 @@ export class MainScene extends Phaser.Scene {
     });
 
     this.el('collect-all-button').addEventListener('click', () => this.collectIslandRewards());
+    this.el('multiplier-rewards-button').addEventListener('click', () => this.renderMultiplierRewardsModal());
     this.bindIslandMapPan();
 
     for (const key of ['play', 'island', 'market'] as ScreenKey[]) {
@@ -161,6 +162,8 @@ export class MainScene extends Phaser.Scene {
     this.setText('badge-blast', this.t('helperBadgeBlast'));
     this.setText('badge-special', this.t('specialCandyRule'));
     this.setText('multiplier-rewards-title', this.t('multiplierRewards'));
+    this.setText('multiplier-next-reward', this.t('nextMultiplierReward'));
+    this.setText('multiplier-rewards-button', this.t('viewRewards'));
     this.setText('shake-button', this.t('shakeButton'));
     this.setText('island-title', this.t('islandTitle'));
     this.setText('collect-all-button', this.t('collectAll'));
@@ -186,19 +189,31 @@ export class MainScene extends Phaser.Scene {
   }
 
   private renderMultiplierRewards(): void {
-    const list = this.el('multiplier-rewards');
-    list.innerHTML = '';
-    [
+    // Kept as a render hook; the full reward list now lives in a modal to preserve gameplay space.
+  }
+
+  private getMultiplierRewardRows(): string[][] {
+    return [
       ['x128', '+10', '+10', ''],
       ['x256', '+20', '+20', ''],
       ['x512', '+50', '+50', ''],
       ['x1000', '+100', '+100', ` + ${this.t('superChest')}`]
-    ].forEach(([label, energy, diamonds, extra]) => {
-      const item = document.createElement('article');
-      item.className = 'reward-chip';
-      item.textContent = `${label}: ${energy} ${this.t('energy')} ${diamonds} ${this.t('diamonds')}${extra}`;
-      list.appendChild(item);
-    });
+    ];
+  }
+
+  private renderMultiplierRewardsModal(): void {
+    const rewards = this.getMultiplierRewardRows()
+      .map(([label, energy, diamonds, extra]) => `<article class="reward-chip">${label}: ${energy} ${this.t('energy')} ${diamonds} ${this.t('diamonds')}${extra}</article>`)
+      .join('');
+
+    this.openModal(`
+      <div class="modal-card reward-modal-card">
+        <h2>${this.t('multiplierRewards')}</h2>
+        <div class="reward-list reward-list-modal">${rewards}</div>
+        <button type="button" data-action="close">${this.t('close')}</button>
+      </div>
+    `);
+    this.modalButton('close', () => this.closeModal());
   }
 
   private renderIsland(): void {

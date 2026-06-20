@@ -29,6 +29,8 @@ const tr: typeof en = {
   helperBadgeBlast: '3+ sıra için kaydır',
   specialCandyRule: '4 özel şeker = +5 çalkalama',
   multiplierRewards: 'Çarpan Ödülleri',
+  viewRewards: 'Ödülleri Gör',
+  nextMultiplierReward: 'Sonraki: x128',
   futureRemoveAds: 'Konfor seçeneği sonra',
   futureDiamondPacks: 'Elmas paketleri yakında',
   noEnergy: 'Enerji yok',
