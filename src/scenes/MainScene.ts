@@ -25,11 +25,11 @@ import {
   type ScreenKey
 } from '../types';
 
-const GAME_WIDTH = 540;
-const BOARD_SIZE = 430;
+const GAME_SIZE = 380;
+const BOARD_SIZE = 360;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
-const BOARD_X = (GAME_WIDTH - BOARD_SIZE) / 2;
-const BOARD_Y = 254;
+const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
+const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
 const TODAY = () => getLocalDateKey();
 
 const MULTIPLIER_TINTS = [
@@ -53,7 +53,6 @@ export class MainScene extends Phaser.Scene {
   private t!: (key: TranslationKey) => string;
   private screen: ScreenKey = 'play';
   private boardContainer?: Phaser.GameObjects.Container;
-  private shakeButton?: Phaser.GameObjects.Container;
   private rewardSummary?: RewardSummary;
   private cellContainers = new Map<string, Phaser.GameObjects.Container>();
   private isShaking = false;
@@ -67,174 +66,186 @@ export class MainScene extends Phaser.Scene {
     this.locale = this.save.language;
     this.t = createTranslator(this.locale);
     this.state = createGameState(this.save);
-    this.drawScreen();
+    this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
+    this.bindOverlay();
+    this.drawBoard();
+    this.renderOverlay();
 
     if (this.isDailyRewardAvailable()) {
-      this.drawDailyRewardModal();
+      this.renderDailyRewardModal();
     }
   }
 
-  private drawScreen(): void {
-    this.children.removeAll();
-    this.cellContainers.clear();
-    this.drawBackground();
-    this.drawTopBar();
+  private bindOverlay(): void {
+    this.el('shake-button').addEventListener('click', () => {
+      this.bumpShakeButton();
+      this.handleShake();
+    });
 
-    if (this.screen === 'play') {
-      this.drawPlayScreen();
-    } else if (this.screen === 'island') {
-      this.drawIslandScreen();
-    } else {
-      this.drawMarketScreen();
-    }
-
-    this.drawBottomNav();
-
-    if (this.state.status === 'won') {
-      this.drawWinPanel();
-    } else if (this.state.status === 'failed') {
-      this.drawContinuePanel();
-    }
-  }
-
-  private drawBackground(): void {
-    this.add.rectangle(270, 480, 540, 960, 0x86eaff);
-    this.add.rectangle(270, 390, 540, 540, 0xffb6dc, 0.16);
-    this.add.rectangle(270, 806, 540, 250, 0x55d4d9, 0.42);
-    this.add.circle(68, 106, 64, 0xffffff, 0.22);
-    this.add.circle(462, 132, 86, 0xffffff, 0.18);
-    this.add.circle(88, 742, 118, 0xfff1a8, 0.22);
-    this.add.circle(448, 730, 132, 0xff7eb7, 0.16);
-    this.add.circle(42, 832, 62, 0xff5aa6, 0.28);
-    this.add.circle(498, 842, 78, 0xffd33f, 0.22);
-    this.add.rectangle(270, 904, 540, 112, 0x1e57c4, 0.46);
-    this.drawCandyDecoration(36, 704, 0xff5aa6, 0);
-    this.drawCandyDecoration(500, 700, 0xffd33f, 0.45);
-    this.drawLollipop(54, 804, 0xff5aa6);
-    this.drawLollipop(494, 792, 0x7b2bbf);
-  }
-
-  private drawCandyDecoration(x: number, y: number, color: number, rotation: number): void {
-    const g = this.add.graphics();
-    g.x = x;
-    g.y = y;
-    g.rotation = rotation;
-    g.fillStyle(color, 0.55);
-    g.fillEllipse(0, 0, 44, 24);
-    g.fillStyle(0xffffff, 0.26);
-    g.fillEllipse(-8, -5, 16, 6);
-    g.lineStyle(2, 0xffffff, 0.42);
-    g.strokeEllipse(0, 0, 44, 24);
-  }
-
-  private drawLollipop(x: number, y: number, color: number): void {
-    const g = this.add.graphics();
-    g.lineStyle(5, 0xffffff, 0.68);
-    g.beginPath();
-    g.moveTo(x, y + 20);
-    g.lineTo(x - 8, y + 66);
-    g.strokePath();
-    g.fillStyle(color, 0.72);
-    g.fillCircle(x, y, 22);
-    g.lineStyle(4, 0xffffff, 0.72);
-    g.strokeCircle(x, y, 22);
-    g.lineStyle(3, 0xffffff, 0.38);
-    g.beginPath();
-    g.arc(x, y, 12, 0.4, 4.9);
-    g.strokePath();
-  }
-
-  private drawTopBar(): void {
-    this.add.text(273, 44, this.t('title'), {
-      fontFamily: 'Arial',
-      fontSize: '41px',
-      color: '#3d2362',
-      fontStyle: 'bold',
-      stroke: '#ffffff',
-      strokeThickness: 7,
-      align: 'center'
-    }).setOrigin(0.5);
-    this.add
-      .text(270, 39, this.t('title'), {
-        fontFamily: 'Arial',
-        fontSize: '41px',
-        color: '#ff5aa6',
-        fontStyle: 'bold',
-        stroke: '#7b2bbf',
-        strokeThickness: 3,
-        align: 'center'
-      })
-      .setOrigin(0.5);
-
-    this.addButton(462, 24, 116, 28, `${this.t('language')}: ${this.locale.toUpperCase()}`, () => {
+    this.el('language-button').addEventListener('click', () => {
       const index = SUPPORTED_LOCALES.indexOf(this.locale);
       this.locale = SUPPORTED_LOCALES[(index + 1) % SUPPORTED_LOCALES.length];
       this.save = updateLanguage(this.save, this.locale);
       this.t = createTranslator(this.locale);
-      this.drawScreen();
-    }, 0xffffff, 0x7146bd, 12);
+      this.renderOverlay();
+    });
+
+    this.el('collect-all-button').addEventListener('click', () => this.collectIslandRewards());
+
+    for (const key of ['play', 'island', 'market'] as ScreenKey[]) {
+      this.el(`nav-${key}`).addEventListener('click', () => {
+        this.screen = key;
+        this.renderOverlay();
+      });
+    }
   }
 
-  private drawPlayScreen(): void {
-    this.drawCounters();
-    this.drawGoalPanel();
-    this.drawBoard();
-    this.drawHelperBadges();
-    this.drawMultiplierRewardsPanel();
-    const helperKey = hasAnyValidGroup(this.state.board) ? 'blastHelper' : 'shakeHelper';
+  private renderOverlay(): void {
+    this.setText('game-title', this.t('title'));
+    this.setText('language-button', `${this.t('language')}: ${this.locale.toUpperCase()}`);
+    this.setText('level-label', this.t('level'));
+    this.setText('level-value', String(this.state.level));
+    this.setText('goal-label', this.t('goal'));
+    this.setText('goal-value', this.state.definition.targetScore.toLocaleString());
+    this.setText('energy-label', this.t('energy'));
+    this.setText('energy-value', String(this.state.energy));
+    this.setText('score-label', this.t('score'));
+    this.setText('score-value', this.state.score.toLocaleString());
+    this.setText('diamonds-label', this.t('diamonds'));
+    this.setText('diamonds-value', String(this.state.diamonds));
+    this.setText('shake-label', this.t('shake'));
+    this.setText('shake-value', `${this.state.shakesRemaining}/${MAX_SHAKES}`);
+    this.setText('goal-panel-title', this.t('goal'));
+    this.setText('helper-text', this.t(hasAnyValidGroup(this.state.board) ? 'blastHelper' : 'shakeHelper'));
+    this.setText('badge-blast', this.t('helperBadgeBlast'));
+    this.setText('badge-special', this.t('specialCandyRule'));
+    this.setText('multiplier-rewards-title', this.t('multiplierRewards'));
+    this.setText('shake-button', this.t('shakeButton'));
+    this.setText('island-title', this.t('islandTitle'));
+    this.setText('collect-all-button', this.t('collectAll'));
+    this.setText('market-title', this.t('market'));
 
-    this.add
-      .text(270, 785, this.t(helperKey), {
-        fontFamily: 'Arial',
-        fontSize: '20px',
-        color: '#ffffff',
-        fontStyle: 'bold',
-        stroke: '#3d2362',
-        strokeThickness: 4
-      })
-      .setOrigin(0.5);
-
-    this.shakeButton = this.addButton(270, 838, 356, 68, this.t('shakeButton'), () => this.handleShake(), 0x62d728, 0xffffff, 34);
+    this.renderGoals();
+    this.renderMultiplierRewards();
+    this.renderIsland();
+    this.renderMarket();
+    this.renderNav();
+    this.renderModalForStatus();
   }
 
-  private drawCounters(): void {
-    this.drawStatCard(74, 88, 118, 42, this.t('level'), String(this.state.level), 0xffffff);
-    this.drawStatCard(204, 88, 132, 42, this.t('goal'), this.state.definition.targetScore.toLocaleString(), 0xffffff);
-    this.drawStatCard(74, 137, 118, 42, this.t('score'), this.state.score.toLocaleString(), 0xffffff);
-    this.drawStatCard(396, 88, 124, 42, this.t('energy'), String(this.state.energy), 0xffffff);
-    this.drawStatCard(396, 137, 124, 42, this.t('diamonds'), String(this.state.diamonds), 0xffffff);
-    this.drawStatCard(270, 137, 116, 42, this.t('shake'), `${this.state.shakesRemaining}/${MAX_SHAKES}`, 0xffffff);
+  private renderGoals(): void {
+    const list = this.el('goal-list');
+    list.innerHTML = '';
+    for (const goal of this.state.definition.goals) {
+      const item = document.createElement('article');
+      item.className = `goal-chip${this.isGoalComplete(goal) ? ' is-complete' : ''}`;
+      item.textContent = this.formatGoal(goal);
+      list.appendChild(item);
+    }
   }
 
-  private drawGoalPanel(): void {
-    this.drawGlossyPanel(28, 168, 484, 76, 0xffd7e8, 0xff5aa6);
-    this.add.text(70, 187, this.t('goal'), {
-      fontFamily: 'Arial',
-      fontSize: '17px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      stroke: '#7b2bbf',
-      strokeThickness: 3
-    }).setOrigin(0.5);
-
-    this.state.definition.goals.forEach((goal, index) => {
-      const goalX = 146 + index * 128;
-      this.drawGlossyPanel(goalX - 56, 196, 112, 34, 0xffffff, this.isGoalComplete(goal) ? 0x36c875 : 0xd9b7ff);
-      this.add.text(goalX, 213, this.formatGoal(goal), {
-        fontFamily: 'Arial',
-        fontSize: '10px',
-        color: this.isGoalComplete(goal) ? '#168e67' : '#3d2362',
-        fontStyle: 'bold',
-        align: 'center',
-        wordWrap: { width: 102 }
-      }).setOrigin(0.5);
+  private renderMultiplierRewards(): void {
+    const list = this.el('multiplier-rewards');
+    list.innerHTML = '';
+    [
+      ['x128', '+10', '+10', ''],
+      ['x256', '+20', '+20', ''],
+      ['x512', '+50', '+50', ''],
+      ['x1000', '+100', '+100', ` + ${this.t('superChest')}`]
+    ].forEach(([label, energy, diamonds, extra]) => {
+      const item = document.createElement('article');
+      item.className = 'reward-chip';
+      item.textContent = `${label}: ${energy} ${this.t('energy')} ${diamonds} ${this.t('diamonds')}${extra}`;
+      list.appendChild(item);
     });
   }
 
+  private renderIsland(): void {
+    const list = this.el('building-list');
+    list.innerHTML = '';
+    for (const building of BUILDINGS) {
+      const completed = this.save.completedBuildingIds.includes(building.id);
+      const ready = completed && this.isBuildingReady(building.id);
+      const card = document.createElement('article');
+      card.className = 'building-card';
+      const state = ready ? this.t('ready') : completed ? this.t('completed') : this.t('locked');
+      const action = ready
+        ? `<button class="building-action" data-claim="${building.id}">${this.t('claim')}</button>`
+        : completed
+          ? `<p>${this.t('claimedToday')}</p>`
+          : `<button class="building-action" data-build="${building.id}">${this.t('build')} ${this.getBuildCost(building.id)}</button>`;
+
+      card.innerHTML = `
+        <span class="building-state${ready ? ' ready' : ''}">${state}</span>
+        <div class="building-icon"></div>
+        <h3>${this.t(building.nameKey as TranslationKey)}</h3>
+        <p>${this.t('daily')}: +${building.energy} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}</p>
+        ${action}
+      `;
+      list.appendChild(card);
+    }
+
+    list.querySelectorAll<HTMLButtonElement>('[data-claim]').forEach((button) => {
+      button.addEventListener('click', () => this.claimBuildingReward(Number(button.dataset.claim)));
+    });
+    list.querySelectorAll<HTMLButtonElement>('[data-build]').forEach((button) => {
+      button.addEventListener('click', () => this.buildBuilding(Number(button.dataset.build)));
+    });
+  }
+
+  private renderMarket(): void {
+    const list = this.el('market-list');
+    const items = [
+      { label: this.t('marketOneShake'), shakes: 1, cost: 100, active: true },
+      { label: this.t('marketFiveShakes'), shakes: 5, cost: 300, active: true },
+      { label: this.t('marketTenShakes'), shakes: 10, cost: 600, active: true },
+      { label: this.t('marketBoosters'), shakes: 0, cost: 0, active: false },
+      { label: this.t('futureDiamondPacks'), shakes: 0, cost: 0, active: false }
+    ];
+    list.innerHTML = '';
+
+    for (const item of items) {
+      const card = document.createElement('article');
+      card.className = 'market-card';
+      card.innerHTML = `<strong>${item.label}</strong><button type="button">${item.active ? this.t('buyOneShake').replace('+1 ', '') : this.t('claimLater')}</button>`;
+      const button = card.querySelector('button');
+      button?.addEventListener('click', () => {
+        if (item.active) {
+          this.buyMarketShakes(item.shakes, item.cost);
+        } else {
+          this.showWarning(this.t('marketSafePlaceholder'));
+        }
+      });
+      list.appendChild(card);
+    }
+  }
+
+  private renderNav(): void {
+    for (const key of ['play', 'island', 'market'] as ScreenKey[]) {
+      const tab = this.el(`nav-${key}`);
+      tab.classList.toggle('is-active', this.screen === key);
+      const label = tab.querySelector('strong');
+      if (label) label.textContent = this.t(key);
+      this.el(`${key}-view`).classList.toggle('is-active', this.screen === key);
+    }
+  }
+
+  private renderModalForStatus(): void {
+    if (this.state.status === 'won') {
+      this.renderWinModal();
+    } else if (this.state.status === 'failed') {
+      this.renderFailModal();
+    } else {
+      this.closeModal();
+    }
+  }
+
   private drawBoard(): void {
+    this.children.removeAll();
+    this.cellContainers.clear();
     this.boardContainer = this.add.container(BOARD_X, BOARD_Y);
-    this.boardContainer.add(this.add.rectangle(BOARD_SIZE / 2, BOARD_SIZE / 2 + 4, BOARD_SIZE + 20, BOARD_SIZE + 20, 0x3d2362, 0.18));
-    this.boardContainer.add(this.add.rectangle(BOARD_SIZE / 2, BOARD_SIZE / 2, BOARD_SIZE + 18, BOARD_SIZE + 18, 0xffffff, 0.28).setStrokeStyle(3, 0xffffff, 0.58));
+    this.boardContainer.add(this.add.rectangle(BOARD_SIZE / 2, BOARD_SIZE / 2 + 3, BOARD_SIZE + 12, BOARD_SIZE + 12, 0x3d2362, 0.18));
+    this.boardContainer.add(this.add.rectangle(BOARD_SIZE / 2, BOARD_SIZE / 2, BOARD_SIZE + 10, BOARD_SIZE + 10, 0xffffff, 0.28).setStrokeStyle(3, 0xffffff, 0.58));
 
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
@@ -242,12 +253,10 @@ export class MainScene extends Phaser.Scene {
         const x = col * CELL_SIZE + CELL_SIZE / 2;
         const y = row * CELL_SIZE + CELL_SIZE / 2;
         const container = this.add.container(x, y);
-        const multiplierLabel = getMultiplierLabel(cell.multiplierIndex);
-
         this.drawMultiplierFloor(container, cell.multiplierIndex);
-        container.add(this.add.text(0, 18, multiplierLabel, {
+        container.add(this.add.text(0, 16, getMultiplierLabel(cell.multiplierIndex), {
           fontFamily: 'Arial',
-          fontSize: cell.multiplierIndex >= 10 ? '13px' : '14px',
+          fontSize: cell.multiplierIndex >= 10 ? '12px' : '13px',
           color: cell.multiplierIndex >= 10 ? '#7a3d00' : '#ffffff',
           fontStyle: 'bold',
           stroke: cell.multiplierIndex >= 10 ? '#fff1a6' : '#4d2382',
@@ -257,7 +266,6 @@ export class MainScene extends Phaser.Scene {
         container.setSize(CELL_SIZE, CELL_SIZE);
         container.setInteractive(new Phaser.Geom.Rectangle(-CELL_SIZE / 2, -CELL_SIZE / 2, CELL_SIZE, CELL_SIZE), Phaser.Geom.Rectangle.Contains);
         container.on('pointerdown', () => this.handleCellTap({ row, col }));
-
         this.boardContainer.add(container);
         this.cellContainers.set(this.positionKey({ row, col }), container);
       }
@@ -267,19 +275,15 @@ export class MainScene extends Phaser.Scene {
   private drawMultiplierFloor(container: Phaser.GameObjects.Container, multiplierIndex: number): void {
     const color = MULTIPLIER_TINTS[multiplierIndex] ?? 0xdff8ff;
     const g = this.add.graphics();
-    const size = CELL_SIZE - 6;
+    const size = CELL_SIZE - 5;
     const x = -size / 2;
     const y = -size / 2;
-    g.fillStyle(color, multiplierIndex > 0 ? 0.52 : 0.28);
+    g.fillStyle(color, multiplierIndex > 0 ? 0.54 : 0.3);
     g.fillRoundedRect(x, y, size, size, 7);
-    g.lineStyle(multiplierIndex >= 10 ? 3 : 2, multiplierIndex >= 10 ? 0xfff4a3 : 0xffffff, multiplierIndex > 0 ? 0.72 : 0.42);
+    g.lineStyle(multiplierIndex >= 10 ? 3 : 2, multiplierIndex >= 10 ? 0xfff4a3 : 0xffffff, multiplierIndex > 0 ? 0.76 : 0.44);
     g.strokeRoundedRect(x, y, size, size, 7);
     g.fillStyle(0xffffff, 0.22);
-    g.fillRoundedRect(x + 4, y + 4, size - 8, 12, 5);
-    if (multiplierIndex >= 10) {
-      g.lineStyle(2, 0xffd33f, 0.8);
-      g.strokeRoundedRect(x + 4, y + 4, size - 8, size - 8, 5);
-    }
+    g.fillRoundedRect(x + 4, y + 4, size - 8, 11, 5);
     container.add(g);
   }
 
@@ -290,59 +294,57 @@ export class MainScene extends Phaser.Scene {
 
     if (candyType === 'greenGummy') {
       g.fillStyle(0x23bd4f, 1);
-      g.fillCircle(-10, y - 15, 6);
-      g.fillCircle(10, y - 15, 6);
-      g.fillRoundedRect(-16, y - 13, 32, 35, 12);
+      g.fillCircle(-9, y - 14, 5);
+      g.fillCircle(9, y - 14, 5);
+      g.fillRoundedRect(-14, y - 12, 28, 31, 11);
       g.fillStyle(0x9cff9e, 0.55);
-      g.fillCircle(-6, y - 2, 4);
-      g.fillCircle(6, y - 2, 4);
+      g.fillCircle(-5, y - 2, 3);
+      g.fillCircle(5, y - 2, 3);
       g.lineStyle(3, 0xd6ffd8, 0.8);
-      g.strokeRoundedRect(-16, y - 13, 32, 35, 12);
+      g.strokeRoundedRect(-14, y - 12, 28, 31, 11);
     } else if (candyType === 'purpleJelly') {
       g.fillStyle(0x9f33d8, 1);
-      g.fillRoundedRect(-18, y - 15, 36, 31, 13);
+      g.fillRoundedRect(-16, y - 14, 32, 29, 13);
       g.fillStyle(0xf2c4ff, 0.38);
-      g.fillEllipse(-6, y - 6, 13, 18);
+      g.fillEllipse(-5, y - 6, 12, 17);
       g.lineStyle(3, 0xeadbff, 0.85);
-      g.strokeRoundedRect(-18, y - 15, 36, 31, 13);
+      g.strokeRoundedRect(-16, y - 14, 32, 29, 13);
     } else if (candyType === 'redHeart') {
       g.fillStyle(0xff385f, 1);
-      g.fillCircle(-8, y - 7, 11);
-      g.fillCircle(8, y - 7, 11);
-      g.fillTriangle(-19, y - 2, 19, y - 2, 0, y + 24);
+      g.fillCircle(-7, y - 7, 10);
+      g.fillCircle(7, y - 7, 10);
+      g.fillTriangle(-17, y - 2, 17, y - 2, 0, y + 21);
       g.lineStyle(3, 0xffd3dc, 0.85);
-      g.strokeCircle(-8, y - 7, 11);
-      g.strokeCircle(8, y - 7, 11);
+      g.strokeCircle(-7, y - 7, 10);
+      g.strokeCircle(7, y - 7, 10);
     } else if (candyType === 'yellowStar' || candyType === 'energyStar') {
       const fill = candyType === 'energyStar' ? 0x86fbff : 0xffd82e;
       const stroke = candyType === 'energyStar' ? 0xffffff : 0xfff5b8;
       g.fillStyle(fill, 1);
       g.lineStyle(3, stroke, 0.9);
-      const points = this.getStarPoints(0, y, 24, 11, 5);
+      const points = this.getStarPoints(0, y, 21, 10, 5);
       g.fillPoints(points, true);
       g.strokePoints(points, true);
-      g.fillStyle(0xffffff, 0.42);
-      g.fillCircle(-6, y - 5, 4);
     } else if (candyType === 'blueRound') {
       g.fillStyle(0x198eff, 1);
-      g.fillCircle(0, y, 22);
+      g.fillCircle(0, y, 20);
       g.fillStyle(0xbfe4ff, 0.56);
-      g.fillCircle(-8, y - 9, 7);
+      g.fillCircle(-7, y - 8, 6);
       g.lineStyle(4, 0xd5e8ff, 0.85);
-      g.strokeCircle(0, y, 22);
+      g.strokeCircle(0, y, 20);
     } else if (candyType === 'orangeBean') {
       g.fillStyle(0xff912e, 1);
-      g.fillEllipse(0, y, 42, 25);
+      g.fillEllipse(0, y, 38, 23);
       g.fillStyle(0xffe0b5, 0.45);
-      g.fillEllipse(-8, y - 5, 16, 7);
+      g.fillEllipse(-7, y - 5, 14, 6);
       g.lineStyle(3, 0xffe3c4, 0.85);
-      g.strokeEllipse(0, y, 42, 25);
+      g.strokeEllipse(0, y, 38, 23);
       g.rotation = -0.42;
     } else {
       g.fillStyle(candy.color, 1);
-      g.fillCircle(0, y, 21);
+      g.fillCircle(0, y, 19);
       g.lineStyle(4, candy.accent, 0.85);
-      g.strokeCircle(0, y, 21);
+      g.strokeCircle(0, y, 19);
     }
 
     container.add(g);
@@ -358,94 +360,14 @@ export class MainScene extends Phaser.Scene {
     return result;
   }
 
-  private drawHelperBadges(): void {
-    this.drawGlossyPanel(30, 692, 228, 40, 0x13a9e8, 0xffffff);
-    this.add.text(144, 712, this.t('helperBadgeBlast'), {
-      fontFamily: 'Arial',
-      fontSize: '14px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      align: 'center',
-      wordWrap: { width: 196 }
-    }).setOrigin(0.5);
-
-    this.drawGlossyPanel(282, 692, 228, 40, 0x8f57df, 0xffffff);
-    this.add.text(396, 712, this.t('specialCandyRule'), {
-      fontFamily: 'Arial',
-      fontSize: '13px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      align: 'center',
-      wordWrap: { width: 196 }
-    }).setOrigin(0.5);
-  }
-
-  private drawMultiplierRewardsPanel(): void {
-    this.drawGlossyPanel(44, 736, 452, 42, 0xfff4b8, 0x8f57df);
-    this.add.text(118, 750, this.t('multiplierRewards'), {
-      fontFamily: 'Arial',
-      fontSize: '12px',
-      color: '#643095',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    [
-      ['x128', '+10'],
-      ['x256', '+20'],
-      ['x512', '+50'],
-      ['x1000', '+100']
-    ].forEach(([label, reward], index) => {
-      const x = 206 + index * 74;
-      this.add.text(x, 746, label, {
-        fontFamily: 'Arial',
-        fontSize: '12px',
-        color: label === 'x1000' ? '#b56b00' : '#168e67',
-        fontStyle: 'bold'
-      }).setOrigin(0.5);
-      this.add.text(x, 761, `${reward} ${this.t('energy')} +${reward.replace('+', '')} ${this.t('diamonds')}`, {
-        fontFamily: 'Arial',
-        fontSize: '9px',
-        color: '#3d2362',
-        fontStyle: 'bold'
-      }).setOrigin(0.5);
-    });
-  }
-
-  private drawStatCard(x: number, y: number, width: number, height: number, label: string, value: string, fill: number): void {
-    this.drawGlossyPanel(x - width / 2, y - height / 2, width, height, fill, 0xd9b7ff);
-    this.add.text(x, y - height * 0.18, label.toUpperCase(), {
-      fontFamily: 'Arial',
-      fontSize: '11px',
-      color: '#7b2bbf',
-      fontStyle: 'bold',
-      align: 'center'
-    }).setOrigin(0.5);
-    this.add.text(x, y + height * 0.2, value, {
-      fontFamily: 'Arial',
-      fontSize: height > 50 ? '20px' : '18px',
-      color: '#3d2362',
-      fontStyle: 'bold',
-      align: 'center',
-      wordWrap: { width: width - 12 }
-    }).setOrigin(0.5);
-  }
-
-  private drawGlossyPanel(x: number, y: number, width: number, height: number, fill: number, stroke: number): void {
-    this.add.rectangle(x + width / 2, y + height / 2 + 4, width, height, 0x3d2362, 0.16);
-    this.add.rectangle(x + width / 2, y + height / 2, width, height, fill, 0.86).setStrokeStyle(3, stroke, 0.7);
-    this.add.rectangle(x + width / 2, y + 10, width - 14, 12, 0xffffff, 0.22);
-  }
-
   private handleShake(): void {
-    if (this.isShaking || this.state.status !== 'playing') {
-      return;
-    }
+    if (this.isShaking || this.state.status !== 'playing') return;
 
     const availableGroups = findValidGroups(this.state.board, 3);
     if (availableGroups.length > 0) {
-      this.showFloatingText(270, 724, this.t('shakeBlocked'), '#ffffff');
+      this.showWarning(this.t('shakeBlocked'));
       this.highlightAvailableGroups(availableGroups);
-      this.showBlockedButtonFeedback();
+      this.blockShakeButton();
       return;
     }
 
@@ -455,7 +377,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (this.state.energy < SHAKE_COST_ENERGY) {
-      this.showFloatingText(270, 724, this.t('noEnergy'), '#7b2bbf');
+      this.showWarning(this.t('noEnergy'));
       return;
     }
 
@@ -463,43 +385,39 @@ export class MainScene extends Phaser.Scene {
     this.state.shakesRemaining -= 1;
     this.state.energy -= SHAKE_COST_ENERGY;
     this.syncSaveCurrency();
+    this.renderOverlay();
 
-    if (this.boardContainer) {
-      this.tweens.add({
-        targets: this.boardContainer,
-        x: { from: BOARD_X - 10, to: BOARD_X + 10 },
-        y: { from: BOARD_Y - 5, to: BOARD_Y + 5 },
-        duration: 55,
-        yoyo: true,
-        repeat: 5,
-        onComplete: () => this.finishShake()
-      });
-    } else {
-      this.finishShake();
-    }
+    this.tweens.add({
+      targets: this.boardContainer,
+      x: { from: BOARD_X - 10, to: BOARD_X + 10 },
+      y: { from: BOARD_Y - 5, to: BOARD_Y + 5 },
+      duration: 55,
+      yoyo: true,
+      repeat: 5,
+      onComplete: () => this.finishShake()
+    });
   }
 
   private finishShake(): void {
     this.state.board = regenerateCandies(this.state.board);
     this.isShaking = false;
+    this.drawBoard();
 
     if (this.state.shakesRemaining <= 0 && !areGoalsComplete(this.state)) {
       this.triggerLevelFail();
       return;
     }
 
-    this.drawScreen();
+    this.renderOverlay();
   }
 
   private handleCellTap(position: BoardPosition): void {
-    if (this.state.status !== 'playing') {
-      return;
-    }
+    if (this.state.status !== 'playing') return;
 
     const group = findConnectedGroup(this.state.board, position);
     if (group.length < 3) {
       this.showInvalidFeedback(position);
-      this.showFloatingText(270, 710, this.t('invalidGroup'), '#ffffff');
+      this.showWarning(this.t('invalidGroup'));
       return;
     }
 
@@ -514,28 +432,25 @@ export class MainScene extends Phaser.Scene {
       this.save.stats.totalBlasts += 1;
       this.save.stats.highestMultiplierEver = Math.max(this.save.stats.highestMultiplierEver, this.getHighestMultiplierValue());
       saveData(this.save);
+      this.showScorePopup(`+${result.scoreDelta.toLocaleString()}`);
 
-      this.showFloatingText(270, 258, `+${result.scoreDelta.toLocaleString()}`, '#ffffff');
       this.time.delayedCall(180, () => {
+        this.drawBoard();
         if (areGoalsComplete(this.state)) {
           this.triggerLevelWin();
         } else {
-          this.drawScreen();
+          this.renderOverlay();
         }
       });
     });
   }
 
   private triggerLevelWin(): void {
-    if (this.state.status === 'won') {
-      return;
-    }
-
+    if (this.state.status === 'won') return;
     this.state.status = 'won';
     this.rewardSummary = calculateRewardSummary(this.state);
     this.state.energy += this.rewardSummary.totalEnergy;
     this.state.diamonds += this.rewardSummary.totalDiamonds;
-
     this.save = {
       ...this.save,
       currentLevel: this.state.level + 1,
@@ -550,17 +465,17 @@ export class MainScene extends Phaser.Scene {
       }
     };
     saveData(this.save);
-    this.drawScreen();
+    this.renderOverlay();
   }
 
   private triggerLevelFail(): void {
     this.state.status = 'failed';
-    this.drawScreen();
+    this.renderOverlay();
   }
 
   private continueLevel(shakes: number, diamondCost = 0): void {
     if (diamondCost > 0 && this.state.diamonds < diamondCost) {
-      this.showFloatingText(270, 620, this.t('notEnoughDiamonds'), '#ffffff');
+      this.showWarning(this.t('notEnoughDiamonds'));
       return;
     }
 
@@ -569,14 +484,17 @@ export class MainScene extends Phaser.Scene {
     this.state.continued = true;
     this.state.status = 'playing';
     this.syncSaveCurrency();
-    this.drawScreen();
+    this.closeModal();
+    this.renderOverlay();
   }
 
   private restartLevel(): void {
     this.state = createGameState(this.save);
     this.rewardSummary = undefined;
     this.screen = 'play';
-    this.drawScreen();
+    this.closeModal();
+    this.drawBoard();
+    this.renderOverlay();
   }
 
   private startNextLevel(): void {
@@ -587,208 +505,72 @@ export class MainScene extends Phaser.Scene {
     this.state = createGameState(this.save);
     this.rewardSummary = undefined;
     this.screen = 'play';
-    this.drawScreen();
+    this.closeModal();
+    this.drawBoard();
+    this.renderOverlay();
   }
 
-  private drawWinPanel(): void {
+  private renderWinModal(): void {
     const reward = this.rewardSummary ?? calculateRewardSummary(this.state);
-    const lines = [
-      `${this.t('starsEarned')}: ${'★'.repeat(reward.stars)}`,
-      `${this.t('starReward')}: +${reward.starEnergy} ${this.t('energy')} +${reward.starDiamonds} ${this.t('diamonds')}`,
-      `${this.t('highestMultiplier')}: ${reward.multiplierLabel}`,
-      `${this.t('multiplierBonus')}: +${reward.multiplierEnergy} ${this.t('energy')} +${reward.multiplierDiamonds} ${this.t('diamonds')}`,
-      `${this.t('totalReward')}: +${reward.totalEnergy} ${this.t('energy')} +${reward.totalDiamonds} ${this.t('diamonds')}`
-    ];
-
-    this.drawModal(270, 470, 452, reward.superChest ? 382 : 342);
-    this.add.text(270, 318, this.t('levelWin'), {
-      fontFamily: 'Arial',
-      fontSize: '30px',
-      color: '#7b2bbf',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    lines.forEach((line, index) => {
-      this.add.text(270, 368 + index * 34, line, {
-        fontFamily: 'Arial',
-        fontSize: '18px',
-        color: '#3d2362',
-        fontStyle: 'bold',
-        align: 'center'
-      }).setOrigin(0.5);
-    });
-
-    if (reward.superChest) {
-      this.add.text(270, 548, this.t('superChestUnlocked'), {
-        fontFamily: 'Arial',
-        fontSize: '17px',
-        color: '#d74f00',
-        fontStyle: 'bold',
-        align: 'center',
-        wordWrap: { width: 390 }
-      }).setOrigin(0.5);
-    }
-
-    this.addButton(270, reward.superChest ? 620 : 586, 250, 54, this.t('nextLevel'), () => this.startNextLevel(), 0xff5aa6, 0xffffff, 22);
+    this.openModal(`
+      <div class="modal-card">
+        <h2>${this.t('levelWin')}</h2>
+        <p>${this.t('starsEarned')}: ${'*'.repeat(reward.stars)}</p>
+        <p>${this.t('starReward')}: +${reward.starEnergy} ${this.t('energy')} +${reward.starDiamonds} ${this.t('diamonds')}</p>
+        <p>${this.t('highestMultiplier')}: ${reward.multiplierLabel}</p>
+        <p>${this.t('multiplierBonus')}: +${reward.multiplierEnergy} ${this.t('energy')} +${reward.multiplierDiamonds} ${this.t('diamonds')}</p>
+        <p>${this.t('totalReward')}: +${reward.totalEnergy} ${this.t('energy')} +${reward.totalDiamonds} ${this.t('diamonds')}</p>
+        ${reward.superChest ? `<p>${this.t('superChestUnlocked')}</p>` : ''}
+        <button type="button" data-action="next">${this.t('nextLevel')}</button>
+      </div>
+    `);
+    this.modalButton('next', () => this.startNextLevel());
   }
 
-  private drawContinuePanel(): void {
-    this.drawModal(270, 482, 452, 470);
-    this.add.text(270, 284, this.t('levelFailed'), {
-      fontFamily: 'Arial',
-      fontSize: '30px',
-      color: '#7b2bbf',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    this.add.text(270, 318, this.t('continuePrompt'), {
-      fontFamily: 'Arial',
-      fontSize: '18px',
-      color: '#3d2362',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    this.state.definition.goals.forEach((goal, index) => {
-      this.add.text(270, 350 + index * 20, this.formatGoal(goal), {
-        fontFamily: 'Arial',
-        fontSize: '13px',
-        color: this.isGoalComplete(goal) ? '#168e67' : '#3d2362',
-        fontStyle: 'bold',
-        align: 'center',
-        wordWrap: { width: 360 }
-      }).setOrigin(0.5);
-    });
-
-    this.addButton(270, 416, 330, 40, this.t('rewardedContinue'), () => this.continueLevel(1), 0x19b68f, 0xffffff, 15);
-    this.addButton(270, 468, 330, 40, `${this.t('buyOneShake')} - 100 ${this.t('diamonds')}`, () => this.continueLevel(1, 100), 0xff5aa6, 0xffffff, 15);
-    this.addButton(270, 520, 330, 40, `${this.t('buyFiveShakes')} - 300 ${this.t('diamonds')}`, () => this.continueLevel(5, 300), 0xff5aa6, 0xffffff, 15);
-    this.addButton(270, 572, 330, 40, `${this.t('buyTenShakes')} - 600 ${this.t('diamonds')}`, () => this.continueLevel(10, 600), 0xff5aa6, 0xffffff, 15);
-    this.addButton(270, 628, 250, 42, `${this.t('giveUp')} / ${this.t('restartLevel')}`, () => this.restartLevel(), 0xffffff, 0x7b2bbf, 14);
+  private renderFailModal(): void {
+    const goals = this.state.definition.goals.map((goal) => `<p>${this.formatGoal(goal)}</p>`).join('');
+    this.openModal(`
+      <div class="modal-card">
+        <h2>${this.t('levelFailed')}</h2>
+        <p>${this.t('continuePrompt')}</p>
+        ${goals}
+        <button type="button" data-action="ad">${this.t('rewardedContinue')}</button>
+        <button type="button" data-action="one">${this.t('buyOneShake')} - 100 ${this.t('diamonds')}</button>
+        <button type="button" data-action="five">${this.t('buyFiveShakes')} - 300 ${this.t('diamonds')}</button>
+        <button type="button" data-action="ten">${this.t('buyTenShakes')} - 600 ${this.t('diamonds')}</button>
+        <button type="button" data-action="restart">${this.t('giveUp')} / ${this.t('restartLevel')}</button>
+      </div>
+    `);
+    this.modalButton('ad', () => this.continueLevel(1));
+    this.modalButton('one', () => this.continueLevel(1, 100));
+    this.modalButton('five', () => this.continueLevel(5, 300));
+    this.modalButton('ten', () => this.continueLevel(10, 600));
+    this.modalButton('restart', () => this.restartLevel());
   }
 
-  private drawDailyRewardModal(): void {
+  private renderDailyRewardModal(): void {
     const reward = getDailyReward(this.save.dailyLogin.streak + 1);
-    this.drawModal(270, 438, 420, 296);
-    this.add.text(270, 336, this.t('dailyRewardReady'), {
-      fontFamily: 'Arial',
-      fontSize: '26px',
-      color: '#7b2bbf',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    this.add.text(270, 388, `${this.t('day')} ${reward.day}: +${reward.energy} ${this.t('energy')} +${reward.diamonds} ${this.t('diamonds')}${reward.chest ? ` +${this.t('chest')}` : ''}`, {
-      fontFamily: 'Arial',
-      fontSize: '18px',
-      color: '#3d2362',
-      fontStyle: 'bold',
-      align: 'center',
-      wordWrap: { width: 360 }
-    }).setOrigin(0.5);
-    this.addButton(270, 484, 220, 52, this.t('claim'), () => this.claimDailyReward(), 0xff5aa6, 0xffffff, 22);
+    this.openModal(`
+      <div class="modal-card">
+        <h2>${this.t('dailyRewardReady')}</h2>
+        <p>${this.t('day')} ${reward.day}: +${reward.energy} ${this.t('energy')} +${reward.diamonds} ${this.t('diamonds')}${reward.chest ? ` +${this.t('chest')}` : ''}</p>
+        <button type="button" data-action="claim">${this.t('claim')}</button>
+      </div>
+    `);
+    this.modalButton('claim', () => this.claimDailyReward());
   }
 
   private claimDailyReward(): void {
     const reward = getDailyReward(this.save.dailyLogin.streak + 1);
-    this.save.dailyLogin = {
-      streak: this.save.dailyLogin.streak + 1,
-      lastClaimDate: TODAY()
-    };
+    this.save.dailyLogin = { streak: this.save.dailyLogin.streak + 1, lastClaimDate: TODAY() };
     this.save.energy += reward.energy;
     this.save.diamonds += reward.diamonds;
     this.save.chests += reward.chest ? 1 : 0;
     this.state.energy = this.save.energy;
     this.state.diamonds = this.save.diamonds;
     saveData(this.save);
-    this.drawScreen();
-  }
-
-  private drawIslandScreen(): void {
-    this.add.rectangle(270, 520, 500, 676, 0xffffff, 0.18).setStrokeStyle(3, 0xffffff, 0.32);
-    this.add.circle(138, 640, 118, 0xffd66b, 0.32);
-    this.add.circle(350, 650, 150, 0x70d892, 0.24);
-    this.add.text(270, 78, this.t('islandTitle'), {
-      fontFamily: 'Arial',
-      fontSize: '34px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      stroke: '#7b2bbf',
-      strokeThickness: 6
-    }).setOrigin(0.5);
-
-    this.addButton(270, 124, 260, 40, this.t('collectAll'), () => this.collectIslandRewards(), 0xffd33f, 0x7b2bbf, 17);
-
-    BUILDINGS.forEach((building, index) => {
-      const col = index % 3;
-      const row = Math.floor(index / 3);
-      const x = 94 + col * 176;
-      const y = 190 + row * 86;
-      const isCompleted = this.save.completedBuildingIds.includes(building.id);
-      const ready = isCompleted && this.isBuildingReady(building.id);
-      const buildCost = this.getBuildCost(building.id);
-
-      this.drawGlossyPanel(x - 79, y - 38, 158, 76, isCompleted ? 0xffffff : 0xd9c7f2, ready ? 0xff5aa6 : 0x8f57df);
-      this.add.circle(x - 54, y - 14, 14, ready ? 0xffd33f : isCompleted ? 0x36c875 : 0x9d8cad, 0.88).setStrokeStyle(2, 0xffffff, 0.8);
-      this.add.text(x, y - 23, this.t(building.nameKey as TranslationKey), {
-        fontFamily: 'Arial',
-        fontSize: '12px',
-        color: '#3d2362',
-        fontStyle: 'bold',
-        align: 'center',
-        wordWrap: { width: 132 }
-      }).setOrigin(0.5);
-      this.add.text(x, y + 2, `${this.t('daily')}: +${building.energy} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}`, {
-        fontFamily: 'Arial',
-        fontSize: '9px',
-        color: '#4d2382',
-        align: 'center',
-        wordWrap: { width: 138 }
-      }).setOrigin(0.5);
-
-      if (ready) {
-        this.add.text(x + 48, y - 4, this.t('ready'), {
-          fontFamily: 'Arial',
-          fontSize: '10px',
-          color: '#d74f00',
-          fontStyle: 'bold'
-        }).setOrigin(0.5);
-        this.addButton(x, y + 25, 96, 22, this.t('claim'), () => this.claimBuildingReward(building.id), 0xffd33f, 0x7b2bbf, 10);
-      } else if (isCompleted) {
-        this.add.text(x, y + 24, this.t('claimedToday'), {
-          fontFamily: 'Arial',
-          fontSize: '10px',
-          color: '#168e67',
-          fontStyle: 'bold'
-        }).setOrigin(0.5);
-      } else {
-        this.addButton(x, y + 25, 96, 22, `${this.t('build')} ${buildCost}`, () => this.buildBuilding(building.id), 0xffffff, 0x7b2bbf, 10);
-      }
-    });
-  }
-
-  private drawMarketScreen(): void {
-    this.drawGlossyPanel(38, 84, 464, 596, 0xffffff, 0xd9b7ff);
-    this.add.text(270, 112, this.t('market'), {
-      fontFamily: 'Arial',
-      fontSize: '34px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      stroke: '#7b2bbf',
-      strokeThickness: 6
-    }).setOrigin(0.5);
-
-    this.addButton(270, 190, 380, 58, `${this.t('marketOneShake')}`, () => this.buyMarketShakes(1, 100), 0xfff4b8, 0x7b2bbf, 20);
-    this.addButton(270, 270, 380, 58, `${this.t('marketFiveShakes')}`, () => this.buyMarketShakes(5, 300), 0xfff4b8, 0x7b2bbf, 20);
-    this.addButton(270, 350, 380, 58, `${this.t('marketTenShakes')}`, () => this.buyMarketShakes(10, 600), 0xfff4b8, 0x7b2bbf, 20);
-    this.addButton(270, 450, 380, 58, this.t('marketBoosters'), () => this.showFloatingText(270, 520, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
-    this.addButton(270, 530, 380, 58, this.t('futureRemoveAds'), () => this.showFloatingText(270, 600, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
-    this.addButton(270, 610, 380, 58, this.t('futureDiamondPacks'), () => this.showFloatingText(270, 680, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
-  }
-
-  private buyMarketShakes(shakes: number, cost: number): void {
-    if (this.state.status === 'failed') {
-      this.continueLevel(shakes, cost);
-      return;
-    }
-
-    this.showFloatingText(270, 624, this.t('marketSafePlaceholder'), '#ffffff');
+    this.closeModal();
+    this.renderOverlay();
   }
 
   private collectIslandRewards(): void {
@@ -805,7 +587,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (energy === 0 && diamonds === 0) {
-      this.showFloatingText(270, 164, this.t('claimLater'), '#ffffff');
+      this.showWarning(this.t('claimLater'));
       return;
     }
 
@@ -814,15 +596,13 @@ export class MainScene extends Phaser.Scene {
     this.state.energy = this.save.energy;
     this.state.diamonds = this.save.diamonds;
     saveData(this.save);
-    this.showFloatingText(270, 164, `${this.t('gained')}: +${energy} ${this.t('energy')} +${diamonds} ${this.t('diamonds')}`, '#ffffff');
-    this.time.delayedCall(450, () => this.drawScreen());
+    this.showWarning(`${this.t('gained')}: +${energy} ${this.t('energy')} +${diamonds} ${this.t('diamonds')}`);
+    this.renderOverlay();
   }
 
   private claimBuildingReward(buildingId: number): void {
     const building = BUILDINGS.find((item) => item.id === buildingId);
-    if (!building || !this.isBuildingReady(buildingId)) {
-      return;
-    }
+    if (!building || !this.isBuildingReady(buildingId)) return;
 
     this.save.energy += building.energy;
     this.save.diamonds += building.diamonds;
@@ -830,14 +610,14 @@ export class MainScene extends Phaser.Scene {
     this.state.energy = this.save.energy;
     this.state.diamonds = this.save.diamonds;
     saveData(this.save);
-    this.showFloatingText(270, 164, `${this.t('gained')}: +${building.energy} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}`, '#ffffff');
-    this.time.delayedCall(450, () => this.drawScreen());
+    this.showWarning(`${this.t('gained')}: +${building.energy} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}`);
+    this.renderOverlay();
   }
 
   private buildBuilding(buildingId: number): void {
     const cost = this.getBuildCost(buildingId);
     if (this.save.diamonds < cost) {
-      this.showFloatingText(270, 164, this.t('notEnoughDiamonds'), '#ffffff');
+      this.showWarning(this.t('notEnoughDiamonds'));
       return;
     }
 
@@ -845,48 +625,16 @@ export class MainScene extends Phaser.Scene {
     this.save.completedBuildingIds = [...new Set([...this.save.completedBuildingIds, buildingId])].sort((a, b) => a - b);
     this.state.diamonds = this.save.diamonds;
     saveData(this.save);
-    this.drawScreen();
+    this.renderOverlay();
   }
 
-  private drawBottomNav(): void {
-    this.add.rectangle(270, 908, 540, 104, 0x173f9e, 0.68);
-    this.drawNavButton(95, 'play', this.t('play'));
-    this.drawNavButton(270, 'island', this.t('island'));
-    this.drawNavButton(445, 'market', this.t('market'));
-  }
-
-  private drawNavButton(x: number, key: ScreenKey, label: string): void {
-    const active = this.screen === key;
-    const button = this.addButton(x, 908, 152, 62, label, () => {
-      this.screen = key;
-      this.drawScreen();
-    }, active ? 0xff5aa6 : 0xffffff, active ? 0xffffff : 0x2553b8, 18);
-    this.drawNavIcon(button, key, active);
-  }
-
-  private drawNavIcon(container: Phaser.GameObjects.Container, key: ScreenKey, active: boolean): void {
-    const g = this.add.graphics();
-    const color = active ? 0xffffff : 0xffd33f;
-    g.fillStyle(color, 0.92);
-    if (key === 'play') {
-      g.fillRoundedRect(-50, -10, 22, 16, 6);
-      g.fillCircle(-46, -12, 4);
-      g.fillCircle(-32, -12, 4);
-    } else if (key === 'island') {
-      g.fillCircle(-40, -6, 13);
-      g.fillStyle(0x36c875, active ? 0.9 : 0.78);
-      g.fillEllipse(-40, -12, 34, 16);
-    } else {
-      g.lineStyle(4, color, 0.9);
-      g.strokeRect(-51, -16, 25, 18);
-      g.beginPath();
-      g.moveTo(-47, 4);
-      g.lineTo(-30, 4);
-      g.strokePath();
-      g.fillCircle(-47, 11, 3);
-      g.fillCircle(-31, 11, 3);
+  private buyMarketShakes(shakes: number, cost: number): void {
+    if (this.state.status === 'failed') {
+      this.continueLevel(shakes, cost);
+      return;
     }
-    container.add(g);
+
+    this.showWarning(this.t('marketSafePlaceholder'));
   }
 
   private highlightGroup(group: BoardPosition[]): void {
@@ -933,28 +681,6 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  private showBlockedButtonFeedback(): void {
-    if (!this.shakeButton) {
-      return;
-    }
-
-    this.tweens.killTweensOf(this.shakeButton);
-    this.shakeButton.setScale(1);
-    this.tweens.add({
-      targets: this.shakeButton,
-      x: { from: 262, to: 278 },
-      scaleX: 0.98,
-      scaleY: 1.04,
-      duration: 55,
-      yoyo: true,
-      repeat: 3,
-      onComplete: () => {
-        this.shakeButton?.setPosition(270, 838);
-        this.shakeButton?.setScale(1);
-      }
-    });
-  }
-
   private showInvalidFeedback(position: BoardPosition): void {
     const container = this.cellContainers.get(this.positionKey(position));
     if (!container) return;
@@ -967,101 +693,50 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private drawModal(x: number, y: number, width: number, height: number): void {
-    this.add.rectangle(270, 480, 540, 960, 0x381d5f, 0.48).setInteractive();
-    this.add.rectangle(x, y, width, height, 0xffffff, 0.95).setStrokeStyle(4, 0xff5aa6, 0.75);
-  }
-
-  private addButton(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    label: string,
-    onClick: () => void,
-    fill: number,
-    textColor: number,
-    fontSize: number
-  ): Phaser.GameObjects.Container {
-    const container = this.add.container(x, y);
-    const shadow = this.add.rectangle(0, 5, width, height, 0x3d2362, 0.22);
-    const bg = this.add.rectangle(0, 0, width, height, fill, 0.95).setStrokeStyle(3, 0xffffff, 0.78);
-    const shine = this.add.rectangle(0, -height * 0.24, width - 18, Math.max(8, height * 0.22), 0xffffff, 0.22);
-    const text = this.add.text(0, 0, label, {
+  private showScorePopup(label: string): void {
+    const text = this.add.text(GAME_SIZE / 2, 38, label, {
       fontFamily: 'Arial',
-      fontSize: `${fontSize}px`,
-      color: `#${textColor.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold',
-      align: 'center',
-      wordWrap: { width: width - 12 }
-    }).setOrigin(0.5);
-    container.add([shadow, bg, shine, text]);
-    container.setSize(width, height);
-    container.setInteractive(new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height), Phaser.Geom.Rectangle.Contains);
-    container.input!.cursor = 'pointer';
-    container.on('pointerover', () => {
-      bg.setAlpha(1);
-      container.setScale(1.03);
-    });
-    container.on('pointerout', () => {
-      bg.setAlpha(0.94);
-      container.setScale(1);
-    });
-    container.on('pointerdown', () => {
-      this.tweens.killTweensOf(container);
-      container.setScale(0.96);
-      onClick();
-    });
-    container.on('pointerup', () => {
-      container.setScale(1.03);
-    });
-    container.on('pointerupoutside', () => {
-      container.setScale(1);
-    });
-    return container;
-  }
-
-  private drawPill(x: number, y: number, label: string, color: number): void {
-    this.add.rectangle(x, y, 154, 42, color, 0.88).setStrokeStyle(2, 0xffffff, 0.65);
-    this.add.text(x, y, label, {
-      fontFamily: 'Arial',
-      fontSize: '15px',
+      fontSize: '24px',
       color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-  }
-
-  private showFloatingText(x: number, y: number, label: string, color: string): void {
-    const text = this.add.text(x, y, label, {
-      fontFamily: 'Arial',
-      fontSize: '22px',
-      color,
       fontStyle: 'bold',
       stroke: '#7b2bbf',
-      strokeThickness: 4,
-      align: 'center',
-      wordWrap: { width: 430 }
+      strokeThickness: 4
     }).setOrigin(0.5);
 
     this.tweens.add({
       targets: text,
-      y: y - 44,
+      y: 0,
       alpha: 0,
       duration: 850,
       onComplete: () => text.destroy()
     });
   }
 
+  private showWarning(label: string): void {
+    const warning = this.el('warning-text');
+    warning.textContent = label;
+    window.setTimeout(() => {
+      if (warning.textContent === label) warning.textContent = '';
+    }, 1400);
+  }
+
+  private bumpShakeButton(): void {
+    const button = this.el('shake-button');
+    button.classList.add('is-pressed');
+    window.setTimeout(() => button.classList.remove('is-pressed'), 160);
+  }
+
+  private blockShakeButton(): void {
+    const button = this.el('shake-button');
+    button.classList.remove('is-blocked');
+    void button.offsetWidth;
+    button.classList.add('is-blocked');
+  }
+
   private formatGoal(goal: LevelGoal): string {
     const progress = getGoalProgress(this.state, goal);
-    if (goal.type === 'score') {
-      return `${this.t('goalScore')}: ${progress.toLocaleString()} / ${goal.target.toLocaleString()}`;
-    }
-
-    if (goal.type === 'candy' && goal.candy) {
-      return `${this.getCandyName(goal.candy)}: ${progress} / ${goal.target}`;
-    }
-
+    if (goal.type === 'score') return `${this.t('goalScore')}: ${progress.toLocaleString()} / ${goal.target.toLocaleString()}`;
+    if (goal.type === 'candy' && goal.candy) return `${this.getCandyName(goal.candy)}: ${progress} / ${goal.target}`;
     return `${this.t('goalMultiplier')}: x${progress} / x${goal.target}`;
   }
 
@@ -1104,6 +779,32 @@ export class MainScene extends Phaser.Scene {
 
   private getBuildCost(buildingId: number): number {
     return 75 + (buildingId - 1) * 50;
+  }
+
+  private openModal(html: string): void {
+    const root = this.el('modal-root');
+    root.innerHTML = html;
+    root.classList.add('is-open');
+  }
+
+  private closeModal(): void {
+    const root = this.el('modal-root');
+    root.classList.remove('is-open');
+    root.innerHTML = '';
+  }
+
+  private modalButton(action: string, onClick: () => void): void {
+    this.el('modal-root').querySelector<HTMLButtonElement>(`[data-action="${action}"]`)?.addEventListener('click', onClick);
+  }
+
+  private setText(id: string, value: string): void {
+    this.el(id).textContent = value;
+  }
+
+  private el(id: string): HTMLElement {
+    const element = document.getElementById(id);
+    if (!element) throw new Error(`Missing UI element #${id}`);
+    return element;
   }
 
   private positionKey(position: BoardPosition): string {

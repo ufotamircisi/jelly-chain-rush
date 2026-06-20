@@ -6,7 +6,98 @@
     <title>Jelly Chain Rush</title>
   </head>
   <body>
-    <div id="game"></div>
+    <main id="app-shell" class="app-shell">
+      <section class="phone-frame">
+        <div class="sky-decor sky-decor-a"></div>
+        <div class="sky-decor sky-decor-b"></div>
+        <header class="game-header">
+          <button id="language-button" class="language-button" type="button"></button>
+          <h1 id="game-title" class="game-logo">Jelly Chain Rush</h1>
+          <div class="counter-grid">
+            <article class="counter-card">
+              <span id="level-label"></span>
+              <strong id="level-value"></strong>
+            </article>
+            <article class="counter-card counter-card-wide">
+              <span id="goal-label"></span>
+              <strong id="goal-value"></strong>
+            </article>
+            <article class="counter-card">
+              <span id="energy-label"></span>
+              <strong id="energy-value"></strong>
+            </article>
+            <article class="counter-card">
+              <span id="score-label"></span>
+              <strong id="score-value"></strong>
+            </article>
+            <article class="counter-card">
+              <span id="diamonds-label"></span>
+              <strong id="diamonds-value"></strong>
+            </article>
+            <article class="counter-card">
+              <span id="shake-label"></span>
+              <strong id="shake-value"></strong>
+            </article>
+          </div>
+        </header>
+
+        <section id="play-view" class="view view-play is-active">
+          <section class="goal-panel">
+            <h2 id="goal-panel-title"></h2>
+            <div id="goal-list" class="goal-list"></div>
+          </section>
+
+          <section class="board-stage">
+            <div id="game" class="board-canvas"></div>
+          </section>
+
+          <p id="helper-text" class="helper-text"></p>
+          <div id="warning-text" class="warning-text" aria-live="polite"></div>
+
+          <section class="info-row">
+            <article id="badge-blast" class="helper-badge helper-badge-blue"></article>
+            <article id="badge-special" class="helper-badge helper-badge-purple"></article>
+          </section>
+
+          <section class="reward-panel">
+            <h2 id="multiplier-rewards-title"></h2>
+            <div id="multiplier-rewards" class="reward-list"></div>
+          </section>
+
+          <button id="shake-button" class="shake-button" type="button"></button>
+        </section>
+
+        <section id="island-view" class="view view-island">
+          <div class="section-heading">
+            <h2 id="island-title"></h2>
+            <button id="collect-all-button" class="collect-button" type="button"></button>
+          </div>
+          <div id="building-list" class="building-list"></div>
+        </section>
+
+        <section id="market-view" class="view view-market">
+          <h2 id="market-title" class="market-title"></h2>
+          <div id="market-list" class="market-list"></div>
+        </section>
+
+        <section id="modal-root" class="modal-root" aria-live="polite"></section>
+
+        <nav class="bottom-nav">
+          <button id="nav-play" class="nav-tab is-active" type="button" data-view="play">
+            <span class="nav-icon nav-icon-play"></span>
+            <strong></strong>
+          </button>
+          <button id="nav-island" class="nav-tab" type="button" data-view="island">
+            <span class="nav-icon nav-icon-island"></span>
+            <strong></strong>
+          </button>
+          <button id="nav-market" class="nav-tab" type="button" data-view="market">
+            <span class="nav-icon nav-icon-market"></span>
+            <strong></strong>
+          </button>
+        </nav>
+      </section>
+    </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

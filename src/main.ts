@@ -5,9 +5,9 @@ import { MainScene } from './scenes/MainScene';
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   parent: 'game',
-  width: 540,
-  height: 960,
-  backgroundColor: '#6ee6df',
+  width: 380,
+  height: 380,
+  transparent: true,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH
