@@ -50,11 +50,14 @@ Important: this reference is a visual direction, not a requirement to copy any c
 * The player should understand: "If this candy lands on that multiplier cell, I can score more."
 * The SHAKE / ÇALKALA button should be large, glossy, and central.
 * The button should feel like it physically shakes the 7x7 board and starts candy rain.
-* Helper text should explain:
+* Dynamic helper text may explain:
   * "Shake to drop new candies"
   * "Candy chain in progress..."
   * "Swipe candies to match 3+"
   * "No moves left. Shake!"
+* Do not show large permanent tutorial helper badges on the main gameplay screen.
+* Keep helper text minimal and dynamic so the board, compact multiplier rewards row, and SHAKE / ÇALKALA button have visual priority.
+* The player should learn swipe matching through play.
 
 ## Board Motion Direction
 
@@ -73,8 +76,7 @@ Floor multipliers must remain visible underneath candies throughout drops, blast
 Side panels should show:
 
 * goals
-* special candy rule
-* multiplier rewards
+* compact multiplier rewards
 
 ## Candy Island
 

@@ -272,7 +272,7 @@ button {
   display: flex;
   justify-content: center;
   width: 100%;
-  margin: 0 auto 3px;
+  margin: 0 auto 5px;
   padding: 4px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.28);
@@ -292,11 +292,11 @@ button {
 
 .helper-text,
 .warning-text {
-  min-height: 20px;
-  margin: 1px 0;
+  min-height: 18px;
+  margin: 2px 0;
   text-align: center;
   color: #fff;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 900;
   text-shadow: 0 2px 0 #3d2362;
 }
@@ -306,41 +306,14 @@ button {
   font-size: 12px;
 }
 
-.info-row {
-  display: grid;
-  grid-template-columns: 0.92fr 1.08fr;
-  gap: 6px;
-  margin-top: 2px;
-}
-
-.helper-badge {
-  min-height: 34px;
-  border: 2px solid rgba(255, 255, 255, 0.58);
-  border-radius: 12px;
-  padding: 5px 7px;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 900;
-  text-align: center;
-  box-shadow: 0 8px 14px rgba(61, 35, 98, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.38);
-}
-
-.helper-badge-blue {
-  background: linear-gradient(180deg, #20c3ff, #168bd8);
-}
-
-.helper-badge-purple {
-  background: linear-gradient(180deg, #ba6bff, #7b2bbf);
-}
-
 .reward-panel {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
   column-gap: 8px;
   width: 100%;
-  margin: 4px 0 0;
-  padding: 5px 8px;
+  margin: 7px 0 0;
+  padding: 6px 8px;
   background: linear-gradient(180deg, rgba(255, 248, 185, 0.96), rgba(255, 225, 247, 0.9));
 }
 
@@ -399,7 +372,7 @@ button {
   display: block;
   width: min(342px, 92%);
   min-height: 54px;
-  margin: 5px auto 0;
+  margin: 9px auto 0;
   border: 4px solid rgba(255, 255, 255, 0.82);
   border-radius: 999px;
   color: #fff;
@@ -1084,13 +1057,7 @@ button {
   }
 
   .helper-text {
-    font-size: 14px;
-  }
-
-  .helper-badge {
-    min-height: 32px;
     font-size: 12px;
-    padding: 5px;
   }
 
   .reward-panel {
@@ -1120,12 +1087,8 @@ button {
     width: min(330px, calc(100vw - 30px));
   }
 
-  .info-row {
-    gap: 6px;
-  }
-
   .reward-panel {
-    margin-top: 4px;
+    margin-top: 6px;
   }
 
   .reward-panel h2 {

@@ -628,6 +628,8 @@ Must include:
 * Multiplier reward info
 * Bottom navigation
 
+The main game screen should not show large permanent tutorial/helper badges. Tutorial copy should stay minimal and dynamic in a single small status line, such as falling, cascade, no-energy, or swipe-ready status. The player should learn swipe matching through play instead of always-visible helper labels.
+
 ### 21.2 Candy Island Screen
 
 Must include:

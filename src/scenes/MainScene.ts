@@ -163,8 +163,6 @@ export class MainScene extends Phaser.Scene {
     this.setText('shake-value', `${this.state.shakesRemaining}/${MAX_SHAKES}`);
     this.setText('goal-panel-title', this.t('goal'));
     this.setText('helper-text', this.getHelperText());
-    this.setText('badge-blast', this.t('helperBadgeBlast'));
-    this.setText('badge-special', this.t('specialCandyRule'));
     this.setText('multiplier-rewards-title', this.t('multiplierRewards'));
     this.setText('multiplier-next-reward', this.t('nextMultiplierReward'));
     this.setText('multiplier-rewards-button', this.t('viewRewards'));

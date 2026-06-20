@@ -24,8 +24,6 @@ const en = {
   bigBlast: 'BIG BLAST!',
   chain: 'CHAIN!',
   megaChain: 'MEGA CHAIN!',
-  helperBadgeBlast: 'Swipe to make 3+ lines',
-  specialCandyRule: '4 special candies = +5 shakes',
   multiplierRewards: 'Multiplier Rewards',
   viewRewards: 'View Rewards',
   nextMultiplierReward: 'Next: x128',
