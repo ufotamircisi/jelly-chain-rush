@@ -13,7 +13,7 @@ const en = {
   shakeButton: 'SHAKE!',
   targetScore: 'Reach 120,000 score',
   blastHelper: 'Swipe candies to match 3+',
-  shakeDropHelper: 'Shake to drop new candies',
+  shakeDropHelper: 'Candies are dropping...',
   chainInProgress: 'Candy chain in progress...',
   swipeHelper: 'Swipe candies to match 3+',
   shakeHelper: 'No moves left. Shake!',

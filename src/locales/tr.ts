@@ -15,7 +15,7 @@ const tr: typeof en = {
   shakeButton: 'ÇALKALA!',
   targetScore: '120.000 skora ulaş',
   blastHelper: '3+ eşleştirmek için şekerleri kaydır',
-  shakeDropHelper: 'Yeni şekerler için Çalkala',
+  shakeDropHelper: 'Şekerler düşüyor...',
   chainInProgress: 'Şeker zinciri devam ediyor...',
   swipeHelper: '3+ eşleştirmek için şekerleri kaydır',
   shakeHelper: 'Hamle kalmadı. Çalkala!',

@@ -62,9 +62,12 @@ export class MainScene extends Phaser.Scene {
   private boardContainer?: Phaser.GameObjects.Container;
   private rewardSummary?: RewardSummary;
   private cellContainers = new Map<string, Phaser.GameObjects.Container>();
+  private candyContainers = new Map<string, Phaser.GameObjects.Container>();
   private isShaking = false;
+  private isDropping = false;
   private isResolving = false;
   private dragStart?: BoardPosition;
+  private audioContext?: AudioContext;
 
   constructor() {
     super('MainScene');
@@ -79,6 +82,7 @@ export class MainScene extends Phaser.Scene {
     this.bindOverlay();
     this.drawBoard();
     this.renderOverlay();
+    this.time.delayedCall(1, () => this.startDropSequence({ playChime: true }));
 
     if (this.isDailyRewardAvailable()) {
       this.renderDailyRewardModal();
@@ -111,6 +115,7 @@ export class MainScene extends Phaser.Scene {
 
   private renderOverlay(): void {
     this.el('phone-frame').classList.toggle('is-gameplay-active', this.screen === 'play');
+    this.el('shake-button').toggleAttribute('disabled', this.isShaking || this.isDropping || this.isResolving || this.state.status !== 'playing');
     this.el('phone-frame').classList.toggle('is-island-active', this.screen === 'island');
     this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
     this.setText('game-title', this.t('title'));
@@ -260,6 +265,7 @@ export class MainScene extends Phaser.Scene {
   private drawBoard(): void {
     this.children.removeAll();
     this.cellContainers.clear();
+    this.candyContainers.clear();
     this.boardContainer = this.add.container(BOARD_X, BOARD_Y);
     this.boardContainer.add(this.add.rectangle(BOARD_SIZE / 2, BOARD_SIZE / 2 + 3, BOARD_SIZE + 12, BOARD_SIZE + 12, 0x3d2362, 0.18));
     this.boardContainer.add(this.add.rectangle(BOARD_SIZE / 2, BOARD_SIZE / 2, BOARD_SIZE + 10, BOARD_SIZE + 10, 0xffffff, 0.28).setStrokeStyle(3, 0xffffff, 0.58));
@@ -279,13 +285,16 @@ export class MainScene extends Phaser.Scene {
           stroke: cell.multiplierIndex >= 10 ? '#fff1a6' : '#4d2382',
           strokeThickness: 3
         }).setOrigin(0.5));
-        this.drawCandyIcon(container, cell.candy);
+        const candyContainer = this.add.container(0, 0);
+        this.drawCandyIcon(candyContainer, cell.candy);
+        container.add(candyContainer);
         container.setSize(CELL_SIZE, CELL_SIZE);
         container.setInteractive(new Phaser.Geom.Rectangle(-CELL_SIZE / 2, -CELL_SIZE / 2, CELL_SIZE, CELL_SIZE), Phaser.Geom.Rectangle.Contains);
         container.on('pointerdown', () => this.handleCellPointerDown({ row, col }));
         container.on('pointerup', () => this.handleCellPointerUp({ row, col }));
         this.boardContainer.add(container);
         this.cellContainers.set(this.positionKey({ row, col }), container);
+        this.candyContainers.set(this.positionKey({ row, col }), candyContainer);
       }
     }
   }
@@ -387,7 +396,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private handleShake(): void {
-    if (this.isShaking || this.isResolving || this.state.status !== 'playing') return;
+    if (this.isShaking || this.isDropping || this.isResolving || this.state.status !== 'playing') return;
 
     if (this.state.shakesRemaining <= 0) {
       this.triggerLevelFail();
@@ -405,6 +414,7 @@ export class MainScene extends Phaser.Scene {
     this.state.energy -= SHAKE_COST_ENERGY;
     this.syncSaveCurrency();
     this.renderOverlay();
+    this.playStartChime();
 
     this.tweens.add({
       targets: this.boardContainer,
@@ -412,17 +422,31 @@ export class MainScene extends Phaser.Scene {
       y: { from: BOARD_Y - 8, to: BOARD_Y + 8 },
       duration: 65,
       yoyo: true,
-      repeat: 22,
-      onComplete: () => this.finishShake()
+      repeat: 8,
+      onComplete: () => {
+        this.isShaking = false;
+        this.startDropSequence();
+      }
     });
   }
 
-  private finishShake(): void {
+  private startDropSequence(options: { playChime?: boolean } = {}): void {
+    if (this.isDropping || this.isResolving || this.state.status !== 'playing') return;
+
+    if (options.playChime) {
+      this.playStartChime();
+    }
+
     this.state.board = regenerateCandies(this.state.board);
-    this.isShaking = false;
+    this.isDropping = true;
+    this.dragStart = undefined;
     this.drawBoard();
-    this.showWarning(this.t('chainInProgress'));
-    this.resolveCurrentCascades();
+    this.renderOverlay();
+    this.animateCandyDrop(() => {
+      this.isDropping = false;
+      this.showWarning(this.t('chainInProgress'));
+      this.resolveCurrentCascades();
+    });
   }
 
   private handleCellPointerDown(position: BoardPosition): void {
@@ -470,6 +494,41 @@ export class MainScene extends Phaser.Scene {
     this.time.delayedCall(120, () => this.resolveCurrentCascades());
   }
 
+  private animateCandyDrop(onComplete: () => void): void {
+    let remaining = this.candyContainers.size;
+    const totalDuration = 3000;
+
+    if (remaining === 0) {
+      onComplete();
+      return;
+    }
+
+    for (let row = 0; row < BOARD_ROWS; row += 1) {
+      for (let col = 0; col < BOARD_COLUMNS; col += 1) {
+        const candy = this.candyContainers.get(this.positionKey({ row, col }));
+        if (!candy) continue;
+        const columnDelay = col * 42;
+        const rowDelay = row * 36;
+        candy.y = -BOARD_SIZE - (BOARD_ROWS - row) * CELL_SIZE;
+        candy.alpha = 0.18;
+        this.tweens.add({
+          targets: candy,
+          y: 0,
+          alpha: 1,
+          duration: totalDuration - columnDelay - rowDelay,
+          delay: columnDelay + rowDelay,
+          ease: 'Bounce.easeOut',
+          onComplete: () => {
+            remaining -= 1;
+            if (remaining === 0) {
+              onComplete();
+            }
+          }
+        });
+      }
+    }
+  }
+
   private resolveCurrentCascades(): void {
     if (this.state.status !== 'playing') return;
 
@@ -510,11 +569,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   private canUseBoardInput(): boolean {
-    return this.state.status === 'playing' && !this.isShaking && !this.isResolving;
+    return this.state.status === 'playing' && !this.isShaking && !this.isDropping && !this.isResolving;
   }
 
   private getHelperText(): string {
-    if (this.isShaking) return this.t('shakeDropHelper');
+    if (this.isShaking || this.isDropping) return this.t('shakeDropHelper');
     if (this.isResolving) return this.t('chainInProgress');
     if (hasValidSwipeMove(this.state.board)) return this.t('swipeHelper');
     return this.t('shakeHelper');
@@ -570,6 +629,7 @@ export class MainScene extends Phaser.Scene {
     this.closeModal();
     this.drawBoard();
     this.renderOverlay();
+    this.time.delayedCall(1, () => this.startDropSequence({ playChime: true }));
   }
 
   private startNextLevel(): void {
@@ -583,6 +643,7 @@ export class MainScene extends Phaser.Scene {
     this.closeModal();
     this.drawBoard();
     this.renderOverlay();
+    this.time.delayedCall(1, () => this.startDropSequence({ playChime: true }));
   }
 
   private renderWinModal(): void {
@@ -806,6 +867,31 @@ export class MainScene extends Phaser.Scene {
     button.classList.remove('is-blocked');
     void button.offsetWidth;
     button.classList.add('is-blocked');
+  }
+
+  private playStartChime(): void {
+    const AudioContextClass = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    this.audioContext ??= new AudioContextClass();
+    if (this.audioContext.state === 'suspended') {
+      void this.audioContext.resume();
+    }
+
+    const now = this.audioContext.currentTime;
+    [660, 880].forEach((frequency, index) => {
+      const oscillator = this.audioContext!.createOscillator();
+      const gain = this.audioContext!.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, now + index * 0.09);
+      gain.gain.setValueAtTime(0.0001, now + index * 0.09);
+      gain.gain.exponentialRampToValueAtTime(0.16, now + index * 0.09 + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.09 + 0.18);
+      oscillator.connect(gain);
+      gain.connect(this.audioContext!.destination);
+      oscillator.start(now + index * 0.09);
+      oscillator.stop(now + index * 0.09 + 0.2);
+    });
   }
 
   private formatGoal(goal: LevelGoal): string {
