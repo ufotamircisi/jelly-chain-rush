@@ -8,6 +8,7 @@ const en = {
   diamonds: 'Diamonds',
   play: 'PLAY',
   island: 'ISLAND',
+  islandTitle: 'Candy Island',
   market: 'MARKET',
   shakeButton: 'SHAKE!',
   targetScore: 'Reach 120,000 score',

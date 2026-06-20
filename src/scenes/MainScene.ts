@@ -26,10 +26,10 @@ import {
 } from '../types';
 
 const GAME_WIDTH = 540;
-const BOARD_SIZE = 392;
+const BOARD_SIZE = 430;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_WIDTH - BOARD_SIZE) / 2;
-const BOARD_Y = 270;
+const BOARD_Y = 254;
 const TODAY = () => getLocalDateKey();
 
 const MULTIPLIER_TINTS = [
@@ -98,20 +98,56 @@ export class MainScene extends Phaser.Scene {
   }
 
   private drawBackground(): void {
-    this.add.rectangle(270, 480, 540, 960, 0x7ee8ff);
-    this.add.rectangle(270, 510, 540, 760, 0xffb8d8, 0.16);
-    this.add.rectangle(270, 822, 540, 278, 0x4ccfd1, 0.34);
-    this.add.circle(70, 126, 68, 0xffffff, 0.2);
-    this.add.circle(472, 158, 92, 0xffffff, 0.18);
-    this.add.circle(84, 792, 116, 0xfff4b8, 0.18);
-    this.add.circle(456, 744, 138, 0xff6fae, 0.14);
-    this.add.rectangle(270, 886, 540, 148, 0x1f5ec9, 0.38);
+    this.add.rectangle(270, 480, 540, 960, 0x86eaff);
+    this.add.rectangle(270, 390, 540, 540, 0xffb6dc, 0.16);
+    this.add.rectangle(270, 806, 540, 250, 0x55d4d9, 0.42);
+    this.add.circle(68, 106, 64, 0xffffff, 0.22);
+    this.add.circle(462, 132, 86, 0xffffff, 0.18);
+    this.add.circle(88, 742, 118, 0xfff1a8, 0.22);
+    this.add.circle(448, 730, 132, 0xff7eb7, 0.16);
+    this.add.circle(42, 832, 62, 0xff5aa6, 0.28);
+    this.add.circle(498, 842, 78, 0xffd33f, 0.22);
+    this.add.rectangle(270, 904, 540, 112, 0x1e57c4, 0.46);
+    this.drawCandyDecoration(36, 704, 0xff5aa6, 0);
+    this.drawCandyDecoration(500, 700, 0xffd33f, 0.45);
+    this.drawLollipop(54, 804, 0xff5aa6);
+    this.drawLollipop(494, 792, 0x7b2bbf);
+  }
+
+  private drawCandyDecoration(x: number, y: number, color: number, rotation: number): void {
+    const g = this.add.graphics();
+    g.x = x;
+    g.y = y;
+    g.rotation = rotation;
+    g.fillStyle(color, 0.55);
+    g.fillEllipse(0, 0, 44, 24);
+    g.fillStyle(0xffffff, 0.26);
+    g.fillEllipse(-8, -5, 16, 6);
+    g.lineStyle(2, 0xffffff, 0.42);
+    g.strokeEllipse(0, 0, 44, 24);
+  }
+
+  private drawLollipop(x: number, y: number, color: number): void {
+    const g = this.add.graphics();
+    g.lineStyle(5, 0xffffff, 0.68);
+    g.beginPath();
+    g.moveTo(x, y + 20);
+    g.lineTo(x - 8, y + 66);
+    g.strokePath();
+    g.fillStyle(color, 0.72);
+    g.fillCircle(x, y, 22);
+    g.lineStyle(4, 0xffffff, 0.72);
+    g.strokeCircle(x, y, 22);
+    g.lineStyle(3, 0xffffff, 0.38);
+    g.beginPath();
+    g.arc(x, y, 12, 0.4, 4.9);
+    g.strokePath();
   }
 
   private drawTopBar(): void {
-    this.add.text(273, 50, this.t('title'), {
+    this.add.text(273, 44, this.t('title'), {
       fontFamily: 'Arial',
-      fontSize: '39px',
+      fontSize: '41px',
       color: '#3d2362',
       fontStyle: 'bold',
       stroke: '#ffffff',
@@ -119,9 +155,9 @@ export class MainScene extends Phaser.Scene {
       align: 'center'
     }).setOrigin(0.5);
     this.add
-      .text(270, 45, this.t('title'), {
+      .text(270, 39, this.t('title'), {
         fontFamily: 'Arial',
-        fontSize: '39px',
+        fontSize: '41px',
         color: '#ff5aa6',
         fontStyle: 'bold',
         stroke: '#7b2bbf',
@@ -130,7 +166,7 @@ export class MainScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.addButton(462, 26, 118, 30, `${this.t('language')}: ${this.locale.toUpperCase()}`, () => {
+    this.addButton(462, 24, 116, 28, `${this.t('language')}: ${this.locale.toUpperCase()}`, () => {
       const index = SUPPORTED_LOCALES.indexOf(this.locale);
       this.locale = SUPPORTED_LOCALES[(index + 1) % SUPPORTED_LOCALES.length];
       this.save = updateLanguage(this.save, this.locale);
@@ -148,7 +184,7 @@ export class MainScene extends Phaser.Scene {
     const helperKey = hasAnyValidGroup(this.state.board) ? 'blastHelper' : 'shakeHelper';
 
     this.add
-      .text(270, 710, this.t(helperKey), {
+      .text(270, 785, this.t(helperKey), {
         fontFamily: 'Arial',
         fontSize: '20px',
         color: '#ffffff',
@@ -158,21 +194,21 @@ export class MainScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.shakeButton = this.addButton(270, 770, 340, 78, this.t('shakeButton'), () => this.handleShake(), 0x62d728, 0xffffff, 34);
+    this.shakeButton = this.addButton(270, 838, 356, 68, this.t('shakeButton'), () => this.handleShake(), 0x62d728, 0xffffff, 34);
   }
 
   private drawCounters(): void {
-    this.drawStatCard(74, 92, 116, 48, this.t('level'), String(this.state.level), 0xffffff);
-    this.drawStatCard(74, 150, 116, 48, this.t('score'), this.state.score.toLocaleString(), 0xffffff);
-    this.drawStatCard(198, 104, 126, 58, this.t('goal'), this.state.definition.targetScore.toLocaleString(), 0xffffff);
-    this.drawStatCard(400, 92, 122, 48, this.t('energy'), String(this.state.energy), 0xffffff);
-    this.drawStatCard(400, 150, 122, 48, this.t('diamonds'), String(this.state.diamonds), 0xffffff);
-    this.drawStatCard(270, 168, 122, 44, this.t('shake'), `${this.state.shakesRemaining}/${MAX_SHAKES}`, 0xffffff);
+    this.drawStatCard(74, 88, 118, 42, this.t('level'), String(this.state.level), 0xffffff);
+    this.drawStatCard(204, 88, 132, 42, this.t('goal'), this.state.definition.targetScore.toLocaleString(), 0xffffff);
+    this.drawStatCard(74, 137, 118, 42, this.t('score'), this.state.score.toLocaleString(), 0xffffff);
+    this.drawStatCard(396, 88, 124, 42, this.t('energy'), String(this.state.energy), 0xffffff);
+    this.drawStatCard(396, 137, 124, 42, this.t('diamonds'), String(this.state.diamonds), 0xffffff);
+    this.drawStatCard(270, 137, 116, 42, this.t('shake'), `${this.state.shakesRemaining}/${MAX_SHAKES}`, 0xffffff);
   }
 
   private drawGoalPanel(): void {
-    this.drawGlossyPanel(26, 204, 160, 102, 0xffd7e8, 0xff5aa6);
-    this.add.text(106, 222, this.t('goal'), {
+    this.drawGlossyPanel(28, 168, 484, 76, 0xffd7e8, 0xff5aa6);
+    this.add.text(70, 187, this.t('goal'), {
       fontFamily: 'Arial',
       fontSize: '17px',
       color: '#ffffff',
@@ -182,13 +218,16 @@ export class MainScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.state.definition.goals.forEach((goal, index) => {
-      this.add.text(40, 248 + index * 24, this.formatGoal(goal), {
+      const goalX = 146 + index * 128;
+      this.drawGlossyPanel(goalX - 56, 196, 112, 34, 0xffffff, this.isGoalComplete(goal) ? 0x36c875 : 0xd9b7ff);
+      this.add.text(goalX, 213, this.formatGoal(goal), {
         fontFamily: 'Arial',
-        fontSize: '12px',
+        fontSize: '10px',
         color: this.isGoalComplete(goal) ? '#168e67' : '#3d2362',
         fontStyle: 'bold',
-        wordWrap: { width: 130 }
-      });
+        align: 'center',
+        wordWrap: { width: 102 }
+      }).setOrigin(0.5);
     });
   }
 
@@ -320,30 +359,30 @@ export class MainScene extends Phaser.Scene {
   }
 
   private drawHelperBadges(): void {
-    this.drawGlossyPanel(20, 604, 155, 46, 0x13a9e8, 0xffffff);
-    this.add.text(98, 627, this.t('helperBadgeBlast'), {
+    this.drawGlossyPanel(30, 692, 228, 40, 0x13a9e8, 0xffffff);
+    this.add.text(144, 712, this.t('helperBadgeBlast'), {
+      fontFamily: 'Arial',
+      fontSize: '14px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      align: 'center',
+      wordWrap: { width: 196 }
+    }).setOrigin(0.5);
+
+    this.drawGlossyPanel(282, 692, 228, 40, 0x8f57df, 0xffffff);
+    this.add.text(396, 712, this.t('specialCandyRule'), {
       fontFamily: 'Arial',
       fontSize: '13px',
       color: '#ffffff',
       fontStyle: 'bold',
       align: 'center',
-      wordWrap: { width: 126 }
-    }).setOrigin(0.5);
-
-    this.drawGlossyPanel(20, 656, 155, 46, 0x8f57df, 0xffffff);
-    this.add.text(98, 679, this.t('specialCandyRule'), {
-      fontFamily: 'Arial',
-      fontSize: '12px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      align: 'center',
-      wordWrap: { width: 126 }
+      wordWrap: { width: 196 }
     }).setOrigin(0.5);
   }
 
   private drawMultiplierRewardsPanel(): void {
-    this.drawGlossyPanel(362, 602, 158, 104, 0xfff4b8, 0x8f57df);
-    this.add.text(441, 620, this.t('multiplierRewards'), {
+    this.drawGlossyPanel(44, 736, 452, 42, 0xfff4b8, 0x8f57df);
+    this.add.text(118, 750, this.t('multiplierRewards'), {
       fontFamily: 'Arial',
       fontSize: '12px',
       color: '#643095',
@@ -356,19 +395,19 @@ export class MainScene extends Phaser.Scene {
       ['x512', '+50'],
       ['x1000', '+100']
     ].forEach(([label, reward], index) => {
-      const y = 642 + index * 15;
-      this.add.text(382, y, label, {
+      const x = 206 + index * 74;
+      this.add.text(x, 746, label, {
         fontFamily: 'Arial',
         fontSize: '12px',
         color: label === 'x1000' ? '#b56b00' : '#168e67',
         fontStyle: 'bold'
-      });
-      this.add.text(448, y, `${reward} ${this.t('energy')} +${reward.replace('+', '')} ${this.t('diamonds')}`, {
+      }).setOrigin(0.5);
+      this.add.text(x, 761, `${reward} ${this.t('energy')} +${reward.replace('+', '')} ${this.t('diamonds')}`, {
         fontFamily: 'Arial',
         fontSize: '9px',
         color: '#3d2362',
         fontStyle: 'bold'
-      }).setOrigin(0.5, 0);
+      }).setOrigin(0.5);
     });
   }
 
@@ -662,26 +701,32 @@ export class MainScene extends Phaser.Scene {
   }
 
   private drawIslandScreen(): void {
-    this.add.text(270, 88, this.t('island'), {
+    this.add.rectangle(270, 520, 500, 676, 0xffffff, 0.18).setStrokeStyle(3, 0xffffff, 0.32);
+    this.add.circle(138, 640, 118, 0xffd66b, 0.32);
+    this.add.circle(350, 650, 150, 0x70d892, 0.24);
+    this.add.text(270, 78, this.t('islandTitle'), {
       fontFamily: 'Arial',
-      fontSize: '30px',
-      color: '#643095',
-      fontStyle: 'bold'
+      fontSize: '34px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#7b2bbf',
+      strokeThickness: 6
     }).setOrigin(0.5);
 
-    this.addButton(270, 130, 250, 38, this.t('collectAll'), () => this.collectIslandRewards(), 0xff5aa6, 0xffffff, 16);
+    this.addButton(270, 124, 260, 40, this.t('collectAll'), () => this.collectIslandRewards(), 0xffd33f, 0x7b2bbf, 17);
 
     BUILDINGS.forEach((building, index) => {
       const col = index % 3;
       const row = Math.floor(index / 3);
       const x = 94 + col * 176;
-      const y = 194 + row * 88;
+      const y = 190 + row * 86;
       const isCompleted = this.save.completedBuildingIds.includes(building.id);
       const ready = isCompleted && this.isBuildingReady(building.id);
       const buildCost = this.getBuildCost(building.id);
 
-      this.add.rectangle(x, y, 158, 78, isCompleted ? 0xffffff : 0xd9c7f2, isCompleted ? 0.72 : 0.58).setStrokeStyle(2, ready ? 0xff5aa6 : 0x8f57df, 0.65);
-      this.add.text(x, y - 24, this.t(building.nameKey as TranslationKey), {
+      this.drawGlossyPanel(x - 79, y - 38, 158, 76, isCompleted ? 0xffffff : 0xd9c7f2, ready ? 0xff5aa6 : 0x8f57df);
+      this.add.circle(x - 54, y - 14, 14, ready ? 0xffd33f : isCompleted ? 0x36c875 : 0x9d8cad, 0.88).setStrokeStyle(2, 0xffffff, 0.8);
+      this.add.text(x, y - 23, this.t(building.nameKey as TranslationKey), {
         fontFamily: 'Arial',
         fontSize: '12px',
         color: '#3d2362',
@@ -698,6 +743,12 @@ export class MainScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       if (ready) {
+        this.add.text(x + 48, y - 4, this.t('ready'), {
+          fontFamily: 'Arial',
+          fontSize: '10px',
+          color: '#d74f00',
+          fontStyle: 'bold'
+        }).setOrigin(0.5);
         this.addButton(x, y + 25, 96, 22, this.t('claim'), () => this.claimBuildingReward(building.id), 0xffd33f, 0x7b2bbf, 10);
       } else if (isCompleted) {
         this.add.text(x, y + 24, this.t('claimedToday'), {
@@ -713,19 +764,22 @@ export class MainScene extends Phaser.Scene {
   }
 
   private drawMarketScreen(): void {
-    this.add.text(270, 108, this.t('market'), {
+    this.drawGlossyPanel(38, 84, 464, 596, 0xffffff, 0xd9b7ff);
+    this.add.text(270, 112, this.t('market'), {
       fontFamily: 'Arial',
-      fontSize: '30px',
-      color: '#643095',
-      fontStyle: 'bold'
+      fontSize: '34px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#7b2bbf',
+      strokeThickness: 6
     }).setOrigin(0.5);
 
-    this.addButton(270, 190, 360, 58, `${this.t('marketOneShake')}`, () => this.buyMarketShakes(1, 100), 0xffffff, 0x7b2bbf, 20);
-    this.addButton(270, 270, 360, 58, `${this.t('marketFiveShakes')}`, () => this.buyMarketShakes(5, 300), 0xffffff, 0x7b2bbf, 20);
-    this.addButton(270, 350, 360, 58, `${this.t('marketTenShakes')}`, () => this.buyMarketShakes(10, 600), 0xffffff, 0x7b2bbf, 20);
-    this.addButton(270, 450, 360, 58, this.t('marketBoosters'), () => this.showFloatingText(270, 520, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
-    this.addButton(270, 530, 360, 58, this.t('futureRemoveAds'), () => this.showFloatingText(270, 600, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
-    this.addButton(270, 610, 360, 58, this.t('futureDiamondPacks'), () => this.showFloatingText(270, 680, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
+    this.addButton(270, 190, 380, 58, `${this.t('marketOneShake')}`, () => this.buyMarketShakes(1, 100), 0xfff4b8, 0x7b2bbf, 20);
+    this.addButton(270, 270, 380, 58, `${this.t('marketFiveShakes')}`, () => this.buyMarketShakes(5, 300), 0xfff4b8, 0x7b2bbf, 20);
+    this.addButton(270, 350, 380, 58, `${this.t('marketTenShakes')}`, () => this.buyMarketShakes(10, 600), 0xfff4b8, 0x7b2bbf, 20);
+    this.addButton(270, 450, 380, 58, this.t('marketBoosters'), () => this.showFloatingText(270, 520, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
+    this.addButton(270, 530, 380, 58, this.t('futureRemoveAds'), () => this.showFloatingText(270, 600, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
+    this.addButton(270, 610, 380, 58, this.t('futureDiamondPacks'), () => this.showFloatingText(270, 680, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
   }
 
   private buyMarketShakes(shakes: number, cost: number): void {
@@ -795,7 +849,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private drawBottomNav(): void {
-    this.add.rectangle(270, 908, 540, 104, 0xffffff, 0.62);
+    this.add.rectangle(270, 908, 540, 104, 0x173f9e, 0.68);
     this.drawNavButton(95, 'play', this.t('play'));
     this.drawNavButton(270, 'island', this.t('island'));
     this.drawNavButton(445, 'market', this.t('market'));
@@ -803,10 +857,36 @@ export class MainScene extends Phaser.Scene {
 
   private drawNavButton(x: number, key: ScreenKey, label: string): void {
     const active = this.screen === key;
-    this.addButton(x, 908, 142, 58, label, () => {
+    const button = this.addButton(x, 908, 152, 62, label, () => {
       this.screen = key;
       this.drawScreen();
-    }, active ? 0x7b2bbf : 0xffffff, active ? 0xffffff : 0x7b2bbf, 18);
+    }, active ? 0xff5aa6 : 0xffffff, active ? 0xffffff : 0x2553b8, 18);
+    this.drawNavIcon(button, key, active);
+  }
+
+  private drawNavIcon(container: Phaser.GameObjects.Container, key: ScreenKey, active: boolean): void {
+    const g = this.add.graphics();
+    const color = active ? 0xffffff : 0xffd33f;
+    g.fillStyle(color, 0.92);
+    if (key === 'play') {
+      g.fillRoundedRect(-50, -10, 22, 16, 6);
+      g.fillCircle(-46, -12, 4);
+      g.fillCircle(-32, -12, 4);
+    } else if (key === 'island') {
+      g.fillCircle(-40, -6, 13);
+      g.fillStyle(0x36c875, active ? 0.9 : 0.78);
+      g.fillEllipse(-40, -12, 34, 16);
+    } else {
+      g.lineStyle(4, color, 0.9);
+      g.strokeRect(-51, -16, 25, 18);
+      g.beginPath();
+      g.moveTo(-47, 4);
+      g.lineTo(-30, 4);
+      g.strokePath();
+      g.fillCircle(-47, 11, 3);
+      g.fillCircle(-31, 11, 3);
+    }
+    container.add(g);
   }
 
   private highlightGroup(group: BoardPosition[]): void {
@@ -869,7 +949,7 @@ export class MainScene extends Phaser.Scene {
       yoyo: true,
       repeat: 3,
       onComplete: () => {
-        this.shakeButton?.setPosition(270, 770);
+        this.shakeButton?.setPosition(270, 838);
         this.shakeButton?.setScale(1);
       }
     });

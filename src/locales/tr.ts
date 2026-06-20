@@ -10,6 +10,7 @@ const tr: typeof en = {
   diamonds: 'Elmas',
   play: 'OYNA',
   island: 'ADA',
+  islandTitle: 'Şeker Adası',
   market: 'MARKET',
   shakeButton: 'ÇALKALA!',
   targetScore: '120.000 skora ulaş',
