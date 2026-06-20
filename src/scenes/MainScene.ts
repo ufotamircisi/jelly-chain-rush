@@ -26,11 +26,25 @@ import {
 } from '../types';
 
 const GAME_WIDTH = 540;
-const BOARD_SIZE = 420;
+const BOARD_SIZE = 392;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_WIDTH - BOARD_SIZE) / 2;
-const BOARD_Y = 292;
+const BOARD_Y = 270;
 const TODAY = () => getLocalDateKey();
+
+const MULTIPLIER_TINTS = [
+  0xdff8ff,
+  0x8be9ff,
+  0xb88cff,
+  0xff91c8,
+  0xffc05d,
+  0xffef78,
+  0x7ee4a0,
+  0x6fd7ff,
+  0xd8a3ff,
+  0xff8a73,
+  0xffd33f
+];
 
 export class MainScene extends Phaser.Scene {
   private save!: SaveData;
@@ -84,95 +98,104 @@ export class MainScene extends Phaser.Scene {
   }
 
   private drawBackground(): void {
-    this.add.rectangle(270, 480, 540, 960, 0x6ee6df);
-    this.add.rectangle(270, 842, 540, 236, 0xffd66b, 0.35);
-    this.add.circle(72, 112, 62, 0xffffff, 0.18);
-    this.add.circle(468, 154, 82, 0xffffff, 0.16);
-    this.add.circle(100, 816, 110, 0xffffff, 0.14);
+    this.add.rectangle(270, 480, 540, 960, 0x7ee8ff);
+    this.add.rectangle(270, 510, 540, 760, 0xffb8d8, 0.16);
+    this.add.rectangle(270, 822, 540, 278, 0x4ccfd1, 0.34);
+    this.add.circle(70, 126, 68, 0xffffff, 0.2);
+    this.add.circle(472, 158, 92, 0xffffff, 0.18);
+    this.add.circle(84, 792, 116, 0xfff4b8, 0.18);
+    this.add.circle(456, 744, 138, 0xff6fae, 0.14);
+    this.add.rectangle(270, 886, 540, 148, 0x1f5ec9, 0.38);
   }
 
   private drawTopBar(): void {
+    this.add.text(273, 50, this.t('title'), {
+      fontFamily: 'Arial',
+      fontSize: '39px',
+      color: '#3d2362',
+      fontStyle: 'bold',
+      stroke: '#ffffff',
+      strokeThickness: 7,
+      align: 'center'
+    }).setOrigin(0.5);
     this.add
-      .text(270, 38, this.t('title'), {
+      .text(270, 45, this.t('title'), {
         fontFamily: 'Arial',
-        fontSize: '32px',
-        color: '#7b2bbf',
-        fontStyle: 'bold'
+        fontSize: '39px',
+        color: '#ff5aa6',
+        fontStyle: 'bold',
+        stroke: '#7b2bbf',
+        strokeThickness: 3,
+        align: 'center'
       })
       .setOrigin(0.5);
 
-    this.addButton(442, 38, 148, 34, `${this.t('language')}: ${this.locale.toUpperCase()}`, () => {
+    this.addButton(462, 26, 118, 30, `${this.t('language')}: ${this.locale.toUpperCase()}`, () => {
       const index = SUPPORTED_LOCALES.indexOf(this.locale);
       this.locale = SUPPORTED_LOCALES[(index + 1) % SUPPORTED_LOCALES.length];
       this.save = updateLanguage(this.save, this.locale);
       this.t = createTranslator(this.locale);
       this.drawScreen();
-    }, 0xffffff, 0x7146bd, 15);
+    }, 0xffffff, 0x7146bd, 12);
   }
 
   private drawPlayScreen(): void {
     this.drawCounters();
     this.drawGoalPanel();
     this.drawBoard();
+    this.drawHelperBadges();
+    this.drawMultiplierRewardsPanel();
     const helperKey = hasAnyValidGroup(this.state.board) ? 'blastHelper' : 'shakeHelper';
 
     this.add
-      .text(270, 732, this.t(helperKey), {
+      .text(270, 710, this.t(helperKey), {
         fontFamily: 'Arial',
         fontSize: '20px',
-        color: '#4d2382',
-        fontStyle: 'bold'
+        color: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#3d2362',
+        strokeThickness: 4
       })
       .setOrigin(0.5);
 
-    this.shakeButton = this.addButton(270, 790, 310, 78, this.t('shakeButton'), () => this.handleShake(), 0xff5aa6, 0xffffff, 32);
+    this.shakeButton = this.addButton(270, 770, 340, 78, this.t('shakeButton'), () => this.handleShake(), 0x62d728, 0xffffff, 34);
   }
 
   private drawCounters(): void {
-    const topStats = [
-      `${this.t('level')} ${this.state.level}`,
-      `${this.t('score')}: ${this.state.score.toLocaleString()} / ${this.state.definition.targetScore.toLocaleString()}`,
-      `${this.t('highestMultiplier')}: ${getMultiplierLabel(this.state.highestMultiplierIndex) || 'x0'}`
-    ];
-
-    topStats.forEach((line, index) => {
-      this.add
-        .text(270, 86 + index * 28, line, {
-          fontFamily: 'Arial',
-          fontSize: index === 1 ? '18px' : '20px',
-          color: '#3d2362',
-          fontStyle: 'bold'
-        })
-        .setOrigin(0.5);
-    });
-
-    this.drawPill(98, 194, `${this.t('shake')} ${this.state.shakesRemaining}/${MAX_SHAKES}`, 0x8f57df);
-    this.drawPill(270, 194, `${this.t('energy')} ${this.state.energy}`, 0x19b68f);
-    this.drawPill(442, 194, `${this.t('diamonds')} ${this.state.diamonds}`, 0x2d93e6);
+    this.drawStatCard(74, 92, 116, 48, this.t('level'), String(this.state.level), 0xffffff);
+    this.drawStatCard(74, 150, 116, 48, this.t('score'), this.state.score.toLocaleString(), 0xffffff);
+    this.drawStatCard(198, 104, 126, 58, this.t('goal'), this.state.definition.targetScore.toLocaleString(), 0xffffff);
+    this.drawStatCard(400, 92, 122, 48, this.t('energy'), String(this.state.energy), 0xffffff);
+    this.drawStatCard(400, 150, 122, 48, this.t('diamonds'), String(this.state.diamonds), 0xffffff);
+    this.drawStatCard(270, 168, 122, 44, this.t('shake'), `${this.state.shakesRemaining}/${MAX_SHAKES}`, 0xffffff);
   }
 
   private drawGoalPanel(): void {
-    this.add.rectangle(270, 242, 470, 74, 0xffffff, 0.58).setStrokeStyle(2, 0x7b2bbf, 0.25);
-    this.add.text(58, 214, this.t('goal'), {
+    this.drawGlossyPanel(26, 204, 160, 102, 0xffd7e8, 0xff5aa6);
+    this.add.text(106, 222, this.t('goal'), {
       fontFamily: 'Arial',
-      fontSize: '16px',
-      color: '#643095',
-      fontStyle: 'bold'
-    });
+      fontSize: '17px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#7b2bbf',
+      strokeThickness: 3
+    }).setOrigin(0.5);
 
     this.state.definition.goals.forEach((goal, index) => {
-      this.add.text(72, 238 + index * 18, this.formatGoal(goal), {
+      this.add.text(40, 248 + index * 24, this.formatGoal(goal), {
         fontFamily: 'Arial',
-        fontSize: '14px',
+        fontSize: '12px',
         color: this.isGoalComplete(goal) ? '#168e67' : '#3d2362',
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        wordWrap: { width: 130 }
       });
     });
   }
 
   private drawBoard(): void {
     this.boardContainer = this.add.container(BOARD_X, BOARD_Y);
-    this.boardContainer.add(this.add.rectangle(BOARD_SIZE / 2, BOARD_SIZE / 2, BOARD_SIZE + 18, BOARD_SIZE + 18, 0xffffff, 0.34));
+    this.boardContainer.add(this.add.rectangle(BOARD_SIZE / 2, BOARD_SIZE / 2 + 4, BOARD_SIZE + 20, BOARD_SIZE + 20, 0x3d2362, 0.18));
+    this.boardContainer.add(this.add.rectangle(BOARD_SIZE / 2, BOARD_SIZE / 2, BOARD_SIZE + 18, BOARD_SIZE + 18, 0xffffff, 0.28).setStrokeStyle(3, 0xffffff, 0.58));
 
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
@@ -181,22 +204,17 @@ export class MainScene extends Phaser.Scene {
         const y = row * CELL_SIZE + CELL_SIZE / 2;
         const container = this.add.container(x, y);
         const multiplierLabel = getMultiplierLabel(cell.multiplierIndex);
-        const candy = getCandyDefinition(cell.candy);
 
-        container.add(this.add.rectangle(0, 0, CELL_SIZE - 7, CELL_SIZE - 7, 0xffffff, 0.34).setStrokeStyle(2, 0x7ad1e7, 0.6));
+        this.drawMultiplierFloor(container, cell.multiplierIndex);
         container.add(this.add.text(0, 18, multiplierLabel, {
           fontFamily: 'Arial',
-          fontSize: '14px',
-          color: '#5b388d',
-          fontStyle: 'bold'
+          fontSize: cell.multiplierIndex >= 10 ? '13px' : '14px',
+          color: cell.multiplierIndex >= 10 ? '#7a3d00' : '#ffffff',
+          fontStyle: 'bold',
+          stroke: cell.multiplierIndex >= 10 ? '#fff1a6' : '#4d2382',
+          strokeThickness: 3
         }).setOrigin(0.5));
-        container.add(this.add.circle(0, -3, 21, candy.color).setStrokeStyle(4, candy.accent, 0.85));
-        container.add(this.add.text(0, -4, candy.label, {
-          fontFamily: 'Arial',
-          fontSize: '22px',
-          color: '#ffffff',
-          fontStyle: 'bold'
-        }).setOrigin(0.5));
+        this.drawCandyIcon(container, cell.candy);
         container.setSize(CELL_SIZE, CELL_SIZE);
         container.setInteractive(new Phaser.Geom.Rectangle(-CELL_SIZE / 2, -CELL_SIZE / 2, CELL_SIZE, CELL_SIZE), Phaser.Geom.Rectangle.Contains);
         container.on('pointerdown', () => this.handleCellTap({ row, col }));
@@ -205,6 +223,178 @@ export class MainScene extends Phaser.Scene {
         this.cellContainers.set(this.positionKey({ row, col }), container);
       }
     }
+  }
+
+  private drawMultiplierFloor(container: Phaser.GameObjects.Container, multiplierIndex: number): void {
+    const color = MULTIPLIER_TINTS[multiplierIndex] ?? 0xdff8ff;
+    const g = this.add.graphics();
+    const size = CELL_SIZE - 6;
+    const x = -size / 2;
+    const y = -size / 2;
+    g.fillStyle(color, multiplierIndex > 0 ? 0.52 : 0.28);
+    g.fillRoundedRect(x, y, size, size, 7);
+    g.lineStyle(multiplierIndex >= 10 ? 3 : 2, multiplierIndex >= 10 ? 0xfff4a3 : 0xffffff, multiplierIndex > 0 ? 0.72 : 0.42);
+    g.strokeRoundedRect(x, y, size, size, 7);
+    g.fillStyle(0xffffff, 0.22);
+    g.fillRoundedRect(x + 4, y + 4, size - 8, 12, 5);
+    if (multiplierIndex >= 10) {
+      g.lineStyle(2, 0xffd33f, 0.8);
+      g.strokeRoundedRect(x + 4, y + 4, size - 8, size - 8, 5);
+    }
+    container.add(g);
+  }
+
+  private drawCandyIcon(container: Phaser.GameObjects.Container, candyType: CandyType): void {
+    const candy = getCandyDefinition(candyType);
+    const g = this.add.graphics();
+    const y = -7;
+
+    if (candyType === 'greenGummy') {
+      g.fillStyle(0x23bd4f, 1);
+      g.fillCircle(-10, y - 15, 6);
+      g.fillCircle(10, y - 15, 6);
+      g.fillRoundedRect(-16, y - 13, 32, 35, 12);
+      g.fillStyle(0x9cff9e, 0.55);
+      g.fillCircle(-6, y - 2, 4);
+      g.fillCircle(6, y - 2, 4);
+      g.lineStyle(3, 0xd6ffd8, 0.8);
+      g.strokeRoundedRect(-16, y - 13, 32, 35, 12);
+    } else if (candyType === 'purpleJelly') {
+      g.fillStyle(0x9f33d8, 1);
+      g.fillRoundedRect(-18, y - 15, 36, 31, 13);
+      g.fillStyle(0xf2c4ff, 0.38);
+      g.fillEllipse(-6, y - 6, 13, 18);
+      g.lineStyle(3, 0xeadbff, 0.85);
+      g.strokeRoundedRect(-18, y - 15, 36, 31, 13);
+    } else if (candyType === 'redHeart') {
+      g.fillStyle(0xff385f, 1);
+      g.fillCircle(-8, y - 7, 11);
+      g.fillCircle(8, y - 7, 11);
+      g.fillTriangle(-19, y - 2, 19, y - 2, 0, y + 24);
+      g.lineStyle(3, 0xffd3dc, 0.85);
+      g.strokeCircle(-8, y - 7, 11);
+      g.strokeCircle(8, y - 7, 11);
+    } else if (candyType === 'yellowStar' || candyType === 'energyStar') {
+      const fill = candyType === 'energyStar' ? 0x86fbff : 0xffd82e;
+      const stroke = candyType === 'energyStar' ? 0xffffff : 0xfff5b8;
+      g.fillStyle(fill, 1);
+      g.lineStyle(3, stroke, 0.9);
+      const points = this.getStarPoints(0, y, 24, 11, 5);
+      g.fillPoints(points, true);
+      g.strokePoints(points, true);
+      g.fillStyle(0xffffff, 0.42);
+      g.fillCircle(-6, y - 5, 4);
+    } else if (candyType === 'blueRound') {
+      g.fillStyle(0x198eff, 1);
+      g.fillCircle(0, y, 22);
+      g.fillStyle(0xbfe4ff, 0.56);
+      g.fillCircle(-8, y - 9, 7);
+      g.lineStyle(4, 0xd5e8ff, 0.85);
+      g.strokeCircle(0, y, 22);
+    } else if (candyType === 'orangeBean') {
+      g.fillStyle(0xff912e, 1);
+      g.fillEllipse(0, y, 42, 25);
+      g.fillStyle(0xffe0b5, 0.45);
+      g.fillEllipse(-8, y - 5, 16, 7);
+      g.lineStyle(3, 0xffe3c4, 0.85);
+      g.strokeEllipse(0, y, 42, 25);
+      g.rotation = -0.42;
+    } else {
+      g.fillStyle(candy.color, 1);
+      g.fillCircle(0, y, 21);
+      g.lineStyle(4, candy.accent, 0.85);
+      g.strokeCircle(0, y, 21);
+    }
+
+    container.add(g);
+  }
+
+  private getStarPoints(x: number, y: number, outer: number, inner: number, points: number): Phaser.Math.Vector2[] {
+    const result: Phaser.Math.Vector2[] = [];
+    for (let index = 0; index < points * 2; index += 1) {
+      const radius = index % 2 === 0 ? outer : inner;
+      const angle = -Math.PI / 2 + (index * Math.PI) / points;
+      result.push(new Phaser.Math.Vector2(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius));
+    }
+    return result;
+  }
+
+  private drawHelperBadges(): void {
+    this.drawGlossyPanel(20, 604, 155, 46, 0x13a9e8, 0xffffff);
+    this.add.text(98, 627, this.t('helperBadgeBlast'), {
+      fontFamily: 'Arial',
+      fontSize: '13px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      align: 'center',
+      wordWrap: { width: 126 }
+    }).setOrigin(0.5);
+
+    this.drawGlossyPanel(20, 656, 155, 46, 0x8f57df, 0xffffff);
+    this.add.text(98, 679, this.t('specialCandyRule'), {
+      fontFamily: 'Arial',
+      fontSize: '12px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      align: 'center',
+      wordWrap: { width: 126 }
+    }).setOrigin(0.5);
+  }
+
+  private drawMultiplierRewardsPanel(): void {
+    this.drawGlossyPanel(362, 602, 158, 104, 0xfff4b8, 0x8f57df);
+    this.add.text(441, 620, this.t('multiplierRewards'), {
+      fontFamily: 'Arial',
+      fontSize: '12px',
+      color: '#643095',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    [
+      ['x128', '+10'],
+      ['x256', '+20'],
+      ['x512', '+50'],
+      ['x1000', '+100']
+    ].forEach(([label, reward], index) => {
+      const y = 642 + index * 15;
+      this.add.text(382, y, label, {
+        fontFamily: 'Arial',
+        fontSize: '12px',
+        color: label === 'x1000' ? '#b56b00' : '#168e67',
+        fontStyle: 'bold'
+      });
+      this.add.text(448, y, `${reward} ${this.t('energy')} +${reward.replace('+', '')} ${this.t('diamonds')}`, {
+        fontFamily: 'Arial',
+        fontSize: '9px',
+        color: '#3d2362',
+        fontStyle: 'bold'
+      }).setOrigin(0.5, 0);
+    });
+  }
+
+  private drawStatCard(x: number, y: number, width: number, height: number, label: string, value: string, fill: number): void {
+    this.drawGlossyPanel(x - width / 2, y - height / 2, width, height, fill, 0xd9b7ff);
+    this.add.text(x, y - height * 0.18, label.toUpperCase(), {
+      fontFamily: 'Arial',
+      fontSize: '11px',
+      color: '#7b2bbf',
+      fontStyle: 'bold',
+      align: 'center'
+    }).setOrigin(0.5);
+    this.add.text(x, y + height * 0.2, value, {
+      fontFamily: 'Arial',
+      fontSize: height > 50 ? '20px' : '18px',
+      color: '#3d2362',
+      fontStyle: 'bold',
+      align: 'center',
+      wordWrap: { width: width - 12 }
+    }).setOrigin(0.5);
+  }
+
+  private drawGlossyPanel(x: number, y: number, width: number, height: number, fill: number, stroke: number): void {
+    this.add.rectangle(x + width / 2, y + height / 2 + 4, width, height, 0x3d2362, 0.16);
+    this.add.rectangle(x + width / 2, y + height / 2, width, height, fill, 0.86).setStrokeStyle(3, stroke, 0.7);
+    this.add.rectangle(x + width / 2, y + 10, width - 14, 12, 0xffffff, 0.22);
   }
 
   private handleShake(): void {
@@ -270,6 +460,7 @@ export class MainScene extends Phaser.Scene {
     const group = findConnectedGroup(this.state.board, position);
     if (group.length < 3) {
       this.showInvalidFeedback(position);
+      this.showFloatingText(270, 710, this.t('invalidGroup'), '#ffffff');
       return;
     }
 
@@ -403,25 +594,36 @@ export class MainScene extends Phaser.Scene {
   }
 
   private drawContinuePanel(): void {
-    this.drawModal(270, 482, 452, 440);
-    this.add.text(270, 304, this.t('levelFailed'), {
+    this.drawModal(270, 482, 452, 470);
+    this.add.text(270, 284, this.t('levelFailed'), {
       fontFamily: 'Arial',
       fontSize: '30px',
       color: '#7b2bbf',
       fontStyle: 'bold'
     }).setOrigin(0.5);
-    this.add.text(270, 340, this.t('continuePrompt'), {
+    this.add.text(270, 318, this.t('continuePrompt'), {
       fontFamily: 'Arial',
       fontSize: '18px',
       color: '#3d2362',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    this.addButton(270, 392, 330, 42, this.t('rewardedContinue'), () => this.continueLevel(1), 0x19b68f, 0xffffff, 16);
-    this.addButton(270, 446, 330, 42, `${this.t('buyOneShake')} - 100 ${this.t('diamonds')}`, () => this.continueLevel(1, 100), 0xff5aa6, 0xffffff, 16);
-    this.addButton(270, 500, 330, 42, `${this.t('buyFiveShakes')} - 300 ${this.t('diamonds')}`, () => this.continueLevel(5, 300), 0xff5aa6, 0xffffff, 16);
-    this.addButton(270, 554, 330, 42, `${this.t('buyTenShakes')} - 600 ${this.t('diamonds')}`, () => this.continueLevel(10, 600), 0xff5aa6, 0xffffff, 16);
-    this.addButton(270, 616, 250, 44, `${this.t('giveUp')} / ${this.t('restartLevel')}`, () => this.restartLevel(), 0xffffff, 0x7b2bbf, 15);
+    this.state.definition.goals.forEach((goal, index) => {
+      this.add.text(270, 350 + index * 20, this.formatGoal(goal), {
+        fontFamily: 'Arial',
+        fontSize: '13px',
+        color: this.isGoalComplete(goal) ? '#168e67' : '#3d2362',
+        fontStyle: 'bold',
+        align: 'center',
+        wordWrap: { width: 360 }
+      }).setOrigin(0.5);
+    });
+
+    this.addButton(270, 416, 330, 40, this.t('rewardedContinue'), () => this.continueLevel(1), 0x19b68f, 0xffffff, 15);
+    this.addButton(270, 468, 330, 40, `${this.t('buyOneShake')} - 100 ${this.t('diamonds')}`, () => this.continueLevel(1, 100), 0xff5aa6, 0xffffff, 15);
+    this.addButton(270, 520, 330, 40, `${this.t('buyFiveShakes')} - 300 ${this.t('diamonds')}`, () => this.continueLevel(5, 300), 0xff5aa6, 0xffffff, 15);
+    this.addButton(270, 572, 330, 40, `${this.t('buyTenShakes')} - 600 ${this.t('diamonds')}`, () => this.continueLevel(10, 600), 0xff5aa6, 0xffffff, 15);
+    this.addButton(270, 628, 250, 42, `${this.t('giveUp')} / ${this.t('restartLevel')}`, () => this.restartLevel(), 0xffffff, 0x7b2bbf, 14);
   }
 
   private drawDailyRewardModal(): void {
@@ -496,12 +698,7 @@ export class MainScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       if (ready) {
-        this.add.text(x, y + 24, this.t('ready'), {
-          fontFamily: 'Arial',
-          fontSize: '11px',
-          color: '#d74f00',
-          fontStyle: 'bold'
-        }).setOrigin(0.5);
+        this.addButton(x, y + 25, 96, 22, this.t('claim'), () => this.claimBuildingReward(building.id), 0xffd33f, 0x7b2bbf, 10);
       } else if (isCompleted) {
         this.add.text(x, y + 24, this.t('claimedToday'), {
           fontFamily: 'Arial',
@@ -527,7 +724,8 @@ export class MainScene extends Phaser.Scene {
     this.addButton(270, 270, 360, 58, `${this.t('marketFiveShakes')}`, () => this.buyMarketShakes(5, 300), 0xffffff, 0x7b2bbf, 20);
     this.addButton(270, 350, 360, 58, `${this.t('marketTenShakes')}`, () => this.buyMarketShakes(10, 600), 0xffffff, 0x7b2bbf, 20);
     this.addButton(270, 450, 360, 58, this.t('marketBoosters'), () => this.showFloatingText(270, 520, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
-    this.addButton(270, 530, 360, 58, this.t('marketPacks'), () => this.showFloatingText(270, 600, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
+    this.addButton(270, 530, 360, 58, this.t('futureRemoveAds'), () => this.showFloatingText(270, 600, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
+    this.addButton(270, 610, 360, 58, this.t('futureDiamondPacks'), () => this.showFloatingText(270, 680, this.t('marketSafePlaceholder'), '#ffffff'), 0xffffff, 0x7b2bbf, 18);
   }
 
   private buyMarketShakes(shakes: number, cost: number): void {
@@ -566,6 +764,22 @@ export class MainScene extends Phaser.Scene {
     this.time.delayedCall(450, () => this.drawScreen());
   }
 
+  private claimBuildingReward(buildingId: number): void {
+    const building = BUILDINGS.find((item) => item.id === buildingId);
+    if (!building || !this.isBuildingReady(buildingId)) {
+      return;
+    }
+
+    this.save.energy += building.energy;
+    this.save.diamonds += building.diamonds;
+    this.save.buildingClaimDates[String(buildingId)] = TODAY();
+    this.state.energy = this.save.energy;
+    this.state.diamonds = this.save.diamonds;
+    saveData(this.save);
+    this.showFloatingText(270, 164, `${this.t('gained')}: +${building.energy} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}`, '#ffffff');
+    this.time.delayedCall(450, () => this.drawScreen());
+  }
+
   private buildBuilding(buildingId: number): void {
     const cost = this.getBuildCost(buildingId);
     if (this.save.diamonds < cost) {
@@ -599,11 +813,18 @@ export class MainScene extends Phaser.Scene {
     for (const position of group) {
       const container = this.cellContainers.get(this.positionKey(position));
       if (!container) continue;
+      this.tweens.killTweensOf(container);
       this.tweens.add({
         targets: container,
-        scale: 1.12,
-        alpha: 0.35,
-        duration: 110
+        scale: 1.18,
+        alpha: 0.72,
+        duration: 75,
+        yoyo: true,
+        repeat: 1,
+        onComplete: () => {
+          container.setScale(1);
+          container.setAlpha(1);
+        }
       });
     }
   }
@@ -648,7 +869,7 @@ export class MainScene extends Phaser.Scene {
       yoyo: true,
       repeat: 3,
       onComplete: () => {
-        this.shakeButton?.setPosition(270, 790);
+        this.shakeButton?.setPosition(270, 770);
         this.shakeButton?.setScale(1);
       }
     });
@@ -683,7 +904,9 @@ export class MainScene extends Phaser.Scene {
     fontSize: number
   ): Phaser.GameObjects.Container {
     const container = this.add.container(x, y);
-    const bg = this.add.rectangle(0, 0, width, height, fill, 0.94).setStrokeStyle(3, 0xffffff, 0.72);
+    const shadow = this.add.rectangle(0, 5, width, height, 0x3d2362, 0.22);
+    const bg = this.add.rectangle(0, 0, width, height, fill, 0.95).setStrokeStyle(3, 0xffffff, 0.78);
+    const shine = this.add.rectangle(0, -height * 0.24, width - 18, Math.max(8, height * 0.22), 0xffffff, 0.22);
     const text = this.add.text(0, 0, label, {
       fontFamily: 'Arial',
       fontSize: `${fontSize}px`,
@@ -692,7 +915,7 @@ export class MainScene extends Phaser.Scene {
       align: 'center',
       wordWrap: { width: width - 12 }
     }).setOrigin(0.5);
-    container.add([bg, text]);
+    container.add([shadow, bg, shine, text]);
     container.setSize(width, height);
     container.setInteractive(new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height), Phaser.Geom.Rectangle.Contains);
     container.input!.cursor = 'pointer';
