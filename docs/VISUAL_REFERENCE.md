@@ -46,6 +46,7 @@ Important: this reference is a visual direction, not a requirement to copy any c
 * The board should look tactical and readable.
 * The board should communicate falling candy columns after SHAKE / ÇALKALA.
 * The player should understand that candies drop, horizontal/vertical matches auto-blast, cascades settle, then the player swipes candies to continue.
+* The board should not read as a tap-to-blast connected-cluster game.
 * The player should understand: "If this candy lands on that multiplier cell, I can score more."
 * The SHAKE / ÇALKALA button should be large, glossy, and central.
 * The button should feel like it physically shakes the 7x7 board and starts candy rain.

@@ -2,7 +2,14 @@ import Phaser from 'phaser';
 import { BUILDINGS } from '../data/buildings';
 import { getCandyDefinition } from '../data/candies';
 import { getMultiplierLabel } from '../data/multipliers';
-import { blastGroup, findConnectedGroup, findValidGroups, getHighestMultiplierIndex, hasAnyValidGroup, regenerateCandies } from '../game/boardModel';
+import {
+  areAdjacent,
+  getHighestMultiplierIndex,
+  hasValidSwipeMove,
+  regenerateCandies,
+  resolveMatchesAndCascades,
+  swapCandies
+} from '../game/boardModel';
 import { getLocalDateKey, isBeforeToday } from '../game/calendar';
 import { getDailyReward } from '../game/dailyRewards';
 import { createGameState } from '../game/gameState';
@@ -56,6 +63,8 @@ export class MainScene extends Phaser.Scene {
   private rewardSummary?: RewardSummary;
   private cellContainers = new Map<string, Phaser.GameObjects.Container>();
   private isShaking = false;
+  private isResolving = false;
+  private dragStart?: BoardPosition;
 
   constructor() {
     super('MainScene');
@@ -119,7 +128,7 @@ export class MainScene extends Phaser.Scene {
     this.setText('shake-label', this.t('shake'));
     this.setText('shake-value', `${this.state.shakesRemaining}/${MAX_SHAKES}`);
     this.setText('goal-panel-title', this.t('goal'));
-    this.setText('helper-text', this.t(hasAnyValidGroup(this.state.board) ? 'blastHelper' : 'shakeHelper'));
+    this.setText('helper-text', this.getHelperText());
     this.setText('badge-blast', this.t('helperBadgeBlast'));
     this.setText('badge-special', this.t('specialCandyRule'));
     this.setText('multiplier-rewards-title', this.t('multiplierRewards'));
@@ -273,7 +282,8 @@ export class MainScene extends Phaser.Scene {
         this.drawCandyIcon(container, cell.candy);
         container.setSize(CELL_SIZE, CELL_SIZE);
         container.setInteractive(new Phaser.Geom.Rectangle(-CELL_SIZE / 2, -CELL_SIZE / 2, CELL_SIZE, CELL_SIZE), Phaser.Geom.Rectangle.Contains);
-        container.on('pointerdown', () => this.handleCellTap({ row, col }));
+        container.on('pointerdown', () => this.handleCellPointerDown({ row, col }));
+        container.on('pointerup', () => this.handleCellPointerUp({ row, col }));
         this.boardContainer.add(container);
         this.cellContainers.set(this.positionKey({ row, col }), container);
       }
@@ -377,15 +387,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private handleShake(): void {
-    if (this.isShaking || this.state.status !== 'playing') return;
-
-    const availableGroups = findValidGroups(this.state.board, 3);
-    if (availableGroups.length > 0) {
-      this.showWarning(this.t('shakeBlocked'));
-      this.highlightAvailableGroups(availableGroups);
-      this.blockShakeButton();
-      return;
-    }
+    if (this.isShaking || this.isResolving || this.state.status !== 'playing') return;
 
     if (this.state.shakesRemaining <= 0) {
       this.triggerLevelFail();
@@ -398,6 +400,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.isShaking = true;
+    this.dragStart = undefined;
     this.state.shakesRemaining -= 1;
     this.state.energy -= SHAKE_COST_ENERGY;
     this.syncSaveCurrency();
@@ -406,10 +409,10 @@ export class MainScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.boardContainer,
       x: { from: BOARD_X - 10, to: BOARD_X + 10 },
-      y: { from: BOARD_Y - 5, to: BOARD_Y + 5 },
-      duration: 55,
+      y: { from: BOARD_Y - 8, to: BOARD_Y + 8 },
+      duration: 65,
       yoyo: true,
-      repeat: 5,
+      repeat: 22,
       onComplete: () => this.finishShake()
     });
   }
@@ -418,47 +421,103 @@ export class MainScene extends Phaser.Scene {
     this.state.board = regenerateCandies(this.state.board);
     this.isShaking = false;
     this.drawBoard();
-
-    if (this.state.shakesRemaining <= 0 && !areGoalsComplete(this.state)) {
-      this.triggerLevelFail();
-      return;
-    }
-
-    this.renderOverlay();
+    this.showWarning(this.t('chainInProgress'));
+    this.resolveCurrentCascades();
   }
 
-  private handleCellTap(position: BoardPosition): void {
-    if (this.state.status !== 'playing') return;
+  private handleCellPointerDown(position: BoardPosition): void {
+    if (!this.canUseBoardInput()) return;
+    this.dragStart = position;
+  }
 
-    const group = findConnectedGroup(this.state.board, position);
-    if (group.length < 3) {
-      this.showInvalidFeedback(position);
-      this.showWarning(this.t('invalidGroup'));
+  private handleCellPointerUp(position: BoardPosition): void {
+    if (!this.canUseBoardInput() || !this.dragStart) return;
+    const start = this.dragStart;
+    this.dragStart = undefined;
+
+    if (start.row === position.row && start.col === position.col) {
       return;
     }
 
-    this.highlightGroup(group);
-    this.time.delayedCall(120, () => {
-      const candy = this.state.board[position.row][position.col].candy;
-      const result = blastGroup(this.state.board, group);
-      this.state.board = result.board;
+    this.handleSwipe(start, position);
+  }
+
+  private handleSwipe(first: BoardPosition, second: BoardPosition): void {
+    if (!areAdjacent(first, second)) {
+      this.showInvalidFeedback(first);
+      this.showWarning(this.t('invalidSwipe'));
+      return;
+    }
+
+    const swappedBoard = swapCandies(this.state.board, first, second);
+    const preview = resolveMatchesAndCascades(swappedBoard);
+    this.state.board = swappedBoard;
+    this.drawBoard();
+
+    if (preview.steps.length === 0) {
+      this.time.delayedCall(120, () => {
+        this.state.board = swapCandies(this.state.board, first, second);
+        this.drawBoard();
+        this.showInvalidFeedback(first);
+        this.showInvalidFeedback(second);
+        this.showWarning(this.t('invalidSwipe'));
+        this.renderOverlay();
+      });
+      return;
+    }
+
+    this.showWarning(this.t('chainInProgress'));
+    this.time.delayedCall(120, () => this.resolveCurrentCascades());
+  }
+
+  private resolveCurrentCascades(): void {
+    if (this.state.status !== 'playing') return;
+
+    this.isResolving = true;
+    this.renderOverlay();
+    const result = resolveMatchesAndCascades(this.state.board);
+    this.state.board = result.board;
+
+    if (result.steps.length > 0) {
       this.state.score += result.scoreDelta;
-      this.state.candyBlasts[candy] = (this.state.candyBlasts[candy] ?? 0) + group.length;
+      for (const [candy, count] of Object.entries(result.candyCounts) as [CandyType, number][]) {
+        this.state.candyBlasts[candy] = (this.state.candyBlasts[candy] ?? 0) + count;
+      }
       this.state.highestMultiplierIndex = Math.max(this.state.highestMultiplierIndex, getHighestMultiplierIndex(result.board));
-      this.save.stats.totalBlasts += 1;
+      this.save.stats.totalBlasts += result.steps.length;
       this.save.stats.highestMultiplierEver = Math.max(this.save.stats.highestMultiplierEver, this.getHighestMultiplierValue());
       saveData(this.save);
       this.showScorePopup(`+${result.scoreDelta.toLocaleString()}`);
+    }
 
-      this.time.delayedCall(180, () => {
-        this.drawBoard();
-        if (areGoalsComplete(this.state)) {
-          this.triggerLevelWin();
-        } else {
-          this.renderOverlay();
-        }
-      });
+    const delay = Math.max(180, result.steps.length * 180);
+    this.time.delayedCall(delay, () => {
+      this.isResolving = false;
+      this.drawBoard();
+
+      if (areGoalsComplete(this.state)) {
+        this.triggerLevelWin();
+        return;
+      }
+
+      if (this.state.shakesRemaining <= 0) {
+        this.triggerLevelFail();
+        return;
+      }
+
+      this.renderOverlay();
     });
+  }
+
+  private canUseBoardInput(): boolean {
+    return this.state.status === 'playing' && !this.isShaking && !this.isResolving;
+  }
+
+  private getHelperText(): string {
+    if (this.isShaking) return this.t('shakeDropHelper');
+    if (this.isResolving) return this.t('chainInProgress');
+    if (hasValidSwipeMove(this.state.board)) return this.t('swipeHelper');
+    return this.t('shakeHelper');
   }
 
   private triggerLevelWin(): void {

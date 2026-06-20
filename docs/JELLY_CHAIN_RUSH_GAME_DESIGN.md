@@ -192,6 +192,8 @@ Invalid swipe:
 
 This hybrid system keeps SHAKE as the dramatic candy-drop action and uses familiar match-3 swipes for player agency after cascades settle.
 
+Normal gameplay must not use tap-to-blast connected clusters. The active puzzle model is shake drop, automatic straight-line matching, cascade resolution, then adjacent swipe moves.
+
 ---
 
 ## 6. Scoring
