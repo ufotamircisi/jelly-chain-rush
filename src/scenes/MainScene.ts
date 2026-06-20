@@ -401,8 +401,7 @@ export class MainScene extends Phaser.Scene {
     this.cellContainers.clear();
     this.candyContainers.clear();
     this.boardContainer = this.add.container(BOARD_X, BOARD_Y);
-    this.boardContainer.add(this.add.rectangle(BOARD_SIZE / 2, BOARD_SIZE / 2 + 3, BOARD_SIZE + 12, BOARD_SIZE + 12, 0x3d2362, 0.18));
-    this.boardContainer.add(this.add.rectangle(BOARD_SIZE / 2, BOARD_SIZE / 2, BOARD_SIZE + 10, BOARD_SIZE + 10, 0xffffff, 0.28).setStrokeStyle(3, 0xffffff, 0.58));
+    this.drawBoardFrame();
 
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
@@ -413,14 +412,15 @@ export class MainScene extends Phaser.Scene {
         this.drawMultiplierFloor(container, cell.multiplierIndex);
         container.add(this.add.text(0, 17, getMultiplierLabel(cell.multiplierIndex), {
           fontFamily: 'Arial',
-          fontSize: cell.multiplierIndex >= 10 ? '13px' : '14px',
-          color: cell.multiplierIndex >= 10 ? '#7a3d00' : '#ffffff',
+          fontSize: cell.multiplierIndex >= 10 ? '12px' : cell.multiplierIndex >= 7 ? '13px' : '12px',
+          color: cell.multiplierIndex >= 9 ? '#8a4a00' : '#ffffff',
           fontStyle: 'bold',
-          stroke: cell.multiplierIndex >= 10 ? '#fff1a6' : '#4d2382',
-          strokeThickness: 3
-        }).setOrigin(0.5));
+          stroke: cell.multiplierIndex >= 9 ? '#fff5b8' : '#4d2382',
+          strokeThickness: cell.multiplierIndex > 0 ? 3 : 2
+        }).setOrigin(0.5).setAlpha(cell.multiplierIndex > 0 ? 0.78 : 0.28));
         const candyContainer = this.add.container(0, 0);
         this.drawCandyIcon(candyContainer, cell.candy);
+        candyContainer.setDepth(2);
         container.add(candyContainer);
         container.setSize(CELL_SIZE, CELL_SIZE);
         container.setInteractive(new Phaser.Geom.Rectangle(-CELL_SIZE / 2, -CELL_SIZE / 2, CELL_SIZE, CELL_SIZE), Phaser.Geom.Rectangle.Contains);
@@ -433,26 +433,53 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  private drawBoardFrame(): void {
+    const frame = this.add.graphics();
+    frame.fillStyle(0x4d2382, 0.28);
+    frame.fillRoundedRect(-5, -1, BOARD_SIZE + 10, BOARD_SIZE + 14, 24);
+    frame.fillStyle(0xffffff, 0.38);
+    frame.fillRoundedRect(-3, -5, BOARD_SIZE + 6, BOARD_SIZE + 8, 23);
+    frame.fillStyle(0xff72bd, 0.34);
+    frame.fillRoundedRect(0, 0, BOARD_SIZE, BOARD_SIZE, 20);
+    frame.fillStyle(0x7ad8ff, 0.24);
+    frame.fillRoundedRect(6, 6, BOARD_SIZE - 12, BOARD_SIZE - 12, 17);
+    frame.lineStyle(5, 0xffffff, 0.72);
+    frame.strokeRoundedRect(-2, -2, BOARD_SIZE + 4, BOARD_SIZE + 4, 22);
+    frame.lineStyle(3, 0x7b2bbf, 0.34);
+    frame.strokeRoundedRect(5, 5, BOARD_SIZE - 10, BOARD_SIZE - 10, 16);
+    this.boardContainer?.add(frame);
+  }
+
   private drawMultiplierFloor(container: Phaser.GameObjects.Container, multiplierIndex: number): void {
     const color = MULTIPLIER_TINTS[multiplierIndex] ?? 0xdff8ff;
     const g = this.add.graphics();
-    const size = CELL_SIZE - 6;
+    const size = CELL_SIZE - 8;
     const x = -size / 2;
     const y = -size / 2;
-    g.fillStyle(color, multiplierIndex > 0 ? 0.62 : 0.36);
-    g.fillRoundedRect(x, y, size, size, 8);
-    g.lineStyle(multiplierIndex >= 10 ? 3 : 2, multiplierIndex >= 10 ? 0xfff4a3 : 0xffffff, multiplierIndex > 0 ? 0.84 : 0.52);
-    g.strokeRoundedRect(x, y, size, size, 8);
+    const alpha = multiplierIndex >= 10 ? 0.86 : multiplierIndex >= 9 ? 0.78 : multiplierIndex >= 7 ? 0.68 : multiplierIndex >= 4 ? 0.56 : multiplierIndex > 0 ? 0.42 : 0.26;
+    g.fillStyle(0x2a1754, 0.14);
+    g.fillRoundedRect(x + 2, y + 3, size, size, 10);
+    g.fillStyle(color, alpha);
+    g.fillRoundedRect(x, y, size, size, 10);
+    g.lineStyle(2, 0xffffff, multiplierIndex > 0 ? 0.62 : 0.34);
+    g.strokeRoundedRect(x, y, size, size, 10);
     if (multiplierIndex >= 10) {
+      g.lineStyle(4, 0xffd33f, 0.9);
+      g.strokeRoundedRect(x - 1, y - 1, size + 2, size + 2, 11);
       g.lineStyle(2, 0xffb11f, 0.95);
       g.strokeRoundedRect(x + 3, y + 3, size - 6, size - 6, 6);
       g.fillStyle(0xffdd58, 0.28);
+      g.fillCircle(0, 0, size * 0.42);
     } else if (multiplierIndex >= 9) {
-      g.fillStyle(0xffffff, 0.3);
+      g.lineStyle(3, 0xfff1a6, 0.86);
+      g.strokeRoundedRect(x + 2, y + 2, size - 4, size - 4, 8);
+    } else if (multiplierIndex >= 7) {
+      g.lineStyle(3, 0xffffff, 0.58);
+      g.strokeRoundedRect(x + 2, y + 2, size - 4, size - 4, 8);
     } else {
       g.fillStyle(0xffffff, 0.22);
     }
-    g.fillRoundedRect(x + 4, y + 4, size - 8, 12, 6);
+    g.fillRoundedRect(x + 5, y + 4, size - 10, 10, 6);
     container.add(g);
   }
 
@@ -462,48 +489,77 @@ export class MainScene extends Phaser.Scene {
     const y = -8;
 
     if (candyType === 'greenGummy') {
-      g.fillStyle(0x23bd4f, 1);
-      g.fillCircle(-9, y - 14, 5);
-      g.fillCircle(9, y - 14, 5);
-      g.fillRoundedRect(-14, y - 12, 28, 31, 11);
-      g.fillStyle(0x9cff9e, 0.55);
-      g.fillCircle(-5, y - 2, 3);
-      g.fillCircle(5, y - 2, 3);
-      g.lineStyle(3, 0xd6ffd8, 0.8);
-      g.strokeRoundedRect(-14, y - 12, 28, 31, 11);
+      g.fillStyle(0x147a38, 0.22);
+      g.fillEllipse(0, y + 17, 31, 9);
+      g.fillStyle(0x27c85a, 1);
+      g.fillCircle(-10, y - 15, 6);
+      g.fillCircle(10, y - 15, 6);
+      g.fillRoundedRect(-16, y - 14, 32, 34, 13);
+      g.fillStyle(0x9cff9e, 0.5);
+      g.fillEllipse(-6, y - 4, 9, 14);
+      g.fillStyle(0xffffff, 0.62);
+      g.fillCircle(-7, y - 7, 3);
+      g.fillCircle(6, y - 7, 3);
+      g.lineStyle(3, 0xd6ffd8, 0.9);
+      g.strokeRoundedRect(-16, y - 14, 32, 34, 13);
     } else if (candyType === 'purpleJelly') {
-      g.fillStyle(0x9f33d8, 1);
-      g.fillRoundedRect(-16, y - 14, 32, 29, 13);
-      g.fillStyle(0xf2c4ff, 0.38);
-      g.fillEllipse(-5, y - 6, 12, 17);
-      g.lineStyle(3, 0xeadbff, 0.85);
-      g.strokeRoundedRect(-16, y - 14, 32, 29, 13);
+      g.fillStyle(0x5e1f8e, 0.24);
+      g.fillEllipse(0, y + 16, 34, 8);
+      g.fillStyle(0xa83add, 1);
+      g.fillRoundedRect(-17, y - 12, 34, 29, 14);
+      g.fillStyle(0xd77bff, 0.62);
+      g.fillRoundedRect(-12, y - 14, 24, 12, 9);
+      g.fillStyle(0xffffff, 0.45);
+      g.fillEllipse(-6, y - 7, 10, 15);
+      g.lineStyle(3, 0xeadbff, 0.9);
+      g.strokeRoundedRect(-17, y - 12, 34, 29, 14);
     } else if (candyType === 'redHeart') {
+      g.fillStyle(0x8d1736, 0.22);
+      g.fillEllipse(0, y + 17, 32, 8);
       g.fillStyle(0xff385f, 1);
       g.fillCircle(-7, y - 7, 10);
       g.fillCircle(7, y - 7, 10);
       g.fillTriangle(-17, y - 2, 17, y - 2, 0, y + 21);
+      g.fillStyle(0xffffff, 0.42);
+      g.fillCircle(-8, y - 10, 4);
       g.lineStyle(3, 0xffd3dc, 0.85);
       g.strokeCircle(-7, y - 7, 10);
       g.strokeCircle(7, y - 7, 10);
     } else if (candyType === 'yellowStar' || candyType === 'energyStar') {
       const fill = candyType === 'energyStar' ? 0x86fbff : 0xffd82e;
       const stroke = candyType === 'energyStar' ? 0xffffff : 0xfff5b8;
+      if (candyType === 'energyStar') {
+        g.fillStyle(0x86fbff, 0.22);
+        g.fillCircle(0, y, 27);
+      } else {
+        g.fillStyle(0x9f6d00, 0.18);
+        g.fillEllipse(0, y + 18, 34, 8);
+      }
       g.fillStyle(fill, 1);
       g.lineStyle(3, stroke, 0.9);
       const points = this.getStarPoints(0, y, 21, 10, 5);
       g.fillPoints(points, true);
       g.strokePoints(points, true);
+      g.fillStyle(0xffffff, candyType === 'energyStar' ? 0.66 : 0.42);
+      g.fillCircle(-5, y - 7, 4);
     } else if (candyType === 'blueRound') {
+      g.fillStyle(0x0d4f96, 0.22);
+      g.fillEllipse(0, y + 18, 34, 8);
       g.fillStyle(0x198eff, 1);
       g.fillCircle(0, y, 20);
+      g.fillStyle(0x5ec8ff, 0.52);
+      g.fillCircle(4, y + 4, 15);
       g.fillStyle(0xbfe4ff, 0.56);
       g.fillCircle(-7, y - 8, 6);
       g.lineStyle(4, 0xd5e8ff, 0.85);
       g.strokeCircle(0, y, 20);
     } else if (candyType === 'orangeBean') {
+      g.fillStyle(0x9e4f11, 0.22);
+      g.fillEllipse(0, y + 17, 36, 8);
       g.fillStyle(0xff912e, 1);
       g.fillEllipse(0, y, 38, 23);
+      g.fillStyle(0xffb44f, 0.55);
+      g.fillEllipse(4, y + 3, 28, 15);
       g.fillStyle(0xffe0b5, 0.45);
       g.fillEllipse(-7, y - 5, 14, 6);
       g.lineStyle(3, 0xffe3c4, 0.85);
@@ -610,13 +666,9 @@ export class MainScene extends Phaser.Scene {
 
     const swappedBoard = swapCandies(this.state.board, first, second);
     const preview = resolveMatchesAndCascades(swappedBoard);
-    this.state.board = swappedBoard;
-    this.drawBoard();
 
     if (preview.steps.length === 0) {
-      this.time.delayedCall(120, () => {
-        this.state.board = swapCandies(this.state.board, first, second);
-        this.drawBoard();
+      this.animateSwap(first, second, true, () => {
         this.showInvalidFeedback(first);
         this.showInvalidFeedback(second);
         this.playInvalidSound();
@@ -626,8 +678,53 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    this.showWarning(this.t('chainInProgress'));
-    this.time.delayedCall(120, () => this.resolveCurrentCascades());
+    this.animateSwap(first, second, false, () => {
+      this.state.board = swappedBoard;
+      this.drawBoard();
+      this.showWarning(this.t('chainInProgress'));
+      this.time.delayedCall(80, () => this.resolveCurrentCascades());
+    });
+  }
+
+  private animateSwap(first: BoardPosition, second: BoardPosition, swapBack: boolean, onComplete: () => void): void {
+    const firstCandy = this.candyContainers.get(this.positionKey(first));
+    const secondCandy = this.candyContainers.get(this.positionKey(second));
+    if (!firstCandy || !secondCandy) {
+      onComplete();
+      return;
+    }
+
+    const dx = (second.col - first.col) * CELL_SIZE;
+    const dy = (second.row - first.row) * CELL_SIZE;
+    let completed = 0;
+    const finishOne = () => {
+      completed += 1;
+      if (completed === 2) {
+        onComplete();
+      }
+    };
+    const duration = swapBack ? 110 : 150;
+
+    this.tweens.add({
+      targets: firstCandy,
+      x: dx,
+      y: dy,
+      scale: 1.08,
+      duration,
+      yoyo: swapBack,
+      ease: 'Sine.easeInOut',
+      onComplete: finishOne
+    });
+    this.tweens.add({
+      targets: secondCandy,
+      x: -dx,
+      y: -dy,
+      scale: 1.08,
+      duration,
+      yoyo: swapBack,
+      ease: 'Sine.easeInOut',
+      onComplete: finishOne
+    });
   }
 
   private animateCandyDrop(onComplete: () => void): void {
@@ -651,9 +748,10 @@ export class MainScene extends Phaser.Scene {
           targets: candy,
           y: 0,
           alpha: 1,
+          scale: { from: 0.94, to: 1 },
           duration: totalDuration - columnDelay - rowDelay,
           delay: columnDelay + rowDelay,
-          ease: 'Bounce.easeOut',
+          ease: 'Back.easeOut',
           onComplete: () => {
             remaining -= 1;
             if (remaining === 0) {
@@ -689,6 +787,7 @@ export class MainScene extends Phaser.Scene {
     this.time.delayedCall(delay, () => {
       this.isResolving = false;
       this.drawBoard();
+      this.animateBoardSettle();
 
       if (areGoalsComplete(this.state)) {
         this.triggerLevelWin();
@@ -965,6 +1064,25 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  private animateBoardSettle(): void {
+    for (let row = 0; row < BOARD_ROWS; row += 1) {
+      for (let col = 0; col < BOARD_COLUMNS; col += 1) {
+        const candy = this.candyContainers.get(this.positionKey({ row, col }));
+        if (!candy) continue;
+        candy.y = -18 - row * 3;
+        candy.alpha = 0.84;
+        this.tweens.add({
+          targets: candy,
+          y: 0,
+          alpha: 1,
+          duration: 180 + row * 18,
+          delay: col * 8,
+          ease: 'Back.easeOut'
+        });
+      }
+    }
+  }
+
   private playCascadeFeedback(steps: CascadeStep[]): void {
     steps.forEach((step, index) => {
       this.time.delayedCall(index * 410, () => {
@@ -996,6 +1114,9 @@ export class MainScene extends Phaser.Scene {
 
     this.emitSparkles(center.x, center.y, size, highMultiplier, specialMultiplier);
     this.showBlastRing(center.x, center.y, size, specialMultiplier);
+    if (step.highestMultiplierIndex >= 9) {
+      this.showGoldenPulse(center.x, center.y, step.highestMultiplierIndex >= 10);
+    }
     this.showScorePopup(`+${this.formatScore(step.scoreDelta)}`, center.x, center.y - 8, size, highMultiplier, specialMultiplier);
     this.playBlastSound(size, specialMultiplier);
 
@@ -1059,9 +1180,24 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  private showGoldenPulse(x: number, y: number, isMax: boolean): void {
+    const pulse = this.add.circle(x, y, isMax ? 18 : 12, 0xffd33f, isMax ? 0.24 : 0.18);
+    pulse.setStrokeStyle(isMax ? 7 : 5, 0xfff1a6, isMax ? 0.95 : 0.78);
+    this.tweens.add({
+      targets: pulse,
+      radius: isMax ? 92 : 72,
+      alpha: 0,
+      duration: isMax ? 620 : 480,
+      ease: 'Cubic.easeOut',
+      onComplete: () => pulse.destroy()
+    });
+  }
+
   private showScorePopup(label: string, x: number, y: number, size: number, highMultiplier: boolean, specialMultiplier: boolean): void {
     const fontSize = specialMultiplier ? 34 : highMultiplier || size >= 5 ? 30 : size >= 4 ? 25 : 21;
-    const text = this.add.text(x, y, label, {
+    const safeX = Phaser.Math.Clamp(x, 52, GAME_SIZE - 52);
+    const safeY = Phaser.Math.Clamp(y, 48, GAME_SIZE - 42);
+    const text = this.add.text(safeX, safeY, label, {
       fontFamily: 'Arial',
       fontSize: `${fontSize}px`,
       color: specialMultiplier ? '#fff1a6' : '#ffffff',
@@ -1073,7 +1209,7 @@ export class MainScene extends Phaser.Scene {
     text.setScale(size >= 5 || highMultiplier ? 0.65 : 0.84);
     this.tweens.add({
       targets: text,
-      y: y - (size >= 5 || highMultiplier ? 58 : 42),
+      y: safeY - (size >= 5 || highMultiplier ? 58 : 42),
       scale: size >= 5 || highMultiplier ? 1.18 : 1,
       alpha: 0,
       duration: size >= 5 || highMultiplier ? 1050 : 820,
