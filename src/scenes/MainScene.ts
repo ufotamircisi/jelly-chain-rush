@@ -887,6 +887,7 @@ export class MainScene extends Phaser.Scene {
       <div class="modal-card">
         <h2>${this.t('levelWin')}</h2>
         <p>${this.t('starsEarned')}: ${'*'.repeat(reward.stars)}</p>
+        <p>${this.t('levelRewardLine')}</p>
         <p>${this.t('starReward')}: +${reward.starEnergy} ${this.t('energy')} +${reward.starDiamonds} ${this.t('diamonds')}</p>
         <p>${this.t('highestMultiplier')}: ${reward.multiplierLabel}</p>
         <p>${this.t('multiplierBonus')}: +${reward.multiplierEnergy} ${this.t('energy')} +${reward.multiplierDiamonds} ${this.t('diamonds')}</p>

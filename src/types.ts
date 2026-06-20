@@ -92,6 +92,7 @@ export interface BuildingDefinition {
 
 export interface RewardSummary {
   stars: number;
+  levelEnergy: number;
   starEnergy: number;
   starDiamonds: number;
   multiplierLabel: string;

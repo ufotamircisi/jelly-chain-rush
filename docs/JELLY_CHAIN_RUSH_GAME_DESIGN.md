@@ -382,11 +382,19 @@ Difficulty should increase gradually.
 
 ## 14. Star Rewards
 
-At level completion, give star reward:
+Every completed level grants a guaranteed base reward:
+
+* Level completion: +100 energy
+
+This guaranteed level reward stacks with star rewards and highest multiplier bonus rewards.
+
+At level completion, also give star reward:
 
 * 1 star: +10 energy +10 diamonds
 * 2 stars: +10 energy +15 diamonds
 * 3 stars: +20 energy +20 diamonds
+
+These star energy and diamond rewards are extra rewards on top of the guaranteed +100 energy base completion reward.
 
 Star calculation can be based on:
 
