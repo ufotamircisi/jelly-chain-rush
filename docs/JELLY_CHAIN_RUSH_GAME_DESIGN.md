@@ -1,4 +1,4 @@
-# Jelly Chain Rush — Game Design Document
+# Jelly Chain Rush - Game Design Document
 
 ## 1. Project Identity
 
@@ -7,7 +7,7 @@
 **Future app id:** com.lumisoft.jellychainrush
 **Genre:** Casual puzzle / candy island builder
 **Main platform:** Mobile-first web game, later Android/iOS via Capacitor
-**Core theme:** Shake, match, blast, grow multipliers, build Candy Island.
+**Core theme:** Shake, drop, match, blast, grow multipliers, build Candy Island.
 
 This game is **not** a casino, slot, gambling, betting, spin, freespin, jackpot, cashout, payout, wager, or real-money game.
 
@@ -56,22 +56,17 @@ Each level starts with:
 * Level goals
 * Persistent floor multipliers from x2 up to x1000
 
-The player presses **SHAKE! / ÇALKALA!** to shake the board and drop candies.
+The player presses **SHAKE! / ÇALKALA!** to shake the board, trigger a 3-second downward candy drop / candy rain animation, and fill the board with falling candies. Visible UI must always use **SHAKE / ÇALKALA** language, never spin language.
 
-Candies do **not** auto-blast.
+After the falling animation stops, all 3+ horizontal or vertical line matches automatically blast. Candies fall, new candies spawn from the top, and automatic cascades continue until no line matches remain.
 
-The player manually taps connected groups of **3 or more matching candies**. Valid groups are connected orthogonally only: up, down, left, right. Diagonal connections do not count.
+After all cascades end, the player can swipe adjacent candies like a match-3 game:
 
-When the player taps a valid group:
-
-1. The group highlights.
-2. The group blasts.
-3. Score is added.
-4. Floor multiplier tiles under blasted cells upgrade.
-5. Candies above fall down.
-6. New candies spawn from the top.
-7. The player keeps blasting available groups.
-8. When no valid 3+ group remains, the player can shake again.
+1. The player swipes two adjacent candies up, down, left, or right.
+2. The swipe is valid only if it creates at least one horizontal or vertical 3+ line match.
+3. Valid swipes swap candies, blast matches, add score, upgrade floor multipliers under blasted cells, drop candies, spawn new candies, and continue cascades automatically.
+4. Invalid swipes swap back, add no score, and cost no energy or shake rights.
+5. When no valid manual moves remain, the player can use SHAKE / ÇALKALA again if shake rights and energy are available.
 
 ---
 
@@ -93,7 +88,7 @@ Multipliers are semi-transparent, glass-like, readable tiles underneath the cand
 
 Multiplier path:
 
-none → x2 → x4 → x8 → x16 → x32 → x64 → x128 → x256 → x512 → x1000
+none -> x2 -> x4 -> x8 -> x16 -> x32 -> x64 -> x128 -> x256 -> x512 -> x1000
 
 Important:
 
@@ -128,52 +123,89 @@ Each level starts with:
 
 * Costs 10 energy
 * Uses 1 shake right
-* Visually shakes the board
-* Rearranges/drops candies into the 7x7 board
+* Physically shakes/trembles the 7x7 board
+* Triggers a 3-second downward candy drop / candy rain animation
+* Drops candies into the moving candy layer above the fixed multiplier cells
 
 When the player presses **SHAKE! / ÇALKALA!**:
 
-* First check whether any valid 3+ connected candy group exists
-* If at least one valid group exists, do not shake, do not spend shake rights, and do not spend energy
-* Show a localized warning and briefly highlight available matches
-* The button should show clear feedback even when the shake is blocked
-* Board moves left/right briefly
-* Board slightly moves up/down
-* Subtle screen vibration/haptic placeholder can be added
-* Candies drop into place after the shake animation
+* The button should visibly respond immediately.
+* The board should move left/right and slightly up/down before or during the candy drop.
+* Subtle screen vibration/haptic placeholder can be added.
+* Candies fall downward in columns for roughly 3 seconds.
+* Floor multipliers remain attached to their board cells and do not move with candies.
+* After the drop stops, automatic horizontal and vertical line-match detection begins.
 
-The shake should feel physical and satisfying.
-
-The player can only shake when no valid 3+ orthogonally connected candy group remains.
+The shake should feel physical and satisfying. The action is always called SHAKE / ÇALKALA in visible UI.
 
 ---
 
-## 5. Manual Blast System
+## 5. Automatic Line Match and Swipe System
 
-A valid blast group:
+### 5.1 Automatic Matches After Shake
+
+Match detection is line-based.
+
+A valid automatic match:
 
 * Minimum 3 same candy icons
-* Orthogonal connection only
-* Diagonal connection does not count
+* Straight horizontal or vertical line only
+* Diagonal does not count
 
-Candies do not auto-blast.
+After a shake drop stops:
 
-The player chooses which group to tap. This keeps the game strategic and not purely luck-based.
+1. Horizontal and vertical 3+ matches auto-blast.
+2. Score is added.
+3. Floor multiplier tiles under blasted cells upgrade.
+4. Candies above fall down.
+5. New candies spawn from the top.
+6. New horizontal and vertical matches auto-blast again.
+7. Cascades continue until no automatic matches remain.
+
+### 5.2 Manual Player Moves
+
+After all automatic cascades end, the player can swipe candies manually.
+
+Swipe rules:
+
+* Adjacent means up, down, left, or right only.
+* Diagonal swaps are not valid.
+* A swipe is valid only if it creates at least one 3+ horizontal or vertical line match.
+
+Valid swipe:
+
+1. Candies swap.
+2. Matching candies blast.
+3. Score is added.
+4. Floor multipliers under blasted cells upgrade.
+5. Candies fall.
+6. New candies spawn from the top.
+7. Cascades continue automatically.
+
+Invalid swipe:
+
+1. Candies swap briefly.
+2. Candies swap back.
+3. No score is added.
+4. No energy is spent.
+5. No shake right is spent.
+
+This hybrid system keeps SHAKE as the dramatic candy-drop action and uses familiar match-3 swipes for player agency after cascades settle.
 
 ---
 
 ## 6. Scoring
 
-Base score depends on group size.
+Base score depends on line match size.
 
-Suggested group size bonus:
+Suggested line size bonus:
 
 * 3 candies: x1.0
 * 4 candies: x1.2
 * 5 candies: x1.5
 * 6 candies: x2.0
 * 7 candies: x2.5
-* 8+ candies: x3.0
+* 8+ candies across simultaneous matches/cascades: x3.0
 
 Floor multipliers under the blasted candies apply to score.
 
@@ -191,6 +223,12 @@ Track the highest multiplier reached during the level.
 
 Multipliers persist for the entire active level.
 
+Matched/blasted cells upgrade their floor multipliers.
+
+Multiplier path:
+
+none -> x2 -> x4 -> x8 -> x16 -> x32 -> x64 -> x128 -> x256 -> x512 -> x1000
+
 Multipliers do **not** reset when the initial 10 shake rights are finished if the player continues with:
 
 * Rewarded ad
@@ -203,18 +241,24 @@ Multipliers reset only when:
 
 This means a player who built x512 or x1000 in a level keeps it while continuing the same level.
 
+Important:
+
+* Multipliers are score multipliers only.
+* Multipliers never affect energy, diamonds, money, or premium currency.
+* Multipliers stay attached to floor cells while candies move above them.
+
 ---
 
 ## 8. Level Win and Fail Rules
 
-The level is won immediately when all required goals are completed.
+The level is won immediately when all required goals are completed during a shake auto-cascade or manual swipe cascade.
 
 It does not matter how many shake rights remain.
 
 Example:
 
 * Player has 10 shake rights.
-* Player completes all goals on shake 4.
+* Player completes all goals on shake 4 during an automatic cascade.
 * Player also reaches x1000.
 * The level is won immediately.
 * The player receives the x1000 reward.
@@ -241,13 +285,13 @@ Options:
 
 Text idea:
 
-“So close!”
-“Continue with extra shakes.”
+"So close!"
+"Continue with extra shakes."
 
 Turkish:
 
-“Çok yaklaştın!”
-“Ek çalkalama ile devam et.”
+"Çok yaklaştın!"
+"Ek çalkalama ile devam et."
 
 ---
 
@@ -300,10 +344,10 @@ Rule:
 Safe text:
 
 English:
-“Lucky Drop! +5 Shakes”
+"Lucky Drop! +5 Shakes"
 
 Turkish:
-“Şanslı Düşüş! +5 Çalkalama”
+"Şanslı Düşüş! +5 Çalkalama"
 
 ---
 
@@ -318,7 +362,7 @@ Goal types:
 1. Reach target score
 2. Blast target candy count
 3. Reach target multiplier
-4. Blast large groups
+4. Blast large line matches
 5. Mixed objectives
 
 Examples:
@@ -327,7 +371,7 @@ Examples:
 * Blast 25 purple jelly candies
 * Reach x128 multiplier
 * Reach x256 multiplier
-* Blast 5 groups of 5+ candies
+* Blast 5 line matches of 5+ candies
 * Reach x1000 multiplier
 
 Difficulty should increase gradually.
@@ -368,13 +412,13 @@ If player reaches x1000 and wins the level:
 
 Show special celebration:
 
-“MAX MULTIPLIER x1000!”
-“SUPER CHEST UNLOCKED!”
+"MAX MULTIPLIER x1000!"
+"SUPER CHEST UNLOCKED!"
 
 Turkish:
 
-“MAX ÇARPAN x1000!”
-“SÜPER SANDIK AÇILDI!”
+"MAX ÇARPAN x1000!"
+"SÜPER SANDIK AÇILDI!"
 
 ---
 
@@ -427,14 +471,14 @@ Rewards are not automatically added. The player must enter the Island screen and
 
 Show:
 
-* “Ready!” / “Hazır!”
-* “Collect All” / “Tümünü Topla”
+* "Ready!" / "Hazır!"
+* "Collect All" / "Tümünü Topla"
 
 Rewards only accumulate for 1 day for MVP.
 
 Building list:
 
-1. Candy Stand / Şeker Tezgâhı
+1. Candy Stand / Şeker Tezgahı
    Daily: +10 energy +10 diamonds
 
 2. Gummy Stand / Jelibon Standı
@@ -446,7 +490,7 @@ Building list:
 4. Ice Cream Booth / Dondurma Büfesi
    Daily: +40 energy +40 diamonds
 
-5. Candy Shop / Şeker Dükkânı
+5. Candy Shop / Şeker Dükkanı
    Daily: +50 energy +50 diamonds
 
 6. Marshmallow House / Marshmallow Evi
@@ -594,6 +638,8 @@ Must include:
 * Board readability first, effects second
 * Multipliers must be visible under candies
 * Effects should not hide the board
+* The board should clearly communicate falling candy columns after SHAKE / ÇALKALA.
+* The player should understand that candies drop, line matches auto-blast, cascades settle, then swipes continue play.
 
 ## Main Visual Reference
 
@@ -634,13 +680,17 @@ Helper text:
 
 English:
 
-* Tap 3+ connected candies
-* No matches left. Shake!
+* Shake to drop new candies
+* Candy chain in progress...
+* Swipe candies to match 3+
+* No moves left. Shake!
 
 Turkish:
 
-* 3+ birleşimi patlat
-* Birleşim kalmadı. Çalkala!
+* Yeni şekerler için Çalkala
+* Şeker zinciri devam ediyor...
+* 3+ eşleştirmek için şekerleri kaydır
+* Hamle kalmadı. Çalkala!
 
 ---
 
@@ -669,20 +719,23 @@ Implement in this order:
 2. 7x7 board
 3. Candy generation
 4. Shake animation
-5. Manual 3+ group detection
-6. Tap-to-blast
-7. Falling/spawn logic
-8. Floor multiplier system
-9. Score system
-10. Level goals
-11. Win/fail logic
-12. Continue system
-13. Energy/diamond system
-14. Daily login reward
-15. Candy Island screen
-16. Building daily production
-17. Market placeholder
-18. Localization
+5. 3-second candy drop / candy rain animation
+6. Horizontal and vertical line-match detection
+7. Automatic blast and cascade resolution
+8. Swipe adjacent candy controls
+9. Valid/invalid swipe handling
+10. Falling/spawn logic
+11. Floor multiplier system
+12. Score system
+13. Level goals
+14. Win/fail logic
+15. Continue system
+16. Energy/diamond system
+17. Daily login reward
+18. Candy Island screen
+19. Building daily production
+20. Market placeholder
+21. Localization
 
 ---
 
