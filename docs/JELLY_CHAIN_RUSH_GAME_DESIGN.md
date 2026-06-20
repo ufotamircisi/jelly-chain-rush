@@ -58,12 +58,12 @@ Each level starts with:
 
 The player presses **SHAKE! / ÇALKALA!** to shake the board, trigger a 3-second downward candy drop / candy rain animation, and fill the board with falling candies. Visible UI must always use **SHAKE / ÇALKALA** language, never spin language.
 
-After the falling animation stops, all 3+ horizontal or vertical line matches automatically blast. Candies fall, new candies spawn from the top, and automatic cascades continue until no line matches remain.
+After the falling animation stops, all orthogonally connected same-candy groups of 3+ automatically blast. Candies fall, new candies spawn from the top, and automatic cascades continue until no valid connected groups remain.
 
 After all cascades end, the player can swipe adjacent candies like a match-3 game:
 
 1. The player swipes two adjacent candies up, down, left, or right.
-2. The swipe is valid only if it creates at least one horizontal or vertical 3+ line match.
+2. The swipe is valid only if it creates at least one orthogonally connected same-candy group of 3+.
 3. Valid swipes swap candies, blast matches, add score, upgrade floor multipliers under blasted cells, drop candies, spawn new candies, and continue cascades automatically.
 4. Invalid swipes swap back, add no score, and cost no energy or shake rights.
 5. When no valid manual moves remain, the player can use SHAKE / ÇALKALA again if shake rights and energy are available.
@@ -134,7 +134,7 @@ When the player presses **SHAKE! / ÇALKALA!**:
 * Subtle screen vibration/haptic placeholder can be added.
 * Candies fall downward in columns for roughly 3 seconds.
 * Floor multipliers remain attached to their board cells and do not move with candies.
-* After the drop stops, automatic horizontal and vertical line-match detection begins.
+* After the drop stops, automatic connected-group match detection begins.
 
 The shake should feel physical and satisfying. The action is always called SHAKE / ÇALKALA in visible UI.
 
@@ -144,23 +144,24 @@ The shake should feel physical and satisfying. The action is always called SHAKE
 
 ### 5.1 Automatic Matches After Shake
 
-Match detection is line-based.
+Match detection is connected-group based.
 
 A valid automatic match:
 
-* Minimum 3 same candy icons
-* Straight horizontal or vertical line only
-* Diagonal does not count
+* Minimum 3 same candy icons in one orthogonally connected group
+* Orthogonal connections are up, down, left, and right
+* Diagonal connections do not count
+* There is no artificial maximum group size
 
 After a shake drop stops:
 
-1. Horizontal and vertical 3+ matches auto-blast.
+1. Connected same-candy groups of 3+ auto-blast.
 2. Score is added.
-3. Floor multiplier tiles under blasted cells upgrade.
+3. Floor multiplier tiles under every blasted cell upgrade.
 4. Candies above fall down.
 5. New candies spawn from the top.
-6. New horizontal and vertical matches auto-blast again.
-7. Cascades continue until no automatic matches remain.
+6. New connected groups of 3+ auto-blast again.
+7. Cascades continue until no automatic connected groups remain.
 
 ### 5.2 Manual Player Moves
 
@@ -170,7 +171,7 @@ Swipe rules:
 
 * Adjacent means up, down, left, or right only.
 * Diagonal swaps are not valid.
-* A swipe is valid only if it creates at least one 3+ horizontal or vertical line match.
+* A swipe is valid only if it creates at least one orthogonally connected same-candy group of 3+.
 
 Valid swipe:
 
@@ -192,24 +193,23 @@ Invalid swipe:
 
 This hybrid system keeps SHAKE as the dramatic candy-drop action and uses familiar match-3 swipes for player agency after cascades settle.
 
-Normal gameplay must not use tap-to-blast connected clusters. The active puzzle model is shake drop, automatic straight-line matching, cascade resolution, then adjacent swipe moves.
+Normal gameplay must not use tap-to-blast. The active puzzle model is shake drop, automatic connected-group matching, cascade resolution, then adjacent swipe moves.
 
 ---
 
 ## 6. Scoring
 
-Base score depends on line match size.
+Base score depends on actual connected blast group size. Matching groups have no artificial maximum size.
 
-Suggested line size bonus:
+Group size bonus:
 
 * 3 candies: x1.0
-* 4 candies: x1.2
-* 5 candies: x1.5
-* 6 candies: x2.0
-* 7 candies: x2.5
-* 8+ candies across simultaneous matches/cascades: x3.0
+* 4 candies: x1.4
+* 5 candies: x2.0
+* 6 candies: x3.0
+* 7+ candies: x4.0
 
-Floor multipliers under the blasted candies apply to score.
+If a connected group has 12 or 30 candies, all of them blast, all of them score, and every blasted cell upgrades its floor multiplier. Floor multipliers under the blasted candies apply to score.
 
 Show score popups:
 
@@ -419,7 +419,7 @@ Goal types:
 1. Reach target score
 2. Blast target candy count
 3. Reach target multiplier
-4. Blast large line matches
+4. Blast large connected groups
 5. Mixed objectives
 
 Examples:
@@ -428,7 +428,7 @@ Examples:
 * Blast 25 purple jelly candies
 * Reach x128 multiplier
 * Reach x256 multiplier
-* Blast 5 line matches of 5+ candies
+* Blast 5 connected groups of 5+ candies
 * Reach x1000 multiplier
 
 Difficulty should increase gradually.
@@ -721,7 +721,7 @@ Must include:
 * Multipliers must be visible under candies
 * Effects should not hide the board
 * The board should clearly communicate falling candy columns after SHAKE / ÇALKALA.
-* The player should understand that candies drop, line matches auto-blast, cascades settle, then swipes continue play.
+* The player should understand that candies drop, connected same-candy groups auto-blast, cascades settle, then swipes continue play.
 
 ## Main Visual Reference
 
@@ -802,7 +802,7 @@ Implement in this order:
 3. Candy generation
 4. Shake animation
 5. 3-second candy drop / candy rain animation
-6. Horizontal and vertical line-match detection
+6. Connected-group match detection
 7. Automatic blast and cascade resolution
 8. Swipe adjacent candy controls
 9. Valid/invalid swipe handling

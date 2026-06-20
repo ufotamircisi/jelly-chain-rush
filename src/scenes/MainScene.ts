@@ -1301,13 +1301,13 @@ export class MainScene extends Phaser.Scene {
   }
 
   private emitSparkles(x: number, y: number, size: number, highMultiplier: boolean, specialMultiplier: boolean): void {
-    const count = size >= 6 ? 18 : size >= 5 ? 14 : size >= 4 ? 10 : 7;
+    const count = size >= 10 ? 24 : size >= 6 ? 18 : size >= 5 ? 14 : size >= 4 ? 10 : 7;
     const color = specialMultiplier ? 0xffd33f : highMultiplier ? 0xffffff : 0xfff1a6;
 
     for (let index = 0; index < count; index += 1) {
       const angle = (Math.PI * 2 * index) / count + (Math.random() * 0.36 - 0.18);
       const minDistance = size >= 5 ? 34 : 22;
-      const maxDistance = size >= 6 ? 74 : 48;
+      const maxDistance = size >= 10 ? 88 : size >= 6 ? 74 : 48;
       const distance = minDistance + Math.random() * (maxDistance - minDistance);
       const sparkle = this.add.star(x, y, 5, 3, specialMultiplier ? 8 : 6, color, 0.95).setScale(0.55);
       this.tweens.add({
@@ -1328,7 +1328,7 @@ export class MainScene extends Phaser.Scene {
     ring.setStrokeStyle(size >= 5 ? 5 : 3, specialMultiplier ? 0xffd33f : 0xffffff, specialMultiplier ? 0.95 : 0.78);
     this.tweens.add({
       targets: ring,
-      radius: size >= 6 ? 66 : size >= 5 ? 54 : size >= 4 ? 42 : 30,
+      radius: size >= 10 ? 78 : size >= 6 ? 66 : size >= 5 ? 54 : size >= 4 ? 42 : 30,
       alpha: 0,
       duration: size >= 5 ? 420 : 280,
       ease: 'Cubic.easeOut',
@@ -1350,7 +1350,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private showScorePopup(label: string, x: number, y: number, size: number, highMultiplier: boolean, specialMultiplier: boolean): void {
-    const fontSize = specialMultiplier ? 34 : highMultiplier || size >= 5 ? 30 : size >= 4 ? 25 : 21;
+    const fontSize = specialMultiplier || size >= 10 ? 34 : highMultiplier || size >= 5 ? 30 : size >= 4 ? 25 : 21;
     const safeX = Phaser.Math.Clamp(x, 52, GAME_SIZE - 52);
     const safeY = Phaser.Math.Clamp(y, 48, GAME_SIZE - 42);
     const text = this.add.text(safeX, safeY, label, {

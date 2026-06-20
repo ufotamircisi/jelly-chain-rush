@@ -38,7 +38,7 @@ export interface CascadeResult {
 
 export function findLineMatches(board: BoardGrid): BoardPosition[] {
   const matched = new Map<string, BoardPosition>();
-  for (const group of findLineMatchGroups(board)) {
+  for (const group of findMatchGroups(board)) {
     for (const position of group) {
       matched.set(positionKey(position), position);
     }
@@ -48,49 +48,23 @@ export function findLineMatches(board: BoardGrid): BoardPosition[] {
 }
 
 export function findLineMatchGroups(board: BoardGrid): BoardPosition[][] {
+  return findMatchGroups(board);
+}
+
+export function findMatchGroups(board: BoardGrid): BoardPosition[][] {
   const groups: BoardPosition[][] = [];
+  const visited = new Set<string>();
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
-    let runStart = 0;
-    for (let col = 1; col <= BOARD_COLUMNS; col += 1) {
-      const current = board[row][col]?.candy;
-      const previous = board[row][col - 1]?.candy;
-      if (col < BOARD_COLUMNS && current === previous && current !== 'energyStar') {
-        continue;
-      }
+    for (let col = 0; col < BOARD_COLUMNS; col += 1) {
+      const position = { row, col };
+      const key = positionKey(position);
+      if (visited.has(key)) continue;
 
-      const runLength = col - runStart;
-      if (previous !== 'energyStar' && runLength >= 3) {
-        const group: BoardPosition[] = [];
-        for (let matchCol = runStart; matchCol < col; matchCol += 1) {
-          const position = { row, col: matchCol };
-          group.push(position);
-        }
+      const group = collectConnectedCandyGroup(board, position, visited);
+      if (group.length >= 3) {
         groups.push(group);
       }
-      runStart = col;
-    }
-  }
-
-  for (let col = 0; col < BOARD_COLUMNS; col += 1) {
-    let runStart = 0;
-    for (let row = 1; row <= BOARD_ROWS; row += 1) {
-      const current = board[row]?.[col]?.candy;
-      const previous = board[row - 1]?.[col]?.candy;
-      if (row < BOARD_ROWS && current === previous && current !== 'energyStar') {
-        continue;
-      }
-
-      const runLength = row - runStart;
-      if (previous !== 'energyStar' && runLength >= 3) {
-        const group: BoardPosition[] = [];
-        for (let matchRow = runStart; matchRow < row; matchRow += 1) {
-          const position = { row: matchRow, col };
-          group.push(position);
-        }
-        groups.push(group);
-      }
-      runStart = row;
     }
   }
 
@@ -98,7 +72,7 @@ export function findLineMatchGroups(board: BoardGrid): BoardPosition[][] {
 }
 
 export function hasLineMatches(board: BoardGrid): boolean {
-  return findLineMatches(board).length > 0;
+  return findMatchGroups(board).length > 0;
 }
 
 export function swapCandies(board: BoardGrid, first: BoardPosition, second: BoardPosition): BoardGrid {
@@ -145,7 +119,7 @@ export function resolveMatchesAndCascades(board: BoardGrid): CascadeResult {
   const steps: CascadeStep[] = [];
 
   for (let cascadeIndex = 0; cascadeIndex < 30; cascadeIndex += 1) {
-    const groups = findLineMatchGroups(nextBoard);
+    const groups = findMatchGroups(nextBoard);
     if (groups.length === 0) {
       break;
     }
@@ -267,6 +241,48 @@ function uniquePositions(positions: BoardPosition[]): BoardPosition[] {
     matched.set(positionKey(position), position);
   }
   return [...matched.values()];
+}
+
+function collectConnectedCandyGroup(board: BoardGrid, start: BoardPosition, visited: Set<string>): BoardPosition[] {
+  const candy = board[start.row]?.[start.col]?.candy;
+  if (!candy || candy === 'energyStar') {
+    visited.add(positionKey(start));
+    return [];
+  }
+
+  const group: BoardPosition[] = [];
+  const pending: BoardPosition[] = [start];
+  visited.add(positionKey(start));
+
+  while (pending.length > 0) {
+    const position = pending.pop()!;
+    group.push(position);
+
+    for (const neighbor of getOrthogonalNeighbors(position)) {
+      if (!isInsideBoard(neighbor)) continue;
+      const key = positionKey(neighbor);
+      if (visited.has(key)) continue;
+      if (board[neighbor.row][neighbor.col].candy !== candy) continue;
+
+      visited.add(key);
+      pending.push(neighbor);
+    }
+  }
+
+  return group;
+}
+
+function getOrthogonalNeighbors(position: BoardPosition): BoardPosition[] {
+  return [
+    { row: position.row - 1, col: position.col },
+    { row: position.row + 1, col: position.col },
+    { row: position.row, col: position.col - 1 },
+    { row: position.row, col: position.col + 1 }
+  ];
+}
+
+function isInsideBoard(position: BoardPosition): boolean {
+  return position.row >= 0 && position.row < BOARD_ROWS && position.col >= 0 && position.col < BOARD_COLUMNS;
 }
 
 function getGroupBonus(groupSize: number): number {
