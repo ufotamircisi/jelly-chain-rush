@@ -272,6 +272,19 @@ If 10 shake rights are used and goals are not complete:
 * Player can continue using ad or diamonds.
 * Continuing does not reset multipliers.
 
+Victory overlay:
+
+* Show level number, score, stars/celebration, highest multiplier, and a clear reward summary.
+* Always show the guaranteed +100 energy level completion reward.
+* Also show star rewards, diamond rewards, highest multiplier bonus rewards, and Super Chest feedback when applicable.
+
+Failed/continue overlay:
+
+* Show current score, highest multiplier, and remaining goal progress.
+* Explain that continuing keeps the current level multipliers.
+* Continue options add shake rights and resume the same level without resetting multipliers.
+* Restart fully restarts the level and resets level multipliers according to normal restart rules.
+
 ---
 
 ## 9. Continue System

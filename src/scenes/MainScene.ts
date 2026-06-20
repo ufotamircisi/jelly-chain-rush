@@ -912,10 +912,10 @@ export class MainScene extends Phaser.Scene {
     this.renderOverlay();
   }
 
-  private continueLevel(shakes: number, diamondCost = 0): void {
+  private continueLevel(shakes: number, diamondCost = 0): boolean {
     if (diamondCost > 0 && this.state.diamonds < diamondCost) {
       this.showWarning(this.t('notEnoughDiamonds'));
-      return;
+      return false;
     }
 
     this.state.diamonds -= diamondCost;
@@ -925,6 +925,7 @@ export class MainScene extends Phaser.Scene {
     this.syncSaveCurrency();
     this.closeModal();
     this.renderOverlay();
+    return true;
   }
 
   private restartLevel(): void {
@@ -953,41 +954,79 @@ export class MainScene extends Phaser.Scene {
 
   private renderWinModal(): void {
     const reward = this.rewardSummary ?? calculateRewardSummary(this.state);
+    const rewardRows = [
+      `<article><span>${this.t('levelReward')}</span><strong>+${reward.levelEnergy} ${this.t('energy')}</strong></article>`,
+      `<article><span>${this.t('starReward')}</span><strong>+${reward.starEnergy} ${this.t('energy')} +${reward.starDiamonds} ${this.t('diamonds')}</strong></article>`
+    ];
+
+    if (reward.multiplierEnergy > 0 || reward.multiplierDiamonds > 0) {
+      rewardRows.push(`<article><span>${this.t('bonus')}</span><strong>+${reward.multiplierEnergy} ${this.t('energy')} +${reward.multiplierDiamonds} ${this.t('diamonds')}</strong></article>`);
+    }
+
+    if (reward.totalDiamonds > 0) {
+      rewardRows.push(`<article><span>${this.t('diamonds')}</span><strong>+${reward.totalDiamonds}</strong></article>`);
+    }
+
+    if (reward.superChest) {
+      rewardRows.push(`<article class="result-special-row"><span>${this.t('superChest')}</span><strong>${this.t('superChestUnlocked')}</strong></article>`);
+    }
+
     this.openModal(`
-      <div class="modal-card">
+      <div class="modal-card result-card result-card-win${reward.superChest ? ' is-super' : ''}">
+        ${reward.superChest ? '<div class="result-glow" aria-hidden="true"></div>' : ''}
+        <div class="confetti" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
         <h2>${this.t('levelWin')}</h2>
-        <p>${this.t('starsEarned')}: ${'*'.repeat(reward.stars)}</p>
-        <p>${this.t('levelRewardLine')}</p>
-        <p>${this.t('starReward')}: +${reward.starEnergy} ${this.t('energy')} +${reward.starDiamonds} ${this.t('diamonds')}</p>
-        <p>${this.t('highestMultiplier')}: ${reward.multiplierLabel}</p>
-        <p>${this.t('multiplierBonus')}: +${reward.multiplierEnergy} ${this.t('energy')} +${reward.multiplierDiamonds} ${this.t('diamonds')}</p>
-        <p>${this.t('totalReward')}: +${reward.totalEnergy} ${this.t('energy')} +${reward.totalDiamonds} ${this.t('diamonds')}</p>
-        ${reward.superChest ? `<p>${this.t('superChestUnlocked')}</p>` : ''}
-        <button type="button" data-action="next">${this.t('nextLevel')}</button>
+        <p class="result-level">${this.t('level')} ${this.state.level}</p>
+        <div class="result-stars" aria-label="${this.t('starsEarned')}: ${reward.stars}">${'★'.repeat(reward.stars)}${'☆'.repeat(3 - reward.stars)}</div>
+        <div class="result-stats">
+          <article><span>${this.t('score')}</span><strong>${this.formatScore(this.state.score)}</strong></article>
+          <article><span>${this.t('highestMultiplier')}</span><strong>${reward.multiplierLabel}</strong></article>
+        </div>
+        <div class="result-rewards">${rewardRows.join('')}</div>
+        <button class="result-primary-button" type="button" data-action="next">${this.t('nextLevel')}</button>
       </div>
     `);
-    this.modalButton('next', () => this.startNextLevel());
+    this.modalButton('next', (button) => {
+      this.disableModalButtons(button);
+      this.startNextLevel();
+    });
   }
 
   private renderFailModal(): void {
-    const goals = this.state.definition.goals.map((goal) => `<p>${this.formatGoal(goal)}</p>`).join('');
+    const goals = this.state.definition.goals.map((goal) => `<article>${this.formatGoal(goal)}</article>`).join('');
     this.openModal(`
-      <div class="modal-card">
+      <div class="modal-card result-card result-card-fail">
         <h2>${this.t('levelFailed')}</h2>
         <p>${this.t('continuePrompt')}</p>
-        ${goals}
-        <button type="button" data-action="ad">${this.t('rewardedContinue')}</button>
-        <button type="button" data-action="one">${this.t('buyOneShake')} - 100 ${this.t('diamonds')}</button>
-        <button type="button" data-action="five">${this.t('buyFiveShakes')} - 300 ${this.t('diamonds')}</button>
-        <button type="button" data-action="ten">${this.t('buyTenShakes')} - 600 ${this.t('diamonds')}</button>
-        <button type="button" data-action="restart">${this.t('giveUp')} / ${this.t('restartLevel')}</button>
+        <div class="result-stats">
+          <article><span>${this.t('score')}</span><strong>${this.formatScore(this.state.score)}</strong></article>
+          <article><span>${this.t('highestMultiplier')}</span><strong>${getMultiplierLabel(this.state.highestMultiplierIndex) || 'x0'}</strong></article>
+        </div>
+        <div class="goal-progress-list">${goals}</div>
+        <p class="result-keep-note">${this.t('continueKeepsMultipliers')}</p>
+        <div class="modal-feedback" aria-live="polite"></div>
+        <div class="continue-actions">
+          <button type="button" data-action="ad">${this.t('watchAdContinue')}</button>
+          <button type="button" data-action="one">${this.t('continueOneShake')}</button>
+          <button type="button" data-action="five">${this.t('continueFiveShakes')}</button>
+          <button type="button" data-action="ten">${this.t('continueTenShakes')}</button>
+          <button class="result-secondary-button" type="button" data-action="restart">${this.t('restart')}</button>
+        </div>
       </div>
     `);
-    this.modalButton('ad', () => this.continueLevel(1));
-    this.modalButton('one', () => this.continueLevel(1, 100));
-    this.modalButton('five', () => this.continueLevel(5, 300));
-    this.modalButton('ten', () => this.continueLevel(10, 600));
-    this.modalButton('restart', () => this.restartLevel());
+    this.modalButton('ad', (button) => this.handleContinueClick(button, 1));
+    this.modalButton('one', (button) => this.handleContinueClick(button, 1, 100));
+    this.modalButton('five', (button) => this.handleContinueClick(button, 5, 300));
+    this.modalButton('ten', (button) => this.handleContinueClick(button, 10, 600));
+    this.modalButton('restart', (button) => {
+      this.disableModalButtons(button);
+      this.restartLevel();
+    });
+  }
+
+  private handleContinueClick(button: HTMLButtonElement, shakes: number, diamondCost = 0): void {
+    if (!this.continueLevel(shakes, diamondCost)) return;
+    this.disableModalButtons(button);
   }
 
   private renderDailyRewardModal(): void {
@@ -1354,11 +1393,14 @@ export class MainScene extends Phaser.Scene {
   private showWarning(label: string): void {
     const warning = this.el('warning-text');
     const marketFeedback = this.el('market-feedback');
+    const modalFeedback = this.el('modal-root').querySelector<HTMLElement>('.modal-feedback');
     warning.textContent = label;
     marketFeedback.textContent = label;
+    if (modalFeedback) modalFeedback.textContent = label;
     window.setTimeout(() => {
       if (warning.textContent === label) warning.textContent = '';
       if (marketFeedback.textContent === label) marketFeedback.textContent = '';
+      if (modalFeedback?.textContent === label) modalFeedback.textContent = '';
     }, 1400);
   }
 
@@ -1572,8 +1614,16 @@ export class MainScene extends Phaser.Scene {
     root.innerHTML = '';
   }
 
-  private modalButton(action: string, onClick: () => void): void {
-    this.el('modal-root').querySelector<HTMLButtonElement>(`[data-action="${action}"]`)?.addEventListener('click', onClick);
+  private modalButton(action: string, onClick: (button: HTMLButtonElement) => void): void {
+    this.el('modal-root').querySelector<HTMLButtonElement>(`[data-action="${action}"]`)?.addEventListener('click', (event) => {
+      onClick(event.currentTarget as HTMLButtonElement);
+    });
+  }
+
+  private disableModalButtons(activeButton: HTMLButtonElement): void {
+    activeButton.closest('.modal-card')?.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
+      button.disabled = true;
+    });
   }
 
   private setText(id: string, value: string): void {

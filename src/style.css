@@ -1020,6 +1020,197 @@ button {
   font-weight: 900;
 }
 
+.modal-card button:disabled {
+  opacity: 0.72;
+  filter: grayscale(0.18);
+}
+
+.result-card {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(255, 255, 255, 0.88);
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 241, 166, 0.82), transparent 5.8rem),
+    radial-gradient(circle at 90% 10%, rgba(122, 216, 255, 0.52), transparent 5rem),
+    linear-gradient(180deg, #fff 0%, #ffe8f5 42%, #f4dcff 100%);
+}
+
+.result-card::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), transparent 38%);
+}
+
+.result-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.result-card h2 {
+  margin-bottom: 3px;
+  font-size: 28px;
+  line-height: 1;
+  color: #ff4fa3;
+  text-shadow: 0 3px 0 #7b2bbf, 0 8px 18px rgba(123, 43, 191, 0.22);
+  -webkit-text-stroke: 1px #fff;
+}
+
+.result-level {
+  margin: 0 0 4px;
+  color: #7b2bbf;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.result-stars {
+  margin: 2px 0 10px;
+  color: #ffbd2f;
+  font-size: 27px;
+  letter-spacing: 0;
+  text-shadow: 0 2px 0 #ad6a00, 0 0 12px rgba(255, 241, 166, 0.82);
+}
+
+.result-stats,
+.result-rewards {
+  display: grid;
+  gap: 7px;
+  margin: 9px 0;
+}
+
+.result-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.result-stats article,
+.result-rewards article,
+.goal-progress-list article {
+  display: grid;
+  gap: 2px;
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  border-radius: 14px;
+  padding: 8px 10px;
+  color: #3d2362;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.72);
+}
+
+.result-stats span,
+.result-rewards span {
+  color: #8430b7;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.result-stats strong,
+.result-rewards strong {
+  color: #2759b4;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.result-special-row {
+  background: linear-gradient(180deg, rgba(255, 247, 172, 0.94), rgba(255, 213, 71, 0.72)) !important;
+  box-shadow: 0 0 18px rgba(255, 211, 63, 0.48), inset 0 2px 0 rgba(255, 255, 255, 0.72) !important;
+}
+
+.result-primary-button {
+  width: min(270px, 100%);
+  min-height: 46px;
+  box-shadow: 0 7px 0 rgba(123, 43, 191, 0.42), inset 0 3px 0 rgba(255, 255, 255, 0.32);
+  font-size: 15px;
+}
+
+.result-secondary-button {
+  color: #7b2bbf !important;
+  background: #fff1a6 !important;
+}
+
+.continue-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.continue-actions button {
+  width: 100%;
+  min-height: 42px;
+  margin: 0;
+}
+
+.goal-progress-list {
+  display: grid;
+  gap: 6px;
+  margin: 9px 0;
+}
+
+.goal-progress-list article {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.result-keep-note {
+  margin: 8px 0 0 !important;
+  color: #7b2bbf !important;
+  font-size: 13px;
+}
+
+.modal-feedback {
+  min-height: 18px;
+  margin: 6px 0;
+  color: #ff4fa3;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.confetti {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.confetti span {
+  position: absolute;
+  top: 12px;
+  width: 8px;
+  height: 14px;
+  border-radius: 4px;
+  background: #ff5aa6;
+  animation: confetti-fall 1300ms ease-in-out infinite alternate;
+}
+
+.confetti span:nth-child(1) { left: 12%; background: #ffbd2f; animation-delay: 0ms; }
+.confetti span:nth-child(2) { left: 29%; background: #79eeff; animation-delay: 130ms; }
+.confetti span:nth-child(3) { left: 52%; background: #adff47; animation-delay: 60ms; }
+.confetti span:nth-child(4) { left: 72%; background: #ff72bd; animation-delay: 190ms; }
+.confetti span:nth-child(5) { left: 88%; background: #7b2bbf; animation-delay: 90ms; }
+
+.result-glow {
+  position: absolute;
+  left: 50%;
+  top: 22px;
+  width: 210px;
+  height: 210px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(255, 211, 63, 0.48), transparent 64%);
+  animation: result-glow 1150ms ease-in-out infinite alternate;
+}
+
+@keyframes confetti-fall {
+  from { transform: translateY(0) rotate(0deg); opacity: 0.76; }
+  to { transform: translateY(28px) rotate(24deg); opacity: 1; }
+}
+
+@keyframes result-glow {
+  from { opacity: 0.62; transform: translateX(-50%) scale(0.92); }
+  to { opacity: 1; transform: translateX(-50%) scale(1.08); }
+}
+
 @media (max-width: 390px), (max-height: 820px) {
   .phone-frame {
     padding-inline: 8px;
