@@ -80,6 +80,8 @@ Side panels should show:
 
 The Candy Island section should be a scrollable green island map, not a plain list/card-only screen. It should include ocean/water around the island, candy-colored paths between buildings, and building nodes placed across the island from early small stands near the front to larger landmarks farther back.
 
+Buildings on the map should appear as compact icon nodes with small name labels and state badges. The map should not show huge building cards covering the island. Detailed building information, including daily production, build cost, claim actions, and build actions, should open in a bottom sheet or floating detail panel above the bottom navigation.
+
 The Candy Island map should include:
 
 * Şeker Tezgahı

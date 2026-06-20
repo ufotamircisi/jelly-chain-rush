@@ -55,24 +55,24 @@ const MULTIPLIER_TINTS = [
 ];
 
 const ISLAND_BUILDING_LAYOUT: Record<number, { x: number; y: number; size: 'small' | 'medium' | 'large' }> = {
-  1: { x: 292, y: 792, size: 'small' },
-  2: { x: 158, y: 724, size: 'small' },
-  3: { x: 420, y: 710, size: 'small' },
-  4: { x: 238, y: 630, size: 'small' },
-  5: { x: 520, y: 606, size: 'medium' },
-  6: { x: 124, y: 540, size: 'medium' },
-  7: { x: 340, y: 520, size: 'medium' },
-  8: { x: 472, y: 450, size: 'medium' },
-  9: { x: 220, y: 414, size: 'medium' },
-  10: { x: 374, y: 350, size: 'medium' },
-  11: { x: 104, y: 300, size: 'large' },
-  12: { x: 544, y: 292, size: 'medium' },
-  13: { x: 274, y: 250, size: 'large' },
-  14: { x: 456, y: 210, size: 'medium' },
-  15: { x: 610, y: 154, size: 'large' },
-  16: { x: 188, y: 148, size: 'large' },
-  17: { x: 356, y: 112, size: 'large' },
-  18: { x: 496, y: 62, size: 'large' }
+  1: { x: 50, y: 832, size: 'small' },
+  2: { x: 32, y: 770, size: 'small' },
+  3: { x: 68, y: 742, size: 'small' },
+  4: { x: 43, y: 682, size: 'small' },
+  5: { x: 70, y: 628, size: 'medium' },
+  6: { x: 29, y: 590, size: 'medium' },
+  7: { x: 52, y: 532, size: 'medium' },
+  8: { x: 72, y: 476, size: 'medium' },
+  9: { x: 34, y: 428, size: 'medium' },
+  10: { x: 56, y: 366, size: 'medium' },
+  11: { x: 29, y: 306, size: 'large' },
+  12: { x: 72, y: 288, size: 'medium' },
+  13: { x: 47, y: 236, size: 'large' },
+  14: { x: 68, y: 190, size: 'medium' },
+  15: { x: 78, y: 136, size: 'large' },
+  16: { x: 32, y: 118, size: 'large' },
+  17: { x: 51, y: 76, size: 'large' },
+  18: { x: 68, y: 42, size: 'large' }
 };
 
 export class MainScene extends Phaser.Scene {
@@ -90,6 +90,7 @@ export class MainScene extends Phaser.Scene {
   private isResolving = false;
   private dragStart?: BoardPosition;
   private audioContext?: AudioContext;
+  private selectedBuildingId?: number;
 
   constructor() {
     super('MainScene');
@@ -220,36 +221,29 @@ export class MainScene extends Phaser.Scene {
       const buildable = !completed && building.id === nextBuildableId;
       const layout = ISLAND_BUILDING_LAYOUT[building.id];
       const card = document.createElement('article');
-      card.className = `building-card building-${layout.size}${ready ? ' is-ready' : completed ? ' is-completed' : buildable ? ' is-buildable' : ' is-locked'}`;
-      card.style.left = `${layout.x}px`;
+      card.className = `building-node building-${layout.size}${ready ? ' is-ready' : completed ? ' is-completed' : buildable ? ' is-buildable' : ' is-locked'}${this.selectedBuildingId === building.id ? ' is-selected' : ''}`;
+      card.style.left = `${layout.x}%`;
       card.style.top = `${layout.y}px`;
-      const state = ready ? this.t('ready') : completed ? this.t('completed') : buildable ? this.t('build') : this.t('locked');
+      const state = ready ? this.t('readyStatus') : completed ? this.t('completed') : buildable ? this.t('build') : this.t('locked');
       const icon = this.getBuildingIcon(building.id);
-      const action = ready
-        ? `<button class="building-action" data-claim="${building.id}">${this.t('claim')}</button>`
-        : completed
-          ? `<p>${this.t('claimedToday')}</p>`
-          : buildable
-            ? `<button class="building-action" data-build="${building.id}">${this.t('build')} ${this.getBuildCost(building.id)}</button>`
-            : `<p>${this.t('buildCost')}: ${this.getBuildCost(building.id)}</p>`;
 
       card.innerHTML = `
-        <span class="building-state${ready ? ' ready' : ''}">${state}</span>
-        ${completed ? '<span class="building-check" aria-hidden="true">✓</span>' : ''}
+        <button class="building-node-button" type="button" data-detail="${building.id}" aria-label="${this.t(building.nameKey as TranslationKey)}">
+          <span class="building-icon" aria-hidden="true">${icon}</span>
+          <strong>${this.t(building.nameKey as TranslationKey)}</strong>
+          <span class="building-state${ready ? ' ready' : ''}">${state}</span>
+          ${completed ? '<span class="building-check" aria-hidden="true">✓</span>' : ''}
+        </button>
         ${!completed && !buildable ? '<span class="building-cloud" aria-hidden="true"></span>' : ''}
-        <div class="building-icon" aria-hidden="true">${icon}</div>
-        <h3>${this.t(building.nameKey as TranslationKey)}</h3>
-        <p>${this.t('daily')}: +${building.energy} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}</p>
-        ${action}
       `;
       map.appendChild(card);
     }
 
-    map.querySelectorAll<HTMLButtonElement>('[data-claim]').forEach((button) => {
-      button.addEventListener('click', () => this.claimBuildingReward(Number(button.dataset.claim)));
-    });
-    map.querySelectorAll<HTMLButtonElement>('[data-build]').forEach((button) => {
-      button.addEventListener('click', () => this.buildBuilding(Number(button.dataset.build)));
+    map.querySelectorAll<HTMLButtonElement>('[data-detail]').forEach((button) => {
+      button.addEventListener('click', () => {
+        this.selectedBuildingId = Number(button.dataset.detail);
+        this.renderIsland();
+      });
     });
 
     if (!map.dataset.initialScrollSet) {
@@ -259,6 +253,8 @@ export class MainScene extends Phaser.Scene {
         map.scrollTop = map.scrollHeight - map.clientHeight;
       });
     }
+
+    this.renderBuildingDetailPanel();
   }
 
   private renderMarket(): void {
@@ -300,6 +296,56 @@ export class MainScene extends Phaser.Scene {
       if (label) label.textContent = this.t(key);
       this.el(`${key}-view`).classList.toggle('is-active', this.screen === key);
     }
+  }
+
+  private renderBuildingDetailPanel(): void {
+    const panel = this.el('building-detail-panel');
+    const building = BUILDINGS.find((item) => item.id === this.selectedBuildingId);
+
+    if (!building) {
+      panel.classList.remove('is-open');
+      panel.innerHTML = '';
+      return;
+    }
+
+    const highestCompletedId = Math.max(0, ...this.save.completedBuildingIds);
+    const nextBuildableId = Math.min(highestCompletedId + 1, BUILDINGS.length);
+    const completed = this.save.completedBuildingIds.includes(building.id);
+    const ready = completed && this.isBuildingReady(building.id);
+    const buildable = !completed && building.id === nextBuildableId;
+    const state = ready ? this.t('readyStatus') : completed ? this.t('completed') : buildable ? this.t('build') : this.t('locked');
+    const action = ready
+      ? `<button class="building-detail-action" data-detail-claim="${building.id}">${this.t('claim')}</button>`
+      : buildable
+        ? `<button class="building-detail-action" data-detail-build="${building.id}">${this.t('build')} ${this.getBuildCost(building.id)}</button>`
+        : '';
+
+    panel.classList.add('is-open');
+    panel.innerHTML = `
+      <button class="building-detail-close" type="button" data-detail-close aria-label="${this.t('close')}">×</button>
+      <div class="building-detail-icon" aria-hidden="true">${this.getBuildingIcon(building.id)}</div>
+      <div class="building-detail-copy">
+        <span class="building-detail-kicker">${this.t('buildingDetails')}</span>
+        <h3>${this.t(building.nameKey as TranslationKey)}</h3>
+        <p><strong>${state}</strong></p>
+        <p>${this.t('daily')} ${this.t('production')}: +${building.energy} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}</p>
+        ${!completed ? `<p>${this.t('buildCost')}: ${this.getBuildCost(building.id)}</p>` : ''}
+      </div>
+      <div class="building-detail-actions">
+        ${action}
+        <button class="building-detail-secondary" type="button" data-detail-close>${this.t('close')}</button>
+      </div>
+    `;
+
+    panel.querySelectorAll<HTMLButtonElement>('[data-detail-close]').forEach((button) => {
+      button.addEventListener('click', () => {
+        this.selectedBuildingId = undefined;
+        this.renderBuildingDetailPanel();
+        this.renderIsland();
+      });
+    });
+    panel.querySelector<HTMLButtonElement>('[data-detail-claim]')?.addEventListener('click', () => this.claimBuildingReward(building.id));
+    panel.querySelector<HTMLButtonElement>('[data-detail-build]')?.addEventListener('click', () => this.buildBuilding(building.id));
   }
 
   private bindIslandMapPan(): void {
