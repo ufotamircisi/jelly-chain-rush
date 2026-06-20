@@ -1,4 +1,5 @@
 import { detectLocale } from '../locales';
+import { STARTING_ENERGY } from '../game/economy';
 import type { LocaleCode, SaveData } from '../types';
 
 const SAVE_KEY = 'jelly-chain-rush.save.v1';
@@ -7,7 +8,7 @@ export function createDefaultSave(): SaveData {
   return {
     currentLevel: 1,
     highestUnlockedLevel: 1,
-    energy: 100,
+    energy: STARTING_ENERGY,
     diamonds: 250,
     superChests: 0,
     chests: 0,

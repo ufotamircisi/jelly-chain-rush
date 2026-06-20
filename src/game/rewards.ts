@@ -1,7 +1,6 @@
 import { getMultiplierLabel } from '../data/multipliers';
+import { LEVEL_COMPLETE_ENERGY_REWARD } from './economy';
 import type { GameState, RewardSummary } from '../types';
-
-const LEVEL_COMPLETION_ENERGY = 100;
 
 export function calculateRewardSummary(state: GameState): RewardSummary {
   const stars = calculateStars(state);
@@ -10,15 +9,17 @@ export function calculateRewardSummary(state: GameState): RewardSummary {
 
   return {
     stars,
-    levelEnergy: LEVEL_COMPLETION_ENERGY,
+    levelEnergy: LEVEL_COMPLETE_ENERGY_REWARD,
     starEnergy: starReward.energy,
     starDiamonds: starReward.diamonds,
     multiplierLabel: getMultiplierLabel(state.highestMultiplierIndex) || 'x0',
     multiplierEnergy: multiplierReward.energy,
     multiplierDiamonds: multiplierReward.diamonds,
     superChest: multiplierReward.superChest,
-    totalEnergy: LEVEL_COMPLETION_ENERGY + starReward.energy + multiplierReward.energy,
-    totalDiamonds: starReward.diamonds + multiplierReward.diamonds
+    totalEnergy: LEVEL_COMPLETE_ENERGY_REWARD + starReward.energy + multiplierReward.energy,
+    totalDiamonds: starReward.diamonds + multiplierReward.diamonds,
+    actualEnergyGained: LEVEL_COMPLETE_ENERGY_REWARD + starReward.energy + multiplierReward.energy,
+    energyCapped: false
   };
 }
 

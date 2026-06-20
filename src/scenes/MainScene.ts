@@ -13,6 +13,14 @@ import {
 } from '../game/boardModel';
 import { getLocalDateKey, isBeforeToday } from '../game/calendar';
 import { getDailyReward } from '../game/dailyRewards';
+import {
+  applyFreeEnergy,
+  applyMarketEnergy,
+  HARD_ENERGY_CAP,
+  MARKET_ENERGY_ITEMS,
+  MARKET_SHAKE_ITEMS,
+  SHAKE_ENERGY_COST
+} from '../game/economy';
 import { createGameState } from '../game/gameState';
 import { areGoalsComplete, getGoalProgress } from '../game/levels';
 import { calculateRewardSummary } from '../game/rewards';
@@ -22,7 +30,6 @@ import {
   BOARD_COLUMNS,
   BOARD_ROWS,
   MAX_SHAKES,
-  SHAKE_COST_ENERGY,
   type BoardPosition,
   type CandyType,
   type GameState,
@@ -168,7 +175,7 @@ export class MainScene extends Phaser.Scene {
     this.setText('multiplier-rewards-button', this.t('viewRewards'));
     this.setText('shake-button', this.t('shakeButton'));
     this.setText('get-energy-button', this.t('getEnergy'));
-    this.el('get-energy-button').classList.toggle('is-visible', this.screen === 'play' && this.state.status === 'playing' && this.state.energy < SHAKE_COST_ENERGY);
+    this.el('get-energy-button').classList.toggle('is-visible', this.screen === 'play' && this.state.status === 'playing' && this.state.energy < SHAKE_ENERGY_COST);
     this.setText('island-title', this.t('islandTitle'));
     this.setText('collect-all-button', this.t('collectAll'));
     this.setText('market-title', this.t('market'));
@@ -283,21 +290,23 @@ export class MainScene extends Phaser.Scene {
     this.renderMarketSection(
       list,
       this.t('energy'),
-      [
-        { label: this.t('marketEnergySmall'), icon: '⚡', onClick: () => this.buyMarketEnergy(50, 50), active: true },
-        { label: this.t('marketEnergyMedium'), icon: '⚡', onClick: () => this.buyMarketEnergy(100, 90), active: true },
-        { label: this.t('marketEnergyLarge'), icon: '⚡', onClick: () => this.buyMarketEnergy(250, 200), active: true }
-      ]
+      MARKET_ENERGY_ITEMS.map((item) => ({
+        label: this.t(item.labelKey),
+        icon: '⚡',
+        onClick: () => this.buyMarketEnergy(item.energy, item.cost),
+        active: true
+      }))
     );
 
     this.renderMarketSection(
       list,
       this.t('shakes'),
-      [
-        { label: this.t('marketOneShake'), icon: '↯', onClick: () => this.buyMarketShakes(1, 100), active: true },
-        { label: this.t('marketFiveShakes'), icon: '↯', onClick: () => this.buyMarketShakes(5, 300), active: true },
-        { label: this.t('marketTenShakes'), icon: '↯', onClick: () => this.buyMarketShakes(10, 600), active: true }
-      ]
+      MARKET_SHAKE_ITEMS.map((item) => ({
+        label: this.t(item.labelKey),
+        icon: '↯',
+        onClick: () => this.buyMarketShakes(item.shakes, item.cost),
+        active: true
+      }))
     );
 
     this.renderMarketSection(
@@ -661,7 +670,7 @@ export class MainScene extends Phaser.Scene {
       return false;
     }
 
-    if (this.state.energy < SHAKE_COST_ENERGY) {
+    if (this.state.energy < SHAKE_ENERGY_COST) {
       this.showWarning(this.t('noEnergy'));
       this.blockShakeButton();
       this.renderOverlay();
@@ -669,7 +678,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.state.shakesRemaining -= 1;
-    this.state.energy -= SHAKE_COST_ENERGY;
+    this.state.energy -= SHAKE_ENERGY_COST;
     this.syncSaveCurrency();
     return true;
   }
@@ -873,13 +882,13 @@ export class MainScene extends Phaser.Scene {
       && !this.isDropping
       && !this.isResolving
       && this.state.shakesRemaining > 0
-      && this.state.energy >= SHAKE_COST_ENERGY;
+      && this.state.energy >= SHAKE_ENERGY_COST;
   }
 
   private getHelperText(): string {
     if (this.isShaking || this.isDropping) return this.t('shakeDropHelper');
     if (this.isResolving) return this.t('chainInProgress');
-    if (this.state.energy < SHAKE_COST_ENERGY) return this.t('noEnergy');
+    if (this.state.energy < SHAKE_ENERGY_COST) return this.t('noEnergy');
     if (hasValidSwipeMove(this.state.board)) return this.t('swipeHelper');
     return this.t('shakeHelper');
   }
@@ -887,8 +896,14 @@ export class MainScene extends Phaser.Scene {
   private triggerLevelWin(): void {
     if (this.state.status === 'won') return;
     this.state.status = 'won';
-    this.rewardSummary = calculateRewardSummary(this.state);
-    this.state.energy += this.rewardSummary.totalEnergy;
+    const reward = calculateRewardSummary(this.state);
+    const energyResult = applyFreeEnergy(this.state.energy, reward.totalEnergy);
+    this.rewardSummary = {
+      ...reward,
+      actualEnergyGained: energyResult.gained,
+      energyCapped: energyResult.capped
+    };
+    this.state.energy = energyResult.energy;
     this.state.diamonds += this.rewardSummary.totalDiamonds;
     this.save = {
       ...this.save,
@@ -960,12 +975,10 @@ export class MainScene extends Phaser.Scene {
     ];
 
     if (reward.multiplierEnergy > 0 || reward.multiplierDiamonds > 0) {
-      rewardRows.push(`<article><span>${this.t('bonus')}</span><strong>+${reward.multiplierEnergy} ${this.t('energy')} +${reward.multiplierDiamonds} ${this.t('diamonds')}</strong></article>`);
+      rewardRows.push(`<article><span>${this.t('multiplierBonus')}</span><strong>+${reward.multiplierEnergy} ${this.t('energy')} +${reward.multiplierDiamonds} ${this.t('diamonds')}</strong></article>`);
     }
 
-    if (reward.totalDiamonds > 0) {
-      rewardRows.push(`<article><span>${this.t('diamonds')}</span><strong>+${reward.totalDiamonds}</strong></article>`);
-    }
+    rewardRows.push(`<article><span>${this.t('totalReward')}</span><strong>+${reward.totalEnergy} ${this.t('energy')} +${reward.totalDiamonds} ${this.t('diamonds')}</strong></article>`);
 
     if (reward.superChest) {
       rewardRows.push(`<article class="result-special-row"><span>${this.t('superChest')}</span><strong>${this.t('superChestUnlocked')}</strong></article>`);
@@ -983,6 +996,7 @@ export class MainScene extends Phaser.Scene {
           <article><span>${this.t('highestMultiplier')}</span><strong>${reward.multiplierLabel}</strong></article>
         </div>
         <div class="result-rewards">${rewardRows.join('')}</div>
+        ${reward.energyCapped ? `<p class="result-keep-note">${this.t('energyFull')}</p>` : ''}
         <button class="result-primary-button" type="button" data-action="next">${this.t('nextLevel')}</button>
       </div>
     `);
@@ -1044,13 +1058,15 @@ export class MainScene extends Phaser.Scene {
   private claimDailyReward(): void {
     const reward = getDailyReward(this.save.dailyLogin.streak + 1);
     this.save.dailyLogin = { streak: this.save.dailyLogin.streak + 1, lastClaimDate: TODAY() };
-    this.save.energy += reward.energy;
+    const energyResult = applyFreeEnergy(this.save.energy, reward.energy);
+    this.save.energy = energyResult.energy;
     this.save.diamonds += reward.diamonds;
     this.save.chests += reward.chest ? 1 : 0;
     this.state.energy = this.save.energy;
     this.state.diamonds = this.save.diamonds;
     saveData(this.save);
     this.closeModal();
+    if (energyResult.capped) this.showWarning(this.t('energyFull'));
     this.renderOverlay();
   }
 
@@ -1072,12 +1088,13 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    this.save.energy += energy;
+    const energyResult = applyFreeEnergy(this.save.energy, energy);
+    this.save.energy = energyResult.energy;
     this.save.diamonds += diamonds;
     this.state.energy = this.save.energy;
     this.state.diamonds = this.save.diamonds;
     saveData(this.save);
-    this.showWarning(`${this.t('dailyProductionCollected')} +${energy} ${this.t('energy')} +${diamonds} ${this.t('diamonds')}`);
+    this.showWarning(`${this.t('dailyProductionCollected')} +${energyResult.gained} ${this.t('energy')} +${diamonds} ${this.t('diamonds')}${energyResult.capped ? ` ${this.t('energyFull')}` : ''}`);
     this.renderOverlay();
   }
 
@@ -1085,13 +1102,14 @@ export class MainScene extends Phaser.Scene {
     const building = BUILDINGS.find((item) => item.id === buildingId);
     if (!building || !this.isBuildingReady(buildingId)) return;
 
-    this.save.energy += building.energy;
+    const energyResult = applyFreeEnergy(this.save.energy, building.energy);
+    this.save.energy = energyResult.energy;
     this.save.diamonds += building.diamonds;
     this.save.buildingClaimDates[String(buildingId)] = TODAY();
     this.state.energy = this.save.energy;
     this.state.diamonds = this.save.diamonds;
     saveData(this.save);
-    this.showWarning(`${this.t('gained')}: +${building.energy} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}`);
+    this.showWarning(`${this.t('gained')}: +${energyResult.gained} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}${energyResult.capped ? ` ${this.t('energyFull')}` : ''}`);
     this.renderOverlay();
   }
 
@@ -1128,15 +1146,21 @@ export class MainScene extends Phaser.Scene {
   }
 
   private buyMarketEnergy(energy: number, cost: number): void {
+    if (this.state.energy >= HARD_ENERGY_CAP) {
+      this.showWarning(this.t('energyFull'));
+      return;
+    }
+
     if (this.state.diamonds < cost) {
       this.showWarning(this.t('notEnoughDiamonds'));
       return;
     }
 
+    const energyResult = applyMarketEnergy(this.state.energy, energy);
     this.state.diamonds -= cost;
-    this.state.energy += energy;
+    this.state.energy = energyResult.energy;
     this.syncSaveCurrency();
-    this.showWarning(`+${energy} ${this.t('energy')} ${this.t('energyAdded')}`);
+    this.showWarning(`+${energyResult.gained} ${this.t('energy')} ${this.t('energyAdded')}${energyResult.capped ? ` ${this.t('energyFull')}` : ''}`);
     this.renderOverlay();
   }
 

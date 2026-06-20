@@ -314,7 +314,9 @@ Turkish:
 
 Energy:
 
-* Max energy starts at 100.
+* Starting energy is 100.
+* Free energy rewards cap at 300.
+* Market energy purchases can overflow up to 999.
 * 1 shake costs 10 energy.
 * 100 energy equals 10 shakes.
 
@@ -329,6 +331,40 @@ If player lacks energy:
   * +250 energy = 200 diamonds
 * Purchases subtract diamonds, add energy immediately, and show feedback.
 * Later balance can include time-based refill and 2-hour wait.
+
+---
+
+## 10.1 Energy Economy Balance
+
+MVP energy balance:
+
+* Starting energy: 100
+* Shake cost: 10 energy
+* Level complete reward: +100 energy
+* Free energy cap: 300
+* Diamond market energy purchases can overflow above the free cap up to 999 energy.
+
+Free energy sources respect the 300 cap:
+
+* Level completion reward
+* Star rewards
+* Highest multiplier bonus rewards
+* Daily rewards
+* Candy Island production
+
+Energy recovery comes from:
+
+* Level completion
+* Daily rewards
+* Candy Island production
+* Market energy exchanges
+
+Design goal:
+
+* Early levels 1-5 should feel comfortable and let most players keep playing.
+* Levels 6-15 may need several shakes but should still feel fair.
+* Later levels can create energy pressure after failures, heavy shake use, or longer sessions.
+* Skilled players can keep progressing, while struggling players naturally use energy recovery options.
 
 ---
 
