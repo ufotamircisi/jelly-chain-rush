@@ -1,7 +1,7 @@
 export const STARTING_ENERGY = 100;
 export const FREE_ENERGY_CAP = 300;
 export const HARD_ENERGY_CAP = 999;
-export const SHAKE_ENERGY_COST = 10;
+export const SHAKE_ENERGY_COST = 20;
 export const LEVEL_COMPLETE_ENERGY_REWARD = 100;
 
 export const MARKET_ENERGY_ITEMS = [
@@ -12,8 +12,8 @@ export const MARKET_ENERGY_ITEMS = [
 
 export const MARKET_SHAKE_ITEMS = [
   { shakes: 1, cost: 100, labelKey: 'marketOneShake' },
-  { shakes: 5, cost: 300, labelKey: 'marketFiveShakes' },
-  { shakes: 10, cost: 600, labelKey: 'marketTenShakes' }
+  { shakes: 3, cost: 250, labelKey: 'marketThreeShakes' },
+  { shakes: 5, cost: 400, labelKey: 'marketFiveShakes' }
 ] as const;
 
 export function applyFreeEnergy(currentEnergy: number, rewardEnergy: number): { energy: number; gained: number; capped: boolean } {

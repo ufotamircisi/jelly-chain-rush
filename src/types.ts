@@ -1,6 +1,6 @@
 export const BOARD_COLUMNS = 7;
 export const BOARD_ROWS = 7;
-export const MAX_SHAKES = 10;
+export const SHAKES_PER_LEVEL = 5;
 
 export type LocaleCode = 'en' | 'tr' | 'es' | 'pt' | 'fr' | 'de' | 'it' | 'id' | 'vi' | 'nl' | 'pl';
 

@@ -30,7 +30,7 @@ import { loadSave, saveData, updateLanguage, updateSoundEnabled } from '../save/
 import {
   BOARD_COLUMNS,
   BOARD_ROWS,
-  MAX_SHAKES,
+  SHAKES_PER_LEVEL,
   type BoardPosition,
   type CandyType,
   type GameState,
@@ -191,7 +191,7 @@ export class MainScene extends Phaser.Scene {
     this.setText('diamonds-label', this.t('diamonds'));
     this.setText('diamonds-value', String(this.state.diamonds));
     this.setText('shake-label', this.t('shake'));
-    this.setText('shake-value', `${this.state.shakesRemaining}/${MAX_SHAKES}`);
+    this.setText('shake-value', `${this.state.shakesRemaining}/${SHAKES_PER_LEVEL}`);
     this.setText('goal-panel-title', this.t('goal'));
     this.setText('helper-text', this.getHelperText());
     this.setText('multiplier-rewards-title', this.t('multiplierRewards'));
@@ -743,7 +743,6 @@ export class MainScene extends Phaser.Scene {
 
   private startInitialDrop(): void {
     if (this.isDropping || this.isResolving || this.state.status !== 'playing') return;
-    if (!this.consumeShakeCost()) return;
     this.startDropSequence({ playChime: true });
   }
 
@@ -1068,16 +1067,16 @@ export class MainScene extends Phaser.Scene {
         <div class="continue-actions">
           <button type="button" data-action="ad">${this.t('watchAdContinue')}</button>
           <button type="button" data-action="one">${this.t('continueOneShake')}</button>
+          <button type="button" data-action="three">${this.t('continueThreeShakes')}</button>
           <button type="button" data-action="five">${this.t('continueFiveShakes')}</button>
-          <button type="button" data-action="ten">${this.t('continueTenShakes')}</button>
           <button class="result-secondary-button" type="button" data-action="restart">${this.t('restart')}</button>
         </div>
       </div>
     `);
     this.modalButton('ad', (button) => this.handleContinueClick(button, 1));
     this.modalButton('one', (button) => this.handleContinueClick(button, 1, 100));
-    this.modalButton('five', (button) => this.handleContinueClick(button, 5, 300));
-    this.modalButton('ten', (button) => this.handleContinueClick(button, 10, 600));
+    this.modalButton('three', (button) => this.handleContinueClick(button, 3, 250));
+    this.modalButton('five', (button) => this.handleContinueClick(button, 5, 400));
     this.modalButton('restart', (button) => {
       this.disableModalButtons(button);
       this.restartLevel();

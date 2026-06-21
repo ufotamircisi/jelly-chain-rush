@@ -51,12 +51,12 @@ Jelly Chain Rush is a 7x7 candy puzzle game where the player has limited shake r
 Each level starts with:
 
 * 7x7 board
-* 10 shake rights
+* 5 manual shake rights
 * Energy and diamond counters
 * Level goals
 * Persistent floor multipliers from x2 up to x1000
 
-The player presses **SHAKE! / ÇALKALA!** to shake the board, trigger a 3-second downward candy drop / candy rain animation, and fill the board with falling candies. Visible UI must always use **SHAKE / ÇALKALA** language, never spin language.
+The level begins with one free automatic opening drop that triggers the 3-second downward candy drop / candy rain animation without spending energy or shake rights. After that, the player presses **SHAKE! / ÇALKALA!** to spend a limited manual shake, shake the board, and fill the board with falling candies. Visible UI must always use **SHAKE / ÇALKALA** language, never spin language.
 
 After the falling animation stops, all orthogonally connected same-candy groups of 3+ automatically blast. Candies fall, new candies spawn from the top, and automatic cascades continue until no valid connected groups remain.
 
@@ -117,15 +117,24 @@ Candy types:
 
 Each level starts with:
 
-* 10 shake rights
+* 5 manual shake rights
 
 1 shake:
 
-* Costs 10 energy
+* Costs 20 energy
 * Uses 1 shake right
 * Physically shakes/trembles the 7x7 board
 * Triggers a 3-second downward candy drop / candy rain animation
 * Drops candies into the moving candy layer above the fixed multiplier cells
+
+At level start, the game performs one free opening candy drop:
+
+* Plays the start bell/chime
+* Runs the 3-second candy drop
+* Resolves automatic connected-group blasts and cascades
+* Does not consume energy
+* Does not consume a shake right
+* Happens once when a level starts or restarts
 
 When the player presses **SHAKE! / ÇALKALA!**:
 
@@ -136,7 +145,7 @@ When the player presses **SHAKE! / ÇALKALA!**:
 * Floor multipliers remain attached to their board cells and do not move with candies.
 * After the drop stops, automatic connected-group match detection begins.
 
-The shake should feel physical and satisfying. The action is always called SHAKE / ÇALKALA in visible UI.
+SHAKE / ÇALKALA is powerful but limited. Swipe matching is the main active play after cascades settle. The shake should feel physical and satisfying. The action is always called SHAKE / ÇALKALA in visible UI.
 
 ---
 
@@ -231,7 +240,7 @@ Multiplier path:
 
 none -> x2 -> x4 -> x8 -> x16 -> x32 -> x64 -> x128 -> x256 -> x512 -> x1000
 
-Multipliers do **not** reset when the initial 10 shake rights are finished if the player continues with:
+Multipliers do **not** reset when the initial 5 manual shake rights are finished if the player continues with:
 
 * Rewarded ad
 * Diamonds
@@ -259,14 +268,14 @@ It does not matter how many shake rights remain.
 
 Example:
 
-* Player has 10 shake rights.
+* Player has 5 manual shake rights.
 * Player completes all goals on shake 4 during an automatic cascade.
 * Player also reaches x1000.
 * The level is won immediately.
 * The player receives the x1000 reward.
 * Next level starts with reset multipliers.
 
-If 10 shake rights are used and goals are not complete:
+If all manual shake rights are used and goals are not complete:
 
 * Show fail/continue screen.
 * Player can continue using ad or diamonds.
@@ -295,8 +304,8 @@ Options:
 
 * Rewarded ad placeholder: +1 shake
 * 100 diamonds: +1 shake
-* 300 diamonds: +5 shakes
-* 600 diamonds: +10 shakes
+* 250 diamonds: +3 shakes
+* 400 diamonds: +5 shakes
 
 Text idea:
 
@@ -317,12 +326,12 @@ Energy:
 * Starting energy is 100.
 * Free energy rewards cap at 300.
 * Market energy purchases can overflow up to 999.
-* 1 shake costs 10 energy.
-* 100 energy equals 10 shakes.
+* 1 manual shake costs 20 energy.
+* 100 energy equals 5 manual shakes.
 
 If player lacks energy:
 
-* Disable SHAKE / ÇALKALA until the player has at least 10 energy.
+* Disable SHAKE / ÇALKALA until the player has at least 20 energy.
 * Show a small Get Energy / Enerji Al action near the disabled main button.
 * Send the player to the Market energy recovery options when they need energy.
 * Market MVP energy recovery options:
@@ -339,7 +348,7 @@ If player lacks energy:
 MVP energy balance:
 
 * Starting energy: 100
-* Shake cost: 10 energy
+* Shake cost: 20 energy
 * Level complete reward: +100 energy
 * Free energy cap: 300
 * Diamond market energy purchases can overflow above the free cap up to 999 energy.
@@ -381,8 +390,8 @@ Used for:
 Diamond costs:
 
 * +1 shake = 100 diamonds
-* +5 shakes = 300 diamonds
-* +10 shakes = 600 diamonds
+* +3 shakes = 250 diamonds
+* +5 shakes = 400 diamonds
 
 No gambling language or mechanics.
 
@@ -401,16 +410,16 @@ Rule:
 Safe text:
 
 English:
-"Lucky Drop! +5 Shakes"
+"Energy Drop! +5 Shakes"
 
 Turkish:
-"Şanslı Düşüş! +5 Çalkalama"
+"Enerji Düşüşü! +5 Çalkalama"
 
 ---
 
 ## 13. Level Goals
 
-Levels are procedural/infinite.
+Levels are generated and scaled procedurally by level number for endless progression.
 
 Each level can include one or more goals.
 
@@ -431,7 +440,14 @@ Examples:
 * Blast 5 connected groups of 5+ candies
 * Reach x1000 multiplier
 
-Difficulty should increase gradually.
+Difficulty should increase gradually through score targets, candy goal counts, multiple goals, and multiplier goals:
+
+* Levels 1-5 are easy onboarding with low score targets and one simple candy goal.
+* Levels 6-15 are moderate, with higher score targets and gradually larger candy goals.
+* Levels 16-30 are harder, with multiple goals and more frequent multiplier goals.
+* Levels 31+ continue procedurally with slowly rising score targets and candy counts.
+
+Connected same-candy groups of 3+ can create large automatic blasts, so later level goals should be high enough that swipe matching matters. Pressing SHAKE repeatedly should not be the only reliable path in later levels.
 
 ---
 
@@ -614,8 +630,8 @@ Energy recovery:
 Extra shakes:
 
 * +1 shake = 100 diamonds
-* +5 shakes = 300 diamonds
-* +10 shakes = 600 diamonds
+* +3 shakes = 250 diamonds
+* +5 shakes = 400 diamonds
 
 Coming soon:
 
