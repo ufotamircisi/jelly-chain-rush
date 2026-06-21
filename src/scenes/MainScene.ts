@@ -970,7 +970,7 @@ export class MainScene extends Phaser.Scene {
     this.renderOverlay();
   }
 
-  private continueLevel(shakes: number, diamondCost = 0): boolean {
+  private continueLevel(shakes: number, diamondCost = 0, source: 'ad' | 'diamonds' = 'diamonds'): boolean {
     if (diamondCost > 0 && this.state.diamonds < diamondCost) {
       this.sfx.playWarning();
       this.showWarning(this.t('notEnoughDiamonds'));
@@ -980,6 +980,9 @@ export class MainScene extends Phaser.Scene {
     this.state.diamonds -= diamondCost;
     this.state.shakesRemaining += shakes;
     this.state.continued = true;
+    if (source === 'ad') {
+      this.state.adContinueUsedForAttempt = true;
+    }
     this.state.status = 'playing';
     this.syncSaveCurrency();
     this.closeModal();
@@ -1053,6 +1056,10 @@ export class MainScene extends Phaser.Scene {
 
   private renderFailModal(): void {
     const goals = this.state.definition.goals.map((goal) => `<article>${this.formatGoal(goal)}</article>`).join('');
+    const adContinue = this.state.adContinueUsedForAttempt
+      ? `<p class="result-keep-note">${this.t('adContinueUsed')}</p>`
+      : `<button type="button" data-action="ad">${this.t('watchAdContinue')}</button>`;
+
     this.openModal(`
       <div class="modal-card result-card result-card-fail">
         <h2>${this.t('levelFailed')}</h2>
@@ -1065,7 +1072,7 @@ export class MainScene extends Phaser.Scene {
         <p class="result-keep-note">${this.t('continueKeepsMultipliers')}</p>
         <div class="modal-feedback" aria-live="polite"></div>
         <div class="continue-actions">
-          <button type="button" data-action="ad">${this.t('watchAdContinue')}</button>
+          ${adContinue}
           <button type="button" data-action="one">${this.t('continueOneShake')}</button>
           <button type="button" data-action="three">${this.t('continueThreeShakes')}</button>
           <button type="button" data-action="five">${this.t('continueFiveShakes')}</button>
@@ -1073,7 +1080,9 @@ export class MainScene extends Phaser.Scene {
         </div>
       </div>
     `);
-    this.modalButton('ad', (button) => this.handleContinueClick(button, 1));
+    if (!this.state.adContinueUsedForAttempt) {
+      this.modalButton('ad', (button) => this.handleContinueClick(button, 1, 0, 'ad'));
+    }
     this.modalButton('one', (button) => this.handleContinueClick(button, 1, 100));
     this.modalButton('three', (button) => this.handleContinueClick(button, 3, 250));
     this.modalButton('five', (button) => this.handleContinueClick(button, 5, 400));
@@ -1083,8 +1092,8 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private handleContinueClick(button: HTMLButtonElement, shakes: number, diamondCost = 0): void {
-    if (!this.continueLevel(shakes, diamondCost)) return;
+  private handleContinueClick(button: HTMLButtonElement, shakes: number, diamondCost = 0, source: 'ad' | 'diamonds' = 'diamonds'): void {
+    if (!this.continueLevel(shakes, diamondCost, source)) return;
     this.disableModalButtons(button);
   }
 

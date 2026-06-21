@@ -44,6 +44,7 @@ const tr: typeof en = {
   giveUp: 'Vazgeç',
   rewardedContinue: 'Reklam İzle: +1 Çalkalama',
   watchAdContinue: 'Reklam İzle: +1 Çalkalama',
+  adContinueUsed: 'Reklam hakkı kullanıldı.',
   continueOneShake: '100 Elmas: +1 Çalkalama',
   continueThreeShakes: '250 Elmas: +3 Çalkalama',
   continueFiveShakes: '400 Elmas: +5 Çalkalama',

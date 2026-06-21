@@ -292,7 +292,10 @@ Failed/continue overlay:
 * Show current score, highest multiplier, and remaining goal progress.
 * Explain that continuing keeps the current level multipliers.
 * Continue options add shake rights and resume the same level without resetting multipliers.
+* Offer one rewarded-ad continue per level attempt.
+* After the rewarded-ad continue is used, failing again only allows diamond continue options or restart.
 * Restart fully restarts the level and resets level multipliers according to normal restart rules.
+* Restart starts a fresh attempt and restores the one rewarded-ad continue availability.
 
 ---
 
@@ -302,10 +305,12 @@ When shake rights are gone and goals are incomplete:
 
 Options:
 
-* Rewarded ad placeholder: +1 shake
+* Rewarded ad placeholder: +1 shake, once per level attempt
 * 100 diamonds: +1 shake
 * 250 diamonds: +3 shakes
 * 400 diamonds: +5 shakes
+
+If the rewarded-ad continue was already used in the current attempt, hide the ad button and show a small note that the ad continue was used. Diamond options and restart remain available.
 
 Text idea:
 

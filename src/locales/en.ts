@@ -42,6 +42,7 @@ const en = {
   giveUp: 'Give Up',
   rewardedContinue: 'Watch Ad: +1 Shake',
   watchAdContinue: 'Watch Ad: +1 Shake',
+  adContinueUsed: 'Ad continue used.',
   continueOneShake: '100 Diamonds: +1 Shake',
   continueThreeShakes: '250 Diamonds: +3 Shakes',
   continueFiveShakes: '400 Diamonds: +5 Shakes',

@@ -15,6 +15,7 @@ export function createGameState(save: SaveData): GameState {
     candyBlasts: {},
     highestMultiplierIndex: 0,
     continued: false,
+    adContinueUsedForAttempt: false,
     status: 'playing',
     board: createBoard()
   };

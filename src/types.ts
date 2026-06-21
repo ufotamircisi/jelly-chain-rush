@@ -79,6 +79,7 @@ export interface GameState {
   candyBlasts: Partial<Record<CandyType, number>>;
   highestMultiplierIndex: number;
   continued: boolean;
+  adContinueUsedForAttempt: boolean;
   status: LevelStatus;
   board: BoardGrid;
 }
