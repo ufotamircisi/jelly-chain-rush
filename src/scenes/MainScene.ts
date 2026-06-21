@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { CANDY_ASSET_PACK, CANDY_TEXTURE_KEY_BY_TYPE } from '../assets/candyAssetManifest';
 import { CandySfx } from '../audio/sfx';
 import { BUILDINGS } from '../data/buildings';
 import { getCandyDefinition } from '../data/candies';
@@ -46,6 +47,7 @@ const BOARD_SIZE = 370;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
+const CANDY_IMAGE_SIZE = CELL_SIZE * 0.8;
 const TODAY = () => getLocalDateKey();
 
 const MULTIPLIER_TINTS = [
@@ -103,6 +105,14 @@ export class MainScene extends Phaser.Scene {
 
   constructor() {
     super('MainScene');
+  }
+
+  preload(): void {
+    for (const asset of CANDY_ASSET_PACK) {
+      if (!this.textures.exists(asset.textureKey)) {
+        this.load.image(asset.textureKey, asset.src);
+      }
+    }
   }
 
   create(): void {
@@ -504,18 +514,19 @@ export class MainScene extends Phaser.Scene {
         const y = row * CELL_SIZE + CELL_SIZE / 2;
         const container = this.add.container(x, y);
         this.drawMultiplierFloor(container, cell.multiplierIndex);
-        container.add(this.add.text(0, 17, getMultiplierLabel(cell.multiplierIndex), {
+        const multiplierLabel = this.add.text(0, 17, getMultiplierLabel(cell.multiplierIndex), {
           fontFamily: 'Arial',
           fontSize: cell.multiplierIndex >= 10 ? '12px' : cell.multiplierIndex >= 7 ? '13px' : '12px',
           color: cell.multiplierIndex >= 9 ? '#8a4a00' : '#ffffff',
           fontStyle: 'bold',
           stroke: cell.multiplierIndex >= 9 ? '#fff5b8' : '#4d2382',
           strokeThickness: cell.multiplierIndex > 0 ? 3 : 2
-        }).setOrigin(0.5).setAlpha(cell.multiplierIndex > 0 ? 0.78 : 0.28));
+        }).setOrigin(0.5).setAlpha(cell.multiplierIndex > 0 ? 0.88 : 0.32).setDepth(3);
         const candyContainer = this.add.container(0, 0);
         this.drawCandyIcon(candyContainer, cell.candy);
         candyContainer.setDepth(2);
         container.add(candyContainer);
+        container.add(multiplierLabel);
         container.setSize(CELL_SIZE, CELL_SIZE);
         container.setInteractive(new Phaser.Geom.Rectangle(-CELL_SIZE / 2, -CELL_SIZE / 2, CELL_SIZE, CELL_SIZE), Phaser.Geom.Rectangle.Contains);
         container.on('pointerdown', () => this.handleCellPointerDown({ row, col }));
@@ -578,6 +589,16 @@ export class MainScene extends Phaser.Scene {
   }
 
   private drawCandyIcon(container: Phaser.GameObjects.Container, candyType: CandyType): void {
+    const textureKey = CANDY_TEXTURE_KEY_BY_TYPE[candyType];
+    if (textureKey && this.textures.exists(textureKey)) {
+      const candyImage = this.add.image(0, -7, textureKey)
+        .setDisplaySize(CANDY_IMAGE_SIZE, CANDY_IMAGE_SIZE)
+        .setOrigin(0.5)
+        .setName(textureKey);
+      container.add(candyImage);
+      return;
+    }
+
     const candy = getCandyDefinition(candyType);
     const g = this.add.graphics();
     const y = -8;
