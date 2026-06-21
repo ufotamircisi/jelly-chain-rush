@@ -324,6 +324,29 @@ Turkish:
 
 ---
 
+## 9.1 Ad Flow MVP
+
+MVP ad behavior uses polished placeholder overlays only. Real ad SDK integration comes later.
+
+After a level is completed:
+
+1. Show the victory overlay and apply normal rewards.
+2. Player taps Next Level.
+3. If the completed level is divisible by 5, show one mandatory ad placeholder before the next level.
+4. If the completed level is divisible by 10, show one mandatory ad placeholder, then an optional rewarded ad offer.
+5. Start the next level after the required placeholder and optional offer flow finishes.
+
+Rules:
+
+* Every completed level divisible by 5 shows one mandatory ad before the next level.
+* Every completed level divisible by 10 shows one mandatory ad, then an optional rewarded ad offer.
+* Do not show duplicate mandatory ads on levels divisible by 10.
+* Optional rewarded ad can be skipped.
+* Rewarded ad bonus for 10th-level milestones: +100 energy +50 diamonds.
+* Rewarded ad bonus respects the hard energy cap.
+
+---
+
 ## 10. Energy System
 
 Energy:

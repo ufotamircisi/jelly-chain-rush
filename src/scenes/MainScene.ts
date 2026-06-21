@@ -99,6 +99,7 @@ export class MainScene extends Phaser.Scene {
   private dragStart?: BoardPosition;
   private sfx!: CandySfx;
   private selectedBuildingId?: number;
+  private pendingAdFlow?: { completedLevel: number; rewardedHandled: boolean };
 
   constructor() {
     super('MainScene');
@@ -1002,6 +1003,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private startNextLevel(): void {
+    this.pendingAdFlow = undefined;
     this.save.currentLevel = Math.max(this.save.currentLevel, this.state.level + 1);
     this.save.energy = this.state.energy;
     this.save.diamonds = this.state.diamonds;
@@ -1050,8 +1052,94 @@ export class MainScene extends Phaser.Scene {
     `);
     this.modalButton('next', (button) => {
       this.disableModalButtons(button);
-      this.startNextLevel();
+      this.beginNextLevelFlow();
     });
+  }
+
+  private beginNextLevelFlow(): void {
+    const completedLevel = this.state.level;
+
+    if (completedLevel % 5 !== 0) {
+      this.startNextLevel();
+      return;
+    }
+
+    this.pendingAdFlow = { completedLevel, rewardedHandled: false };
+    this.renderMandatoryAdModal();
+  }
+
+  private renderMandatoryAdModal(): void {
+    this.openModal(`
+      <div class="modal-card result-card">
+        <h2>${this.t('adBreakTitle')}</h2>
+        <p>${this.t('adBreakMessage')}</p>
+        <button class="result-primary-button" type="button" data-action="continue">${this.t('adBreakContinue')}</button>
+      </div>
+    `);
+    this.modalButton('continue', (button) => {
+      this.disableModalButtons(button);
+      this.continueAfterMandatoryAd();
+    });
+  }
+
+  private continueAfterMandatoryAd(): void {
+    const flow = this.pendingAdFlow;
+    if (flow?.completedLevel && flow.completedLevel % 10 === 0 && !flow.rewardedHandled) {
+      this.renderRewardedAdOfferModal();
+      return;
+    }
+
+    this.startNextLevel();
+  }
+
+  private renderRewardedAdOfferModal(): void {
+    this.openModal(`
+      <div class="modal-card result-card result-card-win">
+        <h2>${this.t('bonusRewardTitle')}</h2>
+        <p>${this.t('bonusRewardMessage')}</p>
+        <div class="result-rewards">
+          <article><span>${this.t('bonus')}</span><strong>${this.t('bonusRewardText')}</strong></article>
+        </div>
+        <div class="continue-actions">
+          <button class="result-primary-button" type="button" data-action="claim">${this.t('watchAndClaim')}</button>
+          <button class="result-secondary-button" type="button" data-action="skip">${this.t('skip')}</button>
+        </div>
+      </div>
+    `);
+    this.modalButton('claim', (button) => {
+      this.disableModalButtons(button);
+      this.claimRewardedAdBonus();
+    });
+    this.modalButton('skip', (button) => {
+      this.disableModalButtons(button);
+      this.skipRewardedAdBonus();
+    });
+  }
+
+  private claimRewardedAdBonus(): void {
+    const flow = this.pendingAdFlow;
+    if (!flow || flow.rewardedHandled) return;
+
+    flow.rewardedHandled = true;
+    const energyResult = applyMarketEnergy(this.state.energy, 100);
+    this.state.energy = energyResult.energy;
+    this.state.diamonds += 50;
+    this.save.energy = this.state.energy;
+    this.save.diamonds = this.state.diamonds;
+    saveData(this.save);
+    this.sfx.playPurchaseSuccess();
+    if (energyResult.capped) {
+      this.showWarning(this.t('energyFull'));
+    }
+    this.startNextLevel();
+  }
+
+  private skipRewardedAdBonus(): void {
+    const flow = this.pendingAdFlow;
+    if (flow) {
+      flow.rewardedHandled = true;
+    }
+    this.startNextLevel();
   }
 
   private renderFailModal(): void {
