@@ -64,6 +64,7 @@ export interface SaveData {
   dailyLogin: DailyLoginState;
   stats: PlayerStats;
   language: LocaleCode;
+  soundEnabled: boolean;
 }
 
 export type LevelStatus = 'playing' | 'won' | 'failed';

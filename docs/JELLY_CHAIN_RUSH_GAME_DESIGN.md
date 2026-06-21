@@ -707,7 +707,22 @@ Must include:
 Must include:
 
 * Language selector
+* Sound toggle
 * Basic settings placeholder
+
+### 21.5 Sound Feedback
+
+MVP sound design should feel cheerful, soft, sweet, and poppy. Sounds should avoid harsh buzzes, scary tones, long loops, or annoying repetition.
+
+Sound feedback should scale with blast size:
+
+* 3-candy connected groups use a small pop.
+* 4-candy connected groups use a slightly brighter medium pop.
+* 5+ connected groups use bigger burst feedback.
+* 10+ connected groups use the largest short candy burst.
+* Bigger connected groups have bigger audio feedback, but cascades should play one combined sound per resolution step instead of one sound per candy.
+* High multipliers and x1000 should have distinct sparkle/chime rewards.
+* A sound on/off control must exist for MVP and persist between sessions.
 
 ---
 

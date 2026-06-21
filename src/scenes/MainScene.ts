@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { CandySfx } from '../audio/sfx';
 import { BUILDINGS } from '../data/buildings';
 import { getCandyDefinition } from '../data/candies';
 import { getMultiplierLabel } from '../data/multipliers';
@@ -25,7 +26,7 @@ import { createGameState } from '../game/gameState';
 import { areGoalsComplete, getGoalProgress } from '../game/levels';
 import { calculateRewardSummary } from '../game/rewards';
 import { createTranslator, SUPPORTED_LOCALES, type TranslationKey } from '../locales';
-import { loadSave, saveData, updateLanguage } from '../save/saveData';
+import { loadSave, saveData, updateLanguage, updateSoundEnabled } from '../save/saveData';
 import {
   BOARD_COLUMNS,
   BOARD_ROWS,
@@ -96,7 +97,7 @@ export class MainScene extends Phaser.Scene {
   private isDropping = false;
   private isResolving = false;
   private dragStart?: BoardPosition;
-  private audioContext?: AudioContext;
+  private sfx!: CandySfx;
   private selectedBuildingId?: number;
 
   constructor() {
@@ -107,6 +108,7 @@ export class MainScene extends Phaser.Scene {
     this.save = loadSave();
     this.locale = this.save.language;
     this.t = createTranslator(this.locale);
+    this.sfx = new CandySfx(this.save.soundEnabled);
     this.state = createGameState(this.save);
     this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
     this.bindOverlay();
@@ -121,11 +123,13 @@ export class MainScene extends Phaser.Scene {
 
   private bindOverlay(): void {
     this.el('shake-button').addEventListener('click', () => {
+      this.playButtonTap();
       this.bumpShakeButton();
       this.handleShake();
     });
 
     this.el('language-button').addEventListener('click', () => {
+      this.playButtonTap();
       const index = SUPPORTED_LOCALES.indexOf(this.locale);
       this.locale = SUPPORTED_LOCALES[(index + 1) % SUPPORTED_LOCALES.length];
       this.save = updateLanguage(this.save, this.locale);
@@ -133,9 +137,27 @@ export class MainScene extends Phaser.Scene {
       this.renderOverlay();
     });
 
-    this.el('collect-all-button').addEventListener('click', () => this.collectIslandRewards());
-    this.el('multiplier-rewards-button').addEventListener('click', () => this.renderMultiplierRewardsModal());
+    this.el('sound-button').addEventListener('click', () => {
+      const soundEnabled = !this.save.soundEnabled;
+      this.save = updateSoundEnabled(this.save, soundEnabled);
+      this.sfx.setMuted(!soundEnabled);
+      if (soundEnabled) {
+        this.sfx.unlock();
+        this.playButtonTap();
+      }
+      this.renderOverlay();
+    });
+
+    this.el('collect-all-button').addEventListener('click', () => {
+      this.playButtonTap();
+      this.collectIslandRewards();
+    });
+    this.el('multiplier-rewards-button').addEventListener('click', () => {
+      this.playButtonTap();
+      this.renderMultiplierRewardsModal();
+    });
     this.el('get-energy-button').addEventListener('click', () => {
+      this.playButtonTap();
       this.screen = 'market';
       this.renderOverlay();
     });
@@ -143,6 +165,7 @@ export class MainScene extends Phaser.Scene {
 
     for (const key of ['play', 'island', 'market'] as ScreenKey[]) {
       this.el(`nav-${key}`).addEventListener('click', () => {
+        this.playButtonTap();
         this.screen = key;
         this.renderOverlay();
       });
@@ -156,6 +179,7 @@ export class MainScene extends Phaser.Scene {
     this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
     this.setText('game-title', this.t('title'));
     this.setText('language-button', `${this.t('language')}: ${this.locale.toUpperCase()}`);
+    this.renderSoundButton();
     this.setText('level-label', this.t('level'));
     this.setText('level-value', String(this.state.level));
     this.setText('goal-label', this.t('goal'));
@@ -186,6 +210,14 @@ export class MainScene extends Phaser.Scene {
     this.renderMarket();
     this.renderNav();
     this.renderModalForStatus();
+  }
+
+  private renderSoundButton(): void {
+    const button = this.el('sound-button');
+    const label = this.t(this.save.soundEnabled ? 'soundOn' : 'soundOff');
+    button.textContent = this.save.soundEnabled ? '\u{1F50A}' : '\u{1F507}';
+    button.setAttribute('aria-label', label);
+    button.setAttribute('title', label);
   }
 
   private renderGoals(): void {
@@ -337,7 +369,10 @@ export class MainScene extends Phaser.Scene {
         <strong>${item.label}</strong>
         <button type="button">${item.active ? this.t('marketAction') : this.t('comingSoon')}</button>
       `;
-      card.querySelector('button')?.addEventListener('click', item.onClick);
+      card.querySelector('button')?.addEventListener('click', () => {
+        this.playButtonTap();
+        item.onClick();
+      });
       section.appendChild(card);
     }
 
@@ -648,7 +683,7 @@ export class MainScene extends Phaser.Scene {
     this.isShaking = true;
     this.dragStart = undefined;
     this.renderOverlay();
-    this.playStartChime();
+    this.sfx.playStartChime();
 
     this.tweens.add({
       targets: this.boardContainer,
@@ -671,6 +706,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (this.state.energy < SHAKE_ENERGY_COST) {
+      this.sfx.playWarning();
       this.showWarning(this.t('noEnergy'));
       this.blockShakeButton();
       this.renderOverlay();
@@ -687,10 +723,11 @@ export class MainScene extends Phaser.Scene {
     if (this.isDropping || this.isResolving || this.state.status !== 'playing') return;
 
     if (options.playChime) {
-      this.playStartChime();
+      this.sfx.playStartChime();
     }
 
     this.state.board = regenerateCandies(this.state.board);
+    this.sfx.playDropShimmer();
     this.isDropping = true;
     this.dragStart = undefined;
     this.drawBoard();
@@ -728,7 +765,8 @@ export class MainScene extends Phaser.Scene {
   private handleSwipe(first: BoardPosition, second: BoardPosition): void {
     if (!areAdjacent(first, second)) {
       this.showInvalidFeedback(first);
-      this.playInvalidSound();
+      this.sfx.playInvalid();
+      this.vibrate(18);
       this.showWarning(this.t('noMatch'));
       return;
     }
@@ -740,7 +778,8 @@ export class MainScene extends Phaser.Scene {
       this.animateSwap(first, second, true, () => {
         this.showInvalidFeedback(first);
         this.showInvalidFeedback(second);
-        this.playInvalidSound();
+        this.sfx.playInvalid();
+        this.vibrate(18);
         this.showWarning(this.t('noMatch'));
         this.renderOverlay();
       });
@@ -896,6 +935,8 @@ export class MainScene extends Phaser.Scene {
   private triggerLevelWin(): void {
     if (this.state.status === 'won') return;
     this.state.status = 'won';
+    this.sfx.playLevelComplete();
+    this.vibrate([18, 32, 28]);
     const reward = calculateRewardSummary(this.state);
     const energyResult = applyFreeEnergy(this.state.energy, reward.totalEnergy);
     this.rewardSummary = {
@@ -924,11 +965,13 @@ export class MainScene extends Phaser.Scene {
 
   private triggerLevelFail(): void {
     this.state.status = 'failed';
+    this.sfx.playLevelFailed();
     this.renderOverlay();
   }
 
   private continueLevel(shakes: number, diamondCost = 0): boolean {
     if (diamondCost > 0 && this.state.diamonds < diamondCost) {
+      this.sfx.playWarning();
       this.showWarning(this.t('notEnoughDiamonds'));
       return false;
     }
@@ -939,6 +982,7 @@ export class MainScene extends Phaser.Scene {
     this.state.status = 'playing';
     this.syncSaveCurrency();
     this.closeModal();
+    this.sfx.playPurchaseSuccess();
     this.renderOverlay();
     return true;
   }
@@ -1067,6 +1111,7 @@ export class MainScene extends Phaser.Scene {
     saveData(this.save);
     this.closeModal();
     if (energyResult.capped) this.showWarning(this.t('energyFull'));
+    this.sfx.playPurchaseSuccess();
     this.renderOverlay();
   }
 
@@ -1084,6 +1129,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (energy === 0 && diamonds === 0) {
+      this.sfx.playWarning();
       this.showWarning(this.t('claimLater'));
       return;
     }
@@ -1094,6 +1140,7 @@ export class MainScene extends Phaser.Scene {
     this.state.energy = this.save.energy;
     this.state.diamonds = this.save.diamonds;
     saveData(this.save);
+    this.sfx.playPurchaseSuccess();
     this.showWarning(`${this.t('dailyProductionCollected')} +${energyResult.gained} ${this.t('energy')} +${diamonds} ${this.t('diamonds')}${energyResult.capped ? ` ${this.t('energyFull')}` : ''}`);
     this.renderOverlay();
   }
@@ -1109,6 +1156,7 @@ export class MainScene extends Phaser.Scene {
     this.state.energy = this.save.energy;
     this.state.diamonds = this.save.diamonds;
     saveData(this.save);
+    this.sfx.playPurchaseSuccess();
     this.showWarning(`${this.t('gained')}: +${energyResult.gained} ${this.t('energy')} +${building.diamonds} ${this.t('diamonds')}${energyResult.capped ? ` ${this.t('energyFull')}` : ''}`);
     this.renderOverlay();
   }
@@ -1116,6 +1164,7 @@ export class MainScene extends Phaser.Scene {
   private buildBuilding(buildingId: number): void {
     const cost = this.getBuildCost(buildingId);
     if (this.save.diamonds < cost) {
+      this.sfx.playWarning();
       this.showWarning(this.t('notEnoughDiamonds'));
       return;
     }
@@ -1124,6 +1173,7 @@ export class MainScene extends Phaser.Scene {
     this.save.completedBuildingIds = [...new Set([...this.save.completedBuildingIds, buildingId])].sort((a, b) => a - b);
     this.state.diamonds = this.save.diamonds;
     saveData(this.save);
+    this.sfx.playPurchaseSuccess();
     this.renderOverlay();
   }
 
@@ -1134,6 +1184,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (this.state.diamonds < cost) {
+      this.sfx.playWarning();
       this.showWarning(this.t('notEnoughDiamonds'));
       return;
     }
@@ -1141,17 +1192,20 @@ export class MainScene extends Phaser.Scene {
     this.state.diamonds -= cost;
     this.state.shakesRemaining += shakes;
     this.syncSaveCurrency();
+    this.sfx.playPurchaseSuccess();
     this.showWarning(`${this.t('gained')}: +${shakes} ${this.t('shake')}`);
     this.renderOverlay();
   }
 
   private buyMarketEnergy(energy: number, cost: number): void {
     if (this.state.energy >= HARD_ENERGY_CAP) {
+      this.sfx.playWarning();
       this.showWarning(this.t('energyFull'));
       return;
     }
 
     if (this.state.diamonds < cost) {
+      this.sfx.playWarning();
       this.showWarning(this.t('notEnoughDiamonds'));
       return;
     }
@@ -1160,6 +1214,7 @@ export class MainScene extends Phaser.Scene {
     this.state.diamonds -= cost;
     this.state.energy = energyResult.energy;
     this.syncSaveCurrency();
+    this.sfx.playPurchaseSuccess();
     this.showWarning(`+${energyResult.gained} ${this.t('energy')} ${this.t('energyAdded')}${energyResult.capped ? ` ${this.t('energyFull')}` : ''}`);
     this.renderOverlay();
   }
@@ -1274,9 +1329,10 @@ export class MainScene extends Phaser.Scene {
       this.showGoldenPulse(center.x, center.y, step.highestMultiplierIndex >= 10);
     }
     this.showScorePopup(`+${this.formatScore(step.scoreDelta)}`, center.x, center.y - 8, size, highMultiplier, specialMultiplier);
-    this.playBlastSound(size, specialMultiplier);
+    this.sfx.playBlast(size, step.highestMultiplierIndex);
 
     if (powerful && this.boardContainer) {
+      if (size >= 5) this.vibrate(size >= 10 ? [12, 18, 18] : 16);
       this.tweens.add({
         targets: this.boardContainer,
         x: BOARD_X + (huge ? 6 : 4),
@@ -1296,7 +1352,7 @@ export class MainScene extends Phaser.Scene {
 
     if (cascadeIndex >= 1) {
       this.showBurstLabel(this.t(cascadeIndex >= 2 ? 'megaChain' : 'chain'), GAME_SIZE / 2, 42, cascadeIndex >= 2);
-      this.playChainSound(cascadeIndex);
+      this.sfx.playChain(cascadeIndex);
     }
   }
 
@@ -1441,108 +1497,15 @@ export class MainScene extends Phaser.Scene {
     button.classList.add('is-blocked');
   }
 
-  private playStartChime(): void {
-    const AudioContextClass = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
+  private playButtonTap(): void {
+    this.sfx.unlock();
+    this.sfx.playButtonTap();
+  }
 
-    this.audioContext ??= new AudioContextClass();
-    if (this.audioContext.state === 'suspended') {
-      void this.audioContext.resume();
+  private vibrate(pattern: VibratePattern): void {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(pattern);
     }
-
-    const now = this.audioContext.currentTime;
-    [660, 880].forEach((frequency, index) => {
-      const oscillator = this.audioContext!.createOscillator();
-      const gain = this.audioContext!.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(frequency, now + index * 0.09);
-      gain.gain.setValueAtTime(0.0001, now + index * 0.09);
-      gain.gain.exponentialRampToValueAtTime(0.16, now + index * 0.09 + 0.018);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.09 + 0.18);
-      oscillator.connect(gain);
-      gain.connect(this.audioContext!.destination);
-      oscillator.start(now + index * 0.09);
-      oscillator.stop(now + index * 0.09 + 0.2);
-    });
-  }
-
-  private playBlastSound(size: number, specialMultiplier: boolean): void {
-    const audio = this.getAudioContext();
-    if (!audio) return;
-
-    const now = audio.currentTime;
-    const oscillator = audio.createOscillator();
-    const gain = audio.createGain();
-    const baseFrequency = specialMultiplier ? 760 : size >= 5 ? 520 : size >= 4 ? 420 : 320;
-
-    oscillator.type = size >= 5 ? 'triangle' : 'sine';
-    oscillator.frequency.setValueAtTime(baseFrequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(Math.max(90, baseFrequency * 0.36), now + 0.2);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(specialMultiplier ? 0.22 : size >= 5 ? 0.18 : 0.12, now + 0.018);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + (size >= 5 ? 0.28 : 0.18));
-    oscillator.connect(gain);
-    gain.connect(audio.destination);
-    oscillator.start(now);
-    oscillator.stop(now + (size >= 5 ? 0.3 : 0.2));
-
-    if (size >= 5 || specialMultiplier) {
-      this.playTone(baseFrequency * 1.5, 0.08, 0.12, 0.05);
-    }
-  }
-
-  private playChainSound(cascadeIndex: number): void {
-    const base = cascadeIndex >= 2 ? 980 : 820;
-    this.playTone(base, 0.1, 0.1, 0.02);
-    this.time.delayedCall(70, () => this.playTone(base * 1.25, 0.08, 0.09, 0.02));
-  }
-
-  private playInvalidSound(): void {
-    const audio = this.getAudioContext();
-    if (!audio) return;
-
-    const now = audio.currentTime;
-    const oscillator = audio.createOscillator();
-    const gain = audio.createGain();
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(180, now);
-    oscillator.frequency.exponentialRampToValueAtTime(120, now + 0.14);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
-    oscillator.connect(gain);
-    gain.connect(audio.destination);
-    oscillator.start(now);
-    oscillator.stop(now + 0.18);
-  }
-
-  private playTone(frequency: number, duration: number, volume: number, delay = 0): void {
-    const audio = this.getAudioContext();
-    if (!audio) return;
-
-    const start = audio.currentTime + delay;
-    const oscillator = audio.createOscillator();
-    const gain = audio.createGain();
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(frequency, start);
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(volume, start + 0.012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-    oscillator.connect(gain);
-    gain.connect(audio.destination);
-    oscillator.start(start);
-    oscillator.stop(start + duration + 0.02);
-  }
-
-  private getAudioContext(): AudioContext | undefined {
-    const AudioContextClass = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return undefined;
-
-    this.audioContext ??= new AudioContextClass();
-    if (this.audioContext.state === 'suspended') {
-      void this.audioContext.resume();
-    }
-    return this.audioContext;
   }
 
   private formatScore(score: number): string {
@@ -1640,6 +1603,7 @@ export class MainScene extends Phaser.Scene {
 
   private modalButton(action: string, onClick: (button: HTMLButtonElement) => void): void {
     this.el('modal-root').querySelector<HTMLButtonElement>(`[data-action="${action}"]`)?.addEventListener('click', (event) => {
+      this.playButtonTap();
       onClick(event.currentTarget as HTMLButtonElement);
     });
   }

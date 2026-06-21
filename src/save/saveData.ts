@@ -23,7 +23,8 @@ export function createDefaultSave(): SaveData {
       totalBlasts: 0,
       highestMultiplierEver: 0
     },
-    language: detectLocale()
+    language: detectLocale(),
+    soundEnabled: true
   };
 }
 
@@ -56,7 +57,8 @@ export function loadSave(): SaveData {
         totalBlasts: parsed.stats?.totalBlasts ?? fallback.stats.totalBlasts,
         highestMultiplierEver: parsed.stats?.highestMultiplierEver ?? fallback.stats.highestMultiplierEver
       },
-      language: parsed.language ?? fallback.language
+      language: parsed.language ?? fallback.language,
+      soundEnabled: parsed.soundEnabled ?? fallback.soundEnabled
     };
   } catch {
     saveData(fallback);
@@ -71,6 +73,12 @@ export function saveData(data: SaveData): void {
 
 export function updateLanguage(data: SaveData, language: LocaleCode): SaveData {
   const next = { ...data, language };
+  saveData(next);
+  return next;
+}
+
+export function updateSoundEnabled(data: SaveData, soundEnabled: boolean): SaveData {
+  const next = { ...data, soundEnabled };
   saveData(next);
   return next;
 }
