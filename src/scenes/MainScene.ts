@@ -137,7 +137,7 @@ export class MainScene extends Phaser.Scene {
       this.renderOverlay();
     });
 
-    this.el('sound-button').addEventListener('click', () => {
+    this.optionalEl('sound-button')?.addEventListener('click', () => {
       const soundEnabled = !this.save.soundEnabled;
       this.save = updateSoundEnabled(this.save, soundEnabled);
       this.sfx.setMuted(!soundEnabled);
@@ -213,7 +213,9 @@ export class MainScene extends Phaser.Scene {
   }
 
   private renderSoundButton(): void {
-    const button = this.el('sound-button');
+    const button = this.optionalEl('sound-button');
+    if (!button) return;
+
     const label = this.t(this.save.soundEnabled ? 'soundOn' : 'soundOff');
     button.textContent = this.save.soundEnabled ? '\u{1F50A}' : '\u{1F507}';
     button.setAttribute('aria-label', label);
@@ -1622,6 +1624,10 @@ export class MainScene extends Phaser.Scene {
     const element = document.getElementById(id);
     if (!element) throw new Error(`Missing UI element #${id}`);
     return element;
+  }
+
+  private optionalEl(id: string): HTMLElement | null {
+    return document.getElementById(id);
   }
 
   private positionKey(position: BoardPosition): string {

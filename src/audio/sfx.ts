@@ -21,6 +21,7 @@ export class CandySfx {
   private context?: AudioContext;
   private master?: GainNode;
   private muted: boolean;
+  private unlocked = false;
 
   constructor(soundEnabled: boolean) {
     this.muted = !soundEnabled;
@@ -31,89 +32,96 @@ export class CandySfx {
   }
 
   unlock(): void {
+    this.unlocked = true;
     void this.getContext();
   }
 
   playButtonTap(): void {
-    this.playTone(540, 0.045, VOLUME.ui, 0, 'sine', 820);
+    this.safePlay(() => this.playTone(540, 0.045, VOLUME.ui, 0, 'sine', 820));
   }
 
   playStartChime(): void {
-    this.playChord([
+    this.safePlay(() => this.playChord([
       { frequency: 660, duration: 0.13, delay: 0, volume: 0.075 },
       { frequency: 880, duration: 0.15, delay: 0.075, volume: 0.07 },
       { frequency: 1320, duration: 0.11, delay: 0.15, volume: 0.045 }
-    ]);
+    ]));
   }
 
   playDropShimmer(): void {
-    this.playNoise(0.42, VOLUME.drop, 1300, 3600, 0.02, 'bandpass');
-    this.playTone(760, 0.08, 0.028, 0.06, 'sine', 1120);
-    this.playTone(1040, 0.08, 0.024, 0.19, 'sine', 1460);
-    this.playTone(1280, 0.07, 0.022, 0.33, 'sine', 1740);
+    this.safePlay(() => {
+      this.playNoise(0.42, VOLUME.drop, 1300, 3600, 0.02, 'bandpass');
+      this.playTone(760, 0.08, 0.028, 0.06, 'sine', 1120);
+      this.playTone(1040, 0.08, 0.024, 0.19, 'sine', 1460);
+      this.playTone(1280, 0.07, 0.022, 0.33, 'sine', 1740);
+    });
   }
 
   playBlast(groupSize: number, highestMultiplierIndex: number): void {
-    if (highestMultiplierIndex >= 10) {
-      this.playX1000();
-      return;
-    }
+    this.safePlay(() => {
+      if (highestMultiplierIndex >= 10) {
+        this.playX1000();
+        return;
+      }
 
-    if (highestMultiplierIndex >= 7) {
-      this.playHighMultiplier(highestMultiplierIndex);
-    }
+      if (highestMultiplierIndex >= 7) {
+        this.playHighMultiplier(highestMultiplierIndex);
+      }
 
-    if (groupSize >= 10) {
-      this.playHugeBlast();
-    } else if (groupSize >= 5) {
-      this.playBigBlast();
-    } else if (groupSize >= 4) {
-      this.playMediumBlast();
-    } else {
-      this.playSmallBlast();
-    }
+      if (groupSize >= 10) {
+        this.playHugeBlast();
+      } else if (groupSize >= 5) {
+        this.playBigBlast();
+      } else if (groupSize >= 4) {
+        this.playMediumBlast();
+      } else {
+        this.playSmallBlast();
+      }
+    });
   }
 
   playChain(cascadeIndex: number): void {
-    const base = cascadeIndex >= 2 ? 720 : 620;
-    const top = cascadeIndex >= 2 ? 1160 : 940;
-    this.playSweep(base, top, 0.16, VOLUME.chain, 0, 'sine');
-    this.playTone(top * 1.18, 0.07, VOLUME.chain * 0.72, 0.11, 'triangle');
+    this.safePlay(() => {
+      const base = cascadeIndex >= 2 ? 720 : 620;
+      const top = cascadeIndex >= 2 ? 1160 : 940;
+      this.playSweep(base, top, 0.16, VOLUME.chain, 0, 'sine');
+      this.playTone(top * 1.18, 0.07, VOLUME.chain * 0.72, 0.11, 'triangle');
+    });
   }
 
   playInvalid(): void {
-    this.playSweep(230, 165, 0.13, VOLUME.invalid, 0, 'sine');
+    this.safePlay(() => this.playSweep(230, 165, 0.13, VOLUME.invalid, 0, 'sine'));
   }
 
   playWarning(): void {
-    this.playChord([
+    this.safePlay(() => this.playChord([
       { frequency: 330, duration: 0.09, delay: 0, volume: VOLUME.warning },
       { frequency: 260, duration: 0.13, delay: 0.08, volume: VOLUME.warning * 0.78 }
-    ]);
+    ]));
   }
 
   playLevelComplete(): void {
-    this.playChord([
+    this.safePlay(() => this.playChord([
       { frequency: 660, duration: 0.12, delay: 0, volume: VOLUME.level },
       { frequency: 880, duration: 0.12, delay: 0.09, volume: VOLUME.level * 0.92 },
       { frequency: 1108, duration: 0.18, delay: 0.18, volume: VOLUME.level * 0.82 },
       { frequency: 1320, duration: 0.16, delay: 0.3, volume: VOLUME.level * 0.55 }
-    ]);
+    ]));
   }
 
   playLevelFailed(): void {
-    this.playChord([
+    this.safePlay(() => this.playChord([
       { frequency: 260, duration: 0.15, delay: 0, volume: 0.065 },
       { frequency: 196, duration: 0.2, delay: 0.12, volume: 0.055 }
-    ]);
+    ]));
   }
 
   playPurchaseSuccess(): void {
-    this.playChord([
+    this.safePlay(() => this.playChord([
       { frequency: 740, duration: 0.09, delay: 0, volume: 0.085 },
       { frequency: 988, duration: 0.12, delay: 0.08, volume: 0.078 },
       { frequency: 1480, duration: 0.08, delay: 0.17, volume: 0.045 }
-    ]);
+    ]));
   }
 
   private playSmallBlast(): void {
@@ -258,7 +266,7 @@ export class CandySfx {
   }
 
   private getContext(): AudioContext | undefined {
-    if (this.muted) return undefined;
+    if (this.muted || !this.unlocked) return undefined;
 
     try {
       const AudioContextClass = window.AudioContext ?? (window as WebAudioWindow).webkitAudioContext;
@@ -280,5 +288,13 @@ export class CandySfx {
     master.gain.setValueAtTime(0.72, audio.currentTime);
     master.connect(audio.destination);
     return master;
+  }
+
+  private safePlay(play: () => void): void {
+    try {
+      play();
+    } catch {
+      // SFX must never be able to break gameplay rendering.
+    }
   }
 }
