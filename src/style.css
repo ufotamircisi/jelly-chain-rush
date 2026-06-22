@@ -268,9 +268,24 @@ button {
 }
 
 .view-island {
-  height: calc(100dvh - 186px);
+  height: calc(100dvh - 180px);
   min-height: 0;
   overflow: hidden;
+}
+
+.view-market {
+  height: calc(100dvh - 178px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 1px 20px;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.view-market::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .goal-panel {
@@ -324,7 +339,7 @@ button {
 }
 
 .board-canvas {
-  width: min(360px, calc(100vw - 32px));
+  width: min(374px, calc(100vw - 28px));
   aspect-ratio: 1;
 }
 
@@ -482,19 +497,23 @@ button {
 .section-heading {
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  gap: 8px;
-  margin: -6px 0 7px;
+  justify-content: space-between;
+  gap: 10px;
+  margin: -1px 0 10px;
+  padding: 0 3px;
 }
 
 .section-heading h2,
 .market-title {
   margin: 0;
-  color: #fff;
+  color: #ff5aa6;
   font-size: 27px;
   font-weight: 900;
-  text-shadow: 0 3px 0 #7b2bbf;
-  -webkit-text-stroke: 1px #7b2bbf;
+  text-shadow:
+    0 2px 0 #fff,
+    0 5px 0 #7b2bbf,
+    0 8px 14px rgba(61, 35, 98, 0.22);
+  -webkit-text-stroke: 1px #fff;
 }
 
 .collect-button {
@@ -503,10 +522,11 @@ button {
   z-index: 4;
   border: 3px solid rgba(255, 255, 255, 0.78);
   border-radius: 999px;
-  padding: 8px 12px;
+  padding: 7px 11px;
   color: #7b2bbf;
   background: linear-gradient(180deg, #fff6a6, #ffbd2f);
   box-shadow: 0 7px 0 #d98210, inset 0 3px 0 rgba(255, 255, 255, 0.42);
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -542,17 +562,17 @@ button {
 .building-list::before {
   display: block;
   width: 100%;
-  height: 940px;
+  height: 990px;
   content: "";
 }
 
 .island-base-image {
   position: absolute;
   left: 50%;
-  top: 10px;
+  top: -6px;
   z-index: 1;
-  width: 94%;
-  height: 920px;
+  width: 104%;
+  height: 986px;
   object-fit: contain;
   pointer-events: none;
   transform: translateX(-50%);
@@ -939,7 +959,7 @@ button {
 }
 
 .market-title {
-  margin: -6px 0 10px;
+  margin: -1px 0 7px;
   text-align: center;
 }
 
@@ -955,12 +975,13 @@ button {
 
 .market-list {
   display: grid;
-  gap: 9px;
+  gap: 10px;
+  padding-bottom: 12px;
 }
 
 .market-section {
   display: grid;
-  gap: 7px;
+  gap: 6px;
 }
 
 .market-section h3 {
@@ -973,28 +994,40 @@ button {
 
 .market-card {
   display: grid;
-  grid-template-columns: 46px 1fr auto;
+  grid-template-columns: 42px 1fr auto;
   align-items: center;
-  gap: 10px;
-  min-height: 58px;
-  padding: 9px 12px;
+  gap: 9px;
+  min-height: 54px;
+  padding: 8px 10px;
 }
 
 .market-icon {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 15px;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
   color: #fff;
   background: linear-gradient(180deg, #30c5ff, #7b2bbf);
   box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.32);
   font-size: 24px;
 }
 
+.market-icon.has-asset-icon {
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.54), 0 3px 8px rgba(61, 35, 98, 0.12);
+}
+
+.market-icon.has-asset-icon img {
+  width: 31px;
+  height: 31px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(61, 35, 98, 0.2));
+}
+
 .market-card strong {
   color: #3d2362;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.12;
 }
 
@@ -1316,16 +1349,17 @@ button {
   }
 
   .game-header {
-    min-height: 108px;
+    min-height: 104px;
   }
 
   .game-logo {
     max-width: 220px;
+    height: 44px;
     font-size: 25px;
   }
 
   .counter-card {
-    min-height: 36px;
+    min-height: 34px;
     padding: 4px 5px;
   }
 
@@ -1338,7 +1372,7 @@ button {
   }
 
   .goal-panel {
-    padding: 5px 7px;
+    padding: 4px 7px;
   }
 
   .goal-chip,
@@ -1351,7 +1385,7 @@ button {
   }
 
   .reward-panel {
-    padding: 5px 7px;
+    padding: 4px 7px;
   }
 
   .shake-button {
@@ -1374,7 +1408,7 @@ button {
   }
 
   .board-canvas {
-    width: min(330px, calc(100vw - 30px));
+    width: min(344px, calc(100vw - 30px));
   }
 
   .reward-panel {

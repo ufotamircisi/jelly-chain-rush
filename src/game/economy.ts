@@ -16,6 +16,16 @@ export const MARKET_SHAKE_ITEMS = [
   { shakes: 5, cost: 400, labelKey: 'marketFiveShakes' }
 ] as const;
 
+export const MARKET_DIAMOND_PACKS = [
+  { diamonds: 100, priceUsd: 2, labelKey: 'marketDiamondPack100' },
+  { diamonds: 250, priceUsd: 4, labelKey: 'marketDiamondPack250' },
+  { diamonds: 500, priceUsd: 6, labelKey: 'marketDiamondPack500' },
+  { diamonds: 1000, priceUsd: 10, labelKey: 'marketDiamondPack1000' },
+  { diamonds: 2500, priceUsd: 20, labelKey: 'marketDiamondPack2500' },
+  { diamonds: 5000, priceUsd: 30, labelKey: 'marketDiamondPack5000' },
+  { diamonds: 10000, priceUsd: 50, labelKey: 'marketDiamondPack10000' }
+] as const;
+
 export function applyFreeEnergy(currentEnergy: number, rewardEnergy: number): { energy: number; gained: number; capped: boolean } {
   if (currentEnergy >= FREE_ENERGY_CAP) {
     return { energy: currentEnergy, gained: 0, capped: rewardEnergy > 0 };

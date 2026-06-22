@@ -23,6 +23,7 @@ import {
   applyFreeEnergy,
   applyMarketEnergy,
   HARD_ENERGY_CAP,
+  MARKET_DIAMOND_PACKS,
   MARKET_ENERGY_ITEMS,
   MARKET_SHAKE_ITEMS,
   SHAKE_ENERGY_COST
@@ -52,7 +53,7 @@ const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
 const CANDY_IMAGE_SIZE = CELL_SIZE * 0.84;
-const CASCADE_SETTLE_DELAY = 430;
+const CASCADE_SETTLE_DELAY = 650;
 const TODAY = () => getLocalDateKey();
 
 const MULTIPLIER_TINTS = [
@@ -347,7 +348,8 @@ export class MainScene extends Phaser.Scene {
       this.t('energy'),
       MARKET_ENERGY_ITEMS.map((item) => ({
         label: this.t(item.labelKey),
-        icon: '⚡',
+        iconSrc: UI_ASSETS.stats.energy,
+        iconLabel: this.t('energy'),
         onClick: () => this.buyMarketEnergy(item.energy, item.cost),
         active: true
       }))
@@ -358,8 +360,21 @@ export class MainScene extends Phaser.Scene {
       this.t('shakes'),
       MARKET_SHAKE_ITEMS.map((item) => ({
         label: this.t(item.labelKey),
-        icon: '↯',
+        iconSrc: UI_ASSETS.stats.shake,
+        iconLabel: this.t('shake'),
         onClick: () => this.buyMarketShakes(item.shakes, item.cost),
+        active: true
+      }))
+    );
+
+    this.renderMarketSection(
+      list,
+      this.t('marketDiamondPacks'),
+      MARKET_DIAMOND_PACKS.map((item) => ({
+        label: this.t(item.labelKey),
+        iconSrc: UI_ASSETS.stats.diamond,
+        iconLabel: this.t('diamonds'),
+        onClick: () => this.showWarning(this.t('marketPurchaseReadySoon')),
         active: true
       }))
     );
@@ -368,9 +383,8 @@ export class MainScene extends Phaser.Scene {
       list,
       this.t('comingSoon'),
       [
-        { label: this.t('freeEnergyComingSoon'), icon: '✦', onClick: () => this.showWarning(this.t('comingSoon')), active: false },
-        { label: this.t('marketBoosters'), icon: '✦', onClick: () => this.showWarning(this.t('comingSoon')), active: false },
-        { label: this.t('futureDiamondPacks'), icon: '✦', onClick: () => this.showWarning(this.t('comingSoon')), active: false }
+        { label: this.t('freeEnergyComingSoon'), iconSrc: UI_ASSETS.stats.energy, iconLabel: this.t('energy'), onClick: () => this.showWarning(this.t('comingSoon')), active: false },
+        { label: this.t('marketBoosters'), iconSrc: UI_ASSETS.stats.shake, iconLabel: this.t('shake'), onClick: () => this.showWarning(this.t('comingSoon')), active: false }
       ]
     );
   }
@@ -378,7 +392,7 @@ export class MainScene extends Phaser.Scene {
   private renderMarketSection(
     list: HTMLElement,
     title: string,
-    items: { label: string; icon: string; onClick: () => void; active: boolean }[]
+    items: { label: string; iconSrc: string; iconLabel: string; onClick: () => void; active: boolean }[]
   ): void {
     const section = document.createElement('section');
     section.className = 'market-section';
@@ -388,7 +402,7 @@ export class MainScene extends Phaser.Scene {
       const card = document.createElement('article');
       card.className = 'market-card';
       card.innerHTML = `
-        <span class="market-icon" aria-hidden="true">${item.icon}</span>
+        <span class="market-icon has-asset-icon" aria-hidden="true"><img src="${item.iconSrc}" alt="" /></span>
         <strong>${item.label}</strong>
         <button type="button">${item.active ? this.t('marketAction') : this.t('comingSoon')}</button>
       `;
