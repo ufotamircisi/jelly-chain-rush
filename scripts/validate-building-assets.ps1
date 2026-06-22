@@ -46,7 +46,14 @@ function Test-NearWhite {
   param([System.Drawing.Color]$Color)
 
   $spread = [Math]::Max($Color.R, [Math]::Max($Color.G, $Color.B)) - [Math]::Min($Color.R, [Math]::Min($Color.G, $Color.B))
-  return $Color.A -gt 245 -and $Color.R -gt 245 -and $Color.G -gt 245 -and $Color.B -gt 245 -and $spread -lt 12
+  return $Color.A -gt 245 -and $Color.R -gt 238 -and $Color.G -gt 238 -and $Color.B -gt 238 -and $spread -lt 28
+}
+
+function Test-MatteLike {
+  param([System.Drawing.Color]$Color)
+
+  $spread = [Math]::Max($Color.R, [Math]::Max($Color.G, $Color.B)) - [Math]::Min($Color.R, [Math]::Min($Color.G, $Color.B))
+  return $Color.A -gt 245 -and $Color.R -gt 220 -and $Color.G -gt 220 -and $Color.B -gt 220 -and $spread -lt 36
 }
 
 function Get-ImageReport {
@@ -65,6 +72,10 @@ function Get-ImageReport {
       Bytes = 0
       HasAlpha = ''
       TransparentCorners = ''
+      SuspiciousWhiteMatte = ''
+      SuspiciousRectangleBackground = ''
+      PossibleCheckerboard = ''
+      CleanupMayBeIncomplete = $true
       Warnings = 'missing file'
     }
   }
@@ -105,6 +116,9 @@ function Get-ImageReport {
 
     $hasAlpha = $false
     $checkerLike = 0
+    $matteLike = 0
+    $opaqueEdgeSamples = 0
+    $edgeSamples = 0
     $samples = 0
     $stepX = [Math]::Max(1, [int]($width / 12))
     $stepY = [Math]::Max(1, [int]($height / 12))
@@ -113,6 +127,9 @@ function Get-ImageReport {
         $pixel = $bitmap.GetPixel($x, $y)
         if ($pixel.A -lt 255) {
           $hasAlpha = $true
+        }
+        if (Test-MatteLike $pixel) {
+          $matteLike += 1
         }
         $isLightChecker = $pixel.R -ge 210 -and $pixel.G -ge 210 -and $pixel.B -ge 210
         $isMidChecker = [Math]::Abs($pixel.R - 185) -lt 30 -and [Math]::Abs($pixel.G - 185) -lt 30 -and [Math]::Abs($pixel.B - 185) -lt 30
@@ -123,8 +140,41 @@ function Get-ImageReport {
       }
     }
 
-    if ($checkerLike -gt ($samples * 0.55) -and -not $hasAlpha) {
+    $edgeYs = @(0, ($height - 1))
+    $edgeXs = @(0, ($width - 1))
+    for ($x = 0; $x -lt $width; $x += $stepX) {
+      foreach ($y in $edgeYs) {
+        $edgeSamples += 1
+        if ($bitmap.GetPixel($x, $y).A -gt 245) {
+          $opaqueEdgeSamples += 1
+        }
+      }
+    }
+    for ($y = 0; $y -lt $height; $y += $stepY) {
+      foreach ($x in $edgeXs) {
+        $edgeSamples += 1
+        if ($bitmap.GetPixel($x, $y).A -gt 245) {
+          $opaqueEdgeSamples += 1
+        }
+      }
+    }
+
+    $suspiciousWhiteMatte = $matteLike -gt ($samples * 0.35) -and $transparentCornerCount -lt 4
+    $suspiciousRectangleBackground = $opaqueEdgeSamples -gt ($edgeSamples * 0.5)
+    $possibleCheckerboard = $checkerLike -gt ($samples * 0.55) -and -not $hasAlpha
+    $cleanupMayBeIncomplete = (-not $hasAlpha) -or $transparentCornerCount -lt 4 -or $suspiciousWhiteMatte -or $suspiciousRectangleBackground -or $possibleCheckerboard
+
+    if ($suspiciousWhiteMatte) {
+      $warnings.Add('suspicious white matte')
+    }
+    if ($suspiciousRectangleBackground) {
+      $warnings.Add('suspicious rectangle background')
+    }
+    if ($possibleCheckerboard) {
       $warnings.Add('possible fake checkerboard background')
+    }
+    if ($cleanupMayBeIncomplete) {
+      $warnings.Add('background cleanup may still be incomplete')
     }
 
     $aspect = [Math]::Max($width, $height) / [Math]::Max(1, [Math]::Min($width, $height))
@@ -140,6 +190,10 @@ function Get-ImageReport {
       Bytes = $item.Length
       HasAlpha = $hasAlpha
       TransparentCorners = "$transparentCornerCount/4"
+      SuspiciousWhiteMatte = $suspiciousWhiteMatte
+      SuspiciousRectangleBackground = $suspiciousRectangleBackground
+      PossibleCheckerboard = $possibleCheckerboard
+      CleanupMayBeIncomplete = $cleanupMayBeIncomplete
       Warnings = if ($warnings.Count -gt 0) { $warnings -join '; ' } else { '' }
     }
   } finally {
