@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { getBuildingAsset } from '../assets/buildingAssetManifest';
 import { CANDY_ASSET_PACK, CANDY_TEXTURE_KEY_BY_TYPE } from '../assets/candyAssetManifest';
+import { ISLAND_BASE_ASSET } from '../assets/islandAssetManifest';
+import { UI_ASSETS } from '../assets/uiAssetManifest';
 import { CandySfx } from '../audio/sfx';
 import { BUILDINGS } from '../data/buildings';
 import { getCandyDefinition } from '../data/candies';
@@ -49,7 +51,8 @@ const BOARD_SIZE = 370;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
-const CANDY_IMAGE_SIZE = CELL_SIZE * 0.8;
+const CANDY_IMAGE_SIZE = CELL_SIZE * 0.84;
+const CASCADE_SETTLE_DELAY = 430;
 const TODAY = () => getLocalDateKey();
 
 const MULTIPLIER_TINTS = [
@@ -191,6 +194,7 @@ export class MainScene extends Phaser.Scene {
     this.el('phone-frame').classList.toggle('is-island-active', this.screen === 'island');
     this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
     this.setText('game-title', this.t('title'));
+    this.renderLogo();
     this.setText('language-button', `${this.t('language')}: ${this.locale.toUpperCase()}`);
     this.renderSoundButton();
     this.setText('level-label', this.t('level'));
@@ -222,7 +226,13 @@ export class MainScene extends Phaser.Scene {
     this.renderIsland();
     this.renderMarket();
     this.renderNav();
+    this.renderUiIcons();
     this.renderModalForStatus();
+  }
+
+  private renderLogo(): void {
+    const title = this.el('game-title');
+    title.innerHTML = `<img src="${UI_ASSETS.logo}" alt="${this.t('title')}" />`;
   }
 
   private renderSoundButton(): void {
@@ -279,13 +289,7 @@ export class MainScene extends Phaser.Scene {
     const highestCompletedId = Math.max(0, ...this.save.completedBuildingIds);
     const nextBuildableId = Math.min(highestCompletedId + 1, BUILDINGS.length);
     map.innerHTML = `
-      <div class="island-land" aria-hidden="true"></div>
-      <div class="island-lagoon island-lagoon-a" aria-hidden="true"></div>
-      <div class="island-lagoon island-lagoon-b" aria-hidden="true"></div>
-      <div class="candy-road candy-road-a" aria-hidden="true"></div>
-      <div class="candy-road candy-road-b" aria-hidden="true"></div>
-      <div class="candy-road candy-road-c" aria-hidden="true"></div>
-      <div class="candy-road candy-road-d" aria-hidden="true"></div>
+      <img class="island-base-image" src="${ISLAND_BASE_ASSET.src}" alt="" aria-hidden="true" />
     `;
 
     for (const building of BUILDINGS) {
@@ -406,6 +410,40 @@ export class MainScene extends Phaser.Scene {
       if (label) label.textContent = this.t(key);
       this.el(`${key}-view`).classList.toggle('is-active', this.screen === key);
     }
+  }
+
+  private renderUiIcons(): void {
+    this.renderCounterIcon('counter-energy', UI_ASSETS.stats.energy, this.t('energy'));
+    this.renderCounterIcon('counter-diamonds', UI_ASSETS.stats.diamond, this.t('diamonds'));
+    this.renderCounterIcon('counter-shakes', UI_ASSETS.stats.shake, this.t('shake'));
+    this.renderNavIcon('nav-play', UI_ASSETS.nav.play, this.t('play'));
+    this.renderNavIcon('nav-island', UI_ASSETS.nav.island, this.t('island'));
+    this.renderNavIcon('nav-market', UI_ASSETS.nav.market, this.t('market'));
+  }
+
+  private renderCounterIcon(cardClass: string, src: string, label: string): void {
+    const card = this.el('phone-frame').querySelector<HTMLElement>(`.${cardClass}`);
+    if (!card) return;
+    card.classList.add('has-asset-icon');
+    let icon = card.querySelector<HTMLImageElement>('.counter-asset-icon');
+    if (!icon) {
+      icon = document.createElement('img');
+      icon.className = 'counter-asset-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      card.prepend(icon);
+    }
+    icon.src = src;
+    icon.alt = '';
+    icon.title = label;
+  }
+
+  private renderNavIcon(buttonId: string, src: string, label: string): void {
+    const button = this.el(buttonId);
+    const container = button.querySelector<HTMLElement>('.nav-icon');
+    if (!container) return;
+    container.classList.add('has-asset-icon');
+    container.innerHTML = `<img src="${src}" alt="" aria-hidden="true" />`;
+    button.setAttribute('aria-label', label);
   }
 
   private renderBuildingDetailPanel(): void {
@@ -927,13 +965,13 @@ export class MainScene extends Phaser.Scene {
       saveData(this.save);
       this.playCascadeFeedback(result.steps);
       if (multiplierUpgrade.upgraded.length > 0) {
-        this.time.delayedCall(Math.max(180, result.steps.length * 410), () => {
+        this.time.delayedCall(Math.max(180, result.steps.length * CASCADE_SETTLE_DELAY), () => {
           this.showMultiplierUpgradeFeedback(multiplierUpgrade.upgraded);
         });
       }
     }
 
-    const delay = Math.max(260, result.steps.length * 430);
+    const delay = Math.max(260, result.steps.length * CASCADE_SETTLE_DELAY);
     this.time.delayedCall(delay, () => {
       this.isResolving = false;
       this.drawBoard();
@@ -1434,7 +1472,7 @@ export class MainScene extends Phaser.Scene {
 
   private playCascadeFeedback(steps: CascadeStep[]): void {
     steps.forEach((step, index) => {
-      this.time.delayedCall(index * 410, () => {
+      this.time.delayedCall(index * CASCADE_SETTLE_DELAY, () => {
         this.playBlastFeedback(step, index);
       });
     });

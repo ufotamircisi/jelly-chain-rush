@@ -6,6 +6,8 @@ const params = new URLSearchParams(window.location.search);
 
 if (params.has('buildingPreview')) {
   void import('./buildingPreview');
+} else if (params.has('islandPreview')) {
+  void import('./islandPreview');
 } else if (params.has('assetPreview')) {
   void import('./assetPreview');
 } else {
