@@ -562,20 +562,20 @@ button {
 .building-list::before {
   display: block;
   width: 100%;
-  height: 990px;
+  height: 1060px;
   content: "";
 }
 
 .island-base-image {
   position: absolute;
   left: 50%;
-  top: -6px;
+  top: -18px;
   z-index: 1;
-  width: 104%;
-  height: 986px;
+  width: 124%;
+  height: 1086px;
   object-fit: contain;
   pointer-events: none;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scaleX(1.04);
   filter: drop-shadow(0 18px 20px rgba(19, 89, 123, 0.22));
 }
 
