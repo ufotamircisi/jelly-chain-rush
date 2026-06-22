@@ -77,7 +77,7 @@ body {
 
 .building-preview-backgrounds {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -125,4 +125,10 @@ body {
     linear-gradient(-45deg, transparent 75%, #c9c9d4 75%);
   background-position: 0 0, 0 8px, 8px -8px, -8px 0;
   background-size: 16px 16px;
+}
+
+.building-preview-swatch-box-test {
+  background:
+    linear-gradient(135deg, #111 0 25%, #ff2fb2 25% 50%, #35e878 50% 75%, #111 75%);
+  background-size: 28px 28px;
 }

@@ -312,7 +312,6 @@ export class MainScene extends Phaser.Scene {
           <span class="building-state${ready ? ' ready' : ''}">${state}</span>
           ${completed ? '<span class="building-check" aria-hidden="true">✓</span>' : ''}
         </button>
-        ${!completed && !buildable ? '<span class="building-cloud" aria-hidden="true"></span>' : ''}
       `;
       map.appendChild(card);
     }

@@ -24,7 +24,8 @@ if (!previewRoot) {
 const backgrounds = [
   { key: 'dark', label: 'Dark' },
   { key: 'light', label: 'Light' },
-  { key: 'checker', label: 'Checker' }
+  { key: 'checker', label: 'Checker' },
+  { key: 'box-test', label: 'Box test' }
 ];
 
 previewRoot.innerHTML = BUILDING_ASSETS.map((asset) => `

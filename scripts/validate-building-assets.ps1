@@ -24,187 +24,224 @@ $expected = @(
 
 Add-Type -AssemblyName System.Drawing
 
-function Test-PngSignature {
-  param([string]$Path)
+$inspectorCode = @'
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Runtime.InteropServices;
 
-  $expectedSignature = [byte[]](137, 80, 78, 71, 13, 10, 26, 10)
-  $bytes = [System.IO.File]::ReadAllBytes($Path)
-  if ($bytes.Length -lt $expectedSignature.Length) {
-    return $false
-  }
-
-  for ($index = 0; $index -lt $expectedSignature.Length; $index += 1) {
-    if ($bytes[$index] -ne $expectedSignature[$index]) {
-      return $false
-    }
-  }
-
-  return $true
+public sealed class BuildingAssetReport
+{
+    public string State { get; set; }
+    public string Slug { get; set; }
+    public string Status { get; set; }
+    public string Dimensions { get; set; }
+    public long Bytes { get; set; }
+    public bool HasAlpha { get; set; }
+    public string TransparentCorners { get; set; }
+    public string AlphaBounds { get; set; }
+    public double ObjectFillPct { get; set; }
+    public double CenterOffsetPct { get; set; }
+    public bool PossibleMatteRectangle { get; set; }
+    public bool ObjectTooSmall { get; set; }
+    public bool NonTransparentBackground { get; set; }
+    public string Warnings { get; set; }
 }
 
-function Test-NearWhite {
-  param([System.Drawing.Color]$Color)
+public static class BuildingAssetInspector
+{
+    public static BuildingAssetReport Missing(string state, string slug)
+    {
+        return new BuildingAssetReport {
+            State = state,
+            Slug = slug,
+            Status = "MISSING",
+            Dimensions = "",
+            Bytes = 0,
+            HasAlpha = false,
+            TransparentCorners = "",
+            AlphaBounds = "",
+            ObjectFillPct = 0,
+            CenterOffsetPct = 100,
+            PossibleMatteRectangle = false,
+            ObjectTooSmall = true,
+            NonTransparentBackground = true,
+            Warnings = "missing file"
+        };
+    }
 
-  $spread = [Math]::Max($Color.R, [Math]::Max($Color.G, $Color.B)) - [Math]::Min($Color.R, [Math]::Min($Color.G, $Color.B))
-  return $Color.A -gt 245 -and $Color.R -gt 238 -and $Color.G -gt 238 -and $Color.B -gt 238 -and $spread -lt 28
+    public static BuildingAssetReport Analyze(string state, string slug, string path)
+    {
+        List<string> warnings = new List<string>();
+        FileInfo file = new FileInfo(path);
+        if (file.Length < 1024) warnings.Add("suspiciously tiny file");
+        if (!HasPngSignature(path)) warnings.Add("not a PNG signature");
+
+        using (MemoryStream stream = new MemoryStream(File.ReadAllBytes(path)))
+        using (Bitmap source = new Bitmap(stream))
+        using (Bitmap bitmap = new Bitmap(source.Width, source.Height, PixelFormat.Format32bppArgb))
+        {
+            using (Graphics graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.Clear(Color.Transparent);
+                graphics.DrawImage(source, 0, 0, source.Width, source.Height);
+            }
+
+            int width = bitmap.Width;
+            int height = bitmap.Height;
+            int[] pixels = ReadPixels(bitmap);
+            bool hasAlpha = false;
+            int transparentCorners = 0;
+            int minX = width;
+            int minY = height;
+            int maxX = -1;
+            int maxY = -1;
+            int visiblePixels = 0;
+            int mattePixels = 0;
+            int edgePixels = 0;
+            int opaqueEdgePixels = 0;
+
+            int[] cornerIndexes = new int[] { 0, width - 1, (height - 1) * width, (height * width) - 1 };
+            foreach (int index in cornerIndexes)
+            {
+                if (Alpha(pixels[index]) < 16) transparentCorners++;
+            }
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int index = y * width + x;
+                    int pixel = pixels[index];
+                    int alpha = Alpha(pixel);
+                    if (alpha < 255) hasAlpha = true;
+                    if (alpha > 16)
+                    {
+                        visiblePixels++;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        if (IsMatteLike(pixel)) mattePixels++;
+                    }
+                    if (x == 0 || y == 0 || x == width - 1 || y == height - 1)
+                    {
+                        edgePixels++;
+                        if (alpha > 16) opaqueEdgePixels++;
+                    }
+                }
+            }
+
+            string alphaBounds = "none";
+            double objectFillPct = 0;
+            double centerOffsetPct = 100;
+            if (visiblePixels > 0)
+            {
+                int boundsWidth = maxX - minX + 1;
+                int boundsHeight = maxY - minY + 1;
+                alphaBounds = string.Format("{0}x{1}+{2}+{3}", boundsWidth, boundsHeight, minX, minY);
+                objectFillPct = Math.Round((Math.Max(boundsWidth, boundsHeight) / (double)Math.Max(width, height)) * 100, 1);
+                double objectCenterX = minX + (boundsWidth / 2.0);
+                double objectCenterY = minY + (boundsHeight / 2.0);
+                double centerOffset = Math.Sqrt(Math.Pow(objectCenterX - (width / 2.0), 2) + Math.Pow(objectCenterY - (height / 2.0), 2));
+                centerOffsetPct = Math.Round((centerOffset / Math.Max(width, height)) * 100, 1);
+            }
+            else
+            {
+                warnings.Add("no visible object");
+            }
+
+            double matteCoveragePct = visiblePixels > 0 ? Math.Round((mattePixels / (double)visiblePixels) * 100, 1) : 0;
+            bool possibleMatteRectangle = matteCoveragePct > 35 && objectFillPct > 92;
+            bool objectTooSmall = objectFillPct < 72;
+            bool objectOffCenter = centerOffsetPct > 7;
+            bool nonTransparentBackground = transparentCorners < 4 || opaqueEdgePixels > 0;
+
+            if (!hasAlpha) warnings.Add("alpha channel not present");
+            if (transparentCorners < 4) warnings.Add("corners are not fully transparent");
+            if (objectTooSmall) warnings.Add("object appears too small for canvas");
+            if (objectOffCenter) warnings.Add("object appears off-center");
+            if (possibleMatteRectangle) warnings.Add("possible matte rectangle");
+            if (nonTransparentBackground) warnings.Add("possible non-transparent background edge");
+
+            return new BuildingAssetReport {
+                State = state,
+                Slug = slug,
+                Status = "OK",
+                Dimensions = width + "x" + height,
+                Bytes = file.Length,
+                HasAlpha = hasAlpha,
+                TransparentCorners = transparentCorners + "/4",
+                AlphaBounds = alphaBounds,
+                ObjectFillPct = objectFillPct,
+                CenterOffsetPct = centerOffsetPct,
+                PossibleMatteRectangle = possibleMatteRectangle,
+                ObjectTooSmall = objectTooSmall,
+                NonTransparentBackground = nonTransparentBackground,
+                Warnings = string.Join("; ", warnings.ToArray())
+            };
+        }
+    }
+
+    private static bool HasPngSignature(string path)
+    {
+        byte[] expected = new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 };
+        byte[] actual = File.ReadAllBytes(path);
+        if (actual.Length < expected.Length) return false;
+        for (int index = 0; index < expected.Length; index++)
+        {
+            if (actual[index] != expected[index]) return false;
+        }
+        return true;
+    }
+
+    private static int[] ReadPixels(Bitmap bitmap)
+    {
+        Rectangle rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
+        BitmapData data = bitmap.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        try
+        {
+            int[] pixels = new int[bitmap.Width * bitmap.Height];
+            Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
+            return pixels;
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
+        }
+    }
+
+    private static int Alpha(int pixel)
+    {
+        return (pixel >> 24) & 255;
+    }
+
+    private static bool IsMatteLike(int pixel)
+    {
+        int alpha = Alpha(pixel);
+        if (alpha <= 180) return false;
+        int red = (pixel >> 16) & 255;
+        int green = (pixel >> 8) & 255;
+        int blue = pixel & 255;
+        int max = Math.Max(red, Math.Max(green, blue));
+        int min = Math.Min(red, Math.Min(green, blue));
+        return red > 220 && green > 220 && blue > 220 && (max - min) < 36;
+    }
 }
+'@
 
-function Test-MatteLike {
-  param([System.Drawing.Color]$Color)
-
-  $spread = [Math]::Max($Color.R, [Math]::Max($Color.G, $Color.B)) - [Math]::Min($Color.R, [Math]::Min($Color.G, $Color.B))
-  return $Color.A -gt 245 -and $Color.R -gt 220 -and $Color.G -gt 220 -and $Color.B -gt 220 -and $spread -lt 36
-}
-
-function Get-ImageReport {
-  param(
-    [string]$State,
-    [string]$Slug,
-    [string]$Path
-  )
-
-  if (-not (Test-Path -LiteralPath $Path)) {
-    return [pscustomobject]@{
-      State = $State
-      Slug = $Slug
-      Status = 'MISSING'
-      Dimensions = ''
-      Bytes = 0
-      HasAlpha = ''
-      TransparentCorners = ''
-      SuspiciousWhiteMatte = ''
-      SuspiciousRectangleBackground = ''
-      PossibleCheckerboard = ''
-      CleanupMayBeIncomplete = $true
-      Warnings = 'missing file'
-    }
-  }
-
-  $item = Get-Item -LiteralPath $Path
-  $warnings = New-Object System.Collections.Generic.List[string]
-
-  if ($item.Length -lt 1024) {
-    $warnings.Add('suspiciously tiny file')
-  }
-
-  if (-not (Test-PngSignature $Path)) {
-    $warnings.Add('not a PNG signature')
-  }
-
-  $bitmap = [System.Drawing.Bitmap]::FromFile($Path)
-  try {
-    $width = $bitmap.Width
-    $height = $bitmap.Height
-    if ($width -lt 64 -or $height -lt 64) {
-      $warnings.Add('suspiciously small dimensions')
-    }
-
-    $corners = @(
-      $bitmap.GetPixel(0, 0),
-      $bitmap.GetPixel($width - 1, 0),
-      $bitmap.GetPixel(0, $height - 1),
-      $bitmap.GetPixel($width - 1, $height - 1)
-    )
-    $transparentCornerCount = ($corners | Where-Object { $_.A -lt 16 }).Count
-    $whiteCornerCount = ($corners | Where-Object { Test-NearWhite $_ }).Count
-    if ($transparentCornerCount -lt 4) {
-      $warnings.Add('corners are not fully transparent')
-    }
-    if ($whiteCornerCount -ge 3) {
-      $warnings.Add('possible white background')
-    }
-
-    $hasAlpha = $false
-    $checkerLike = 0
-    $matteLike = 0
-    $opaqueEdgeSamples = 0
-    $edgeSamples = 0
-    $samples = 0
-    $stepX = [Math]::Max(1, [int]($width / 12))
-    $stepY = [Math]::Max(1, [int]($height / 12))
-    for ($y = 0; $y -lt $height; $y += $stepY) {
-      for ($x = 0; $x -lt $width; $x += $stepX) {
-        $pixel = $bitmap.GetPixel($x, $y)
-        if ($pixel.A -lt 255) {
-          $hasAlpha = $true
-        }
-        if (Test-MatteLike $pixel) {
-          $matteLike += 1
-        }
-        $isLightChecker = $pixel.R -ge 210 -and $pixel.G -ge 210 -and $pixel.B -ge 210
-        $isMidChecker = [Math]::Abs($pixel.R - 185) -lt 30 -and [Math]::Abs($pixel.G - 185) -lt 30 -and [Math]::Abs($pixel.B - 185) -lt 30
-        if ($pixel.A -gt 245 -and ($isLightChecker -or $isMidChecker)) {
-          $checkerLike += 1
-        }
-        $samples += 1
-      }
-    }
-
-    $edgeYs = @(0, ($height - 1))
-    $edgeXs = @(0, ($width - 1))
-    for ($x = 0; $x -lt $width; $x += $stepX) {
-      foreach ($y in $edgeYs) {
-        $edgeSamples += 1
-        if ($bitmap.GetPixel($x, $y).A -gt 245) {
-          $opaqueEdgeSamples += 1
-        }
-      }
-    }
-    for ($y = 0; $y -lt $height; $y += $stepY) {
-      foreach ($x in $edgeXs) {
-        $edgeSamples += 1
-        if ($bitmap.GetPixel($x, $y).A -gt 245) {
-          $opaqueEdgeSamples += 1
-        }
-      }
-    }
-
-    $suspiciousWhiteMatte = $matteLike -gt ($samples * 0.35) -and $transparentCornerCount -lt 4
-    $suspiciousRectangleBackground = $opaqueEdgeSamples -gt ($edgeSamples * 0.5)
-    $possibleCheckerboard = $checkerLike -gt ($samples * 0.55) -and -not $hasAlpha
-    $cleanupMayBeIncomplete = (-not $hasAlpha) -or $transparentCornerCount -lt 4 -or $suspiciousWhiteMatte -or $suspiciousRectangleBackground -or $possibleCheckerboard
-
-    if ($suspiciousWhiteMatte) {
-      $warnings.Add('suspicious white matte')
-    }
-    if ($suspiciousRectangleBackground) {
-      $warnings.Add('suspicious rectangle background')
-    }
-    if ($possibleCheckerboard) {
-      $warnings.Add('possible fake checkerboard background')
-    }
-    if ($cleanupMayBeIncomplete) {
-      $warnings.Add('background cleanup may still be incomplete')
-    }
-
-    $aspect = [Math]::Max($width, $height) / [Math]::Max(1, [Math]::Min($width, $height))
-    if ($width -gt 1800 -or $height -gt 1800 -or $aspect -gt 2.3) {
-      $warnings.Add('possible multi-building sheet')
-    }
-
-    return [pscustomobject]@{
-      State = $State
-      Slug = $Slug
-      Status = 'OK'
-      Dimensions = "${width}x${height}"
-      Bytes = $item.Length
-      HasAlpha = $hasAlpha
-      TransparentCorners = "$transparentCornerCount/4"
-      SuspiciousWhiteMatte = $suspiciousWhiteMatte
-      SuspiciousRectangleBackground = $suspiciousRectangleBackground
-      PossibleCheckerboard = $possibleCheckerboard
-      CleanupMayBeIncomplete = $cleanupMayBeIncomplete
-      Warnings = if ($warnings.Count -gt 0) { $warnings -join '; ' } else { '' }
-    }
-  } finally {
-    $bitmap.Dispose()
-  }
-}
+Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition $inspectorCode
 
 $reports = foreach ($state in @('ruined', 'renovated')) {
   foreach ($slug in $expected) {
     $path = Join-Path $repoRoot "src/assets/buildings/$state/$slug.png"
-    Get-ImageReport -State $state -Slug $slug -Path $path
+    if (Test-Path -LiteralPath $path) {
+      [BuildingAssetInspector]::Analyze($state, $slug, $path)
+    } else {
+      [BuildingAssetInspector]::Missing($state, $slug)
+    }
   }
 }
 
