@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getBuildingAsset } from '../assets/buildingAssetManifest';
 import { CANDY_ASSET_PACK, CANDY_TEXTURE_KEY_BY_TYPE } from '../assets/candyAssetManifest';
 import { CandySfx } from '../audio/sfx';
 import { BUILDINGS } from '../data/buildings';
@@ -298,10 +299,15 @@ export class MainScene extends Phaser.Scene {
       card.style.top = `${layout.y}px`;
       const state = ready ? this.t('readyStatus') : completed ? this.t('completed') : buildable ? this.t('build') : this.t('locked');
       const icon = this.getBuildingIcon(building.id);
+      const asset = getBuildingAsset(building.id);
+      const image = asset?.[completed ? 'renovated' : 'ruined'];
+      const visual = image
+        ? `<img src="${image}" alt="" aria-hidden="true" />`
+        : icon;
 
       card.innerHTML = `
         <button class="building-node-button" type="button" data-detail="${building.id}" aria-label="${this.t(building.nameKey as TranslationKey)}">
-          <span class="building-icon" aria-hidden="true">${icon}</span>
+          <span class="building-icon${image ? ' has-building-image' : ''}" aria-hidden="true">${visual}</span>
           <strong>${this.getBuildingMapLabel(building.id)}</strong>
           <span class="building-state${ready ? ' ready' : ''}">${state}</span>
           ${completed ? '<span class="building-check" aria-hidden="true">✓</span>' : ''}
@@ -419,6 +425,11 @@ export class MainScene extends Phaser.Scene {
     const ready = completed && this.isBuildingReady(building.id);
     const buildable = !completed && building.id === nextBuildableId;
     const state = ready ? this.t('readyStatus') : completed ? this.t('completed') : buildable ? this.t('build') : this.t('locked');
+    const asset = getBuildingAsset(building.id);
+    const image = asset?.[completed ? 'renovated' : 'ruined'];
+    const visual = image
+      ? `<img src="${image}" alt="" aria-hidden="true" />`
+      : this.getBuildingIcon(building.id);
     const action = ready
       ? `<button class="building-detail-action" data-detail-claim="${building.id}">${this.t('claim')}</button>`
       : buildable
@@ -428,7 +439,7 @@ export class MainScene extends Phaser.Scene {
     panel.classList.add('is-open');
     panel.innerHTML = `
       <button class="building-detail-close" type="button" data-detail-close aria-label="${this.t('close')}">×</button>
-      <div class="building-detail-icon" aria-hidden="true">${this.getBuildingIcon(building.id)}</div>
+      <div class="building-detail-icon${image ? ' has-building-image' : ''}" aria-hidden="true">${visual}</div>
       <div class="building-detail-copy">
         <span class="building-detail-kicker">${this.t('buildingDetails')}</span>
         <h3>${this.t(building.nameKey as TranslationKey)}</h3>

@@ -2,7 +2,11 @@ import Phaser from 'phaser';
 import './style.css';
 import { MainScene } from './scenes/MainScene';
 
-if (new URLSearchParams(window.location.search).has('assetPreview')) {
+const params = new URLSearchParams(window.location.search);
+
+if (params.has('buildingPreview')) {
+  void import('./buildingPreview');
+} else if (params.has('assetPreview')) {
   void import('./assetPreview');
 } else {
   const config: Phaser.Types.Core.GameConfig = {

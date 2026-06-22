@@ -1,0 +1,128 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: #2f2251;
+  background: linear-gradient(180deg, #f7fbff, #ffe8f7);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.building-preview-shell {
+  width: min(1320px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 28px 0 40px;
+}
+
+.building-preview-shell header {
+  margin-bottom: 22px;
+}
+
+.building-preview-shell h1 {
+  margin: 0 0 8px;
+  color: #ff4fa5;
+  font-size: 34px;
+  line-height: 1;
+  text-shadow: 0 2px 0 #ffffff;
+}
+
+.building-preview-shell p {
+  margin: 0;
+  color: #5f5381;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.building-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 14px;
+}
+
+.building-preview-card {
+  padding: 14px;
+  border: 1px solid rgba(91, 65, 130, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 24px rgba(50, 35, 93, 0.12);
+}
+
+.building-preview-card h2 {
+  margin: 0;
+  color: #3c2d68;
+  font-size: 16px;
+}
+
+.building-preview-card > p {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.building-preview-versions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.building-preview-versions h3 {
+  margin: 0 0 6px;
+  color: #7b2bbf;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.building-preview-backgrounds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.building-preview-swatch {
+  display: grid;
+  place-items: center;
+  min-height: 138px;
+  margin: 0;
+  border: 1px solid rgba(47, 34, 81, 0.16);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.building-preview-swatch img {
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+}
+
+.building-preview-swatch figcaption {
+  align-self: end;
+  width: 100%;
+  padding: 5px 4px;
+  color: #2f2251;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.building-preview-swatch-dark {
+  background: #17132a;
+}
+
+.building-preview-swatch-light {
+  background: #ffffff;
+}
+
+.building-preview-swatch-checker {
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #c9c9d4 25%, transparent 25%),
+    linear-gradient(-45deg, #c9c9d4 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #c9c9d4 75%),
+    linear-gradient(-45deg, transparent 75%, #c9c9d4 75%);
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+}
