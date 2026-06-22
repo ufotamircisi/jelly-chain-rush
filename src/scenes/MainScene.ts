@@ -6,6 +6,7 @@ import { getCandyDefinition } from '../data/candies';
 import { getMultiplierLabel } from '../data/multipliers';
 import {
   areAdjacent,
+  applyComboMultiplierUpgrade,
   type CascadeStep,
   getHighestMultiplierIndex,
   hasValidSwipeMove,
@@ -813,7 +814,7 @@ export class MainScene extends Phaser.Scene {
       this.state.board = swappedBoard;
       this.drawBoard();
       this.showWarning(this.t('chainInProgress'));
-      this.time.delayedCall(80, () => this.resolveCurrentCascades());
+      this.time.delayedCall(80, () => this.resolveCurrentCascades({ allowMultiplierUpgrade: true }));
     });
   }
 
@@ -894,24 +895,32 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  private resolveCurrentCascades(): void {
+  private resolveCurrentCascades(options: { allowMultiplierUpgrade?: boolean } = {}): void {
     if (this.state.status !== 'playing') return;
 
     this.isResolving = true;
     this.renderOverlay();
     const result = resolveMatchesAndCascades(this.state.board);
-    this.state.board = result.board;
+    const multiplierUpgrade = options.allowMultiplierUpgrade
+      ? applyComboMultiplierUpgrade(result.board, result.steps)
+      : { board: result.board, upgraded: [] };
+    this.state.board = multiplierUpgrade.board;
 
     if (result.steps.length > 0) {
       this.state.score += result.scoreDelta;
       for (const [candy, count] of Object.entries(result.candyCounts) as [CandyType, number][]) {
         this.state.candyBlasts[candy] = (this.state.candyBlasts[candy] ?? 0) + count;
       }
-      this.state.highestMultiplierIndex = Math.max(this.state.highestMultiplierIndex, getHighestMultiplierIndex(result.board));
+      this.state.highestMultiplierIndex = Math.max(this.state.highestMultiplierIndex, getHighestMultiplierIndex(this.state.board));
       this.save.stats.totalBlasts += result.steps.length;
       this.save.stats.highestMultiplierEver = Math.max(this.save.stats.highestMultiplierEver, this.getHighestMultiplierValue());
       saveData(this.save);
       this.playCascadeFeedback(result.steps);
+      if (multiplierUpgrade.upgraded.length > 0) {
+        this.time.delayedCall(Math.max(180, result.steps.length * 410), () => {
+          this.showMultiplierUpgradeFeedback(multiplierUpgrade.upgraded);
+        });
+      }
     }
 
     const delay = Math.max(260, result.steps.length * 430);
@@ -1419,6 +1428,26 @@ export class MainScene extends Phaser.Scene {
         this.playBlastFeedback(step, index);
       });
     });
+  }
+
+  private showMultiplierUpgradeFeedback(upgraded: BoardPosition[]): void {
+    for (const position of upgraded) {
+      const container = this.cellContainers.get(this.positionKey(position));
+      if (!container) continue;
+      this.tweens.killTweensOf(container);
+      this.tweens.add({
+        targets: container,
+        scale: 1.2,
+        duration: 120,
+        yoyo: true,
+        repeat: 1,
+        ease: 'Sine.easeOut',
+        onComplete: () => container.setScale(1)
+      });
+    }
+
+    const center = this.getBlastCenter(upgraded);
+    this.showBurstLabel(this.t('comboMultiplierUp'), center.x, center.y - 34, false);
   }
 
   private playBlastFeedback(step: CascadeStep, cascadeIndex: number): void {

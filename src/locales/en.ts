@@ -24,6 +24,7 @@ const en = {
   bigBlast: 'BIG BLAST!',
   chain: 'CHAIN!',
   megaChain: 'MEGA CHAIN!',
+  comboMultiplierUp: 'Combo! Floor multiplier up.',
   multiplierRewards: 'Multiplier Rewards',
   viewRewards: 'View Rewards',
   nextMultiplierReward: 'Next: x128',

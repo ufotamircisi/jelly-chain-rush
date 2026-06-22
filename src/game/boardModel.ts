@@ -36,6 +36,11 @@ export interface CascadeResult {
   steps: CascadeStep[];
 }
 
+export interface MultiplierUpgradeResult {
+  board: BoardGrid;
+  upgraded: BoardPosition[];
+}
+
 export function findLineMatches(board: BoardGrid): BoardPosition[] {
   const matched = new Map<string, BoardPosition>();
   for (const group of findMatchGroups(board)) {
@@ -152,6 +157,39 @@ export function calculateScore(groupSize: number, multiplierTotal: number): numb
   return Math.round(BASE_CELL_SCORE * groupSize * bonus * Math.max(1, multiplierTotal / groupSize));
 }
 
+export function applyComboMultiplierUpgrade(board: BoardGrid, steps: CascadeStep[]): MultiplierUpgradeResult {
+  if (steps.length < 2) {
+    return { board, upgraded: [] };
+  }
+
+  const upgradeKeys = new Set<string>();
+  const waveKeys = steps.map((step) => new Set(step.matched.map(positionKey)));
+
+  steps.forEach((step, waveIndex) => {
+    for (const position of step.matched) {
+      if (hasOrthogonalContactInOtherWave(position, waveKeys, waveIndex)) {
+        upgradeKeys.add(positionKey(position));
+      }
+    }
+  });
+
+  if (upgradeKeys.size === 0) {
+    return { board, upgraded: [] };
+  }
+
+  const nextBoard = cloneBoard(board);
+  const upgraded: BoardPosition[] = [];
+  for (const key of upgradeKeys) {
+    const [row, col] = key.split(':').map(Number);
+    const cell = nextBoard[row]?.[col];
+    if (!cell) continue;
+    cell.multiplierIndex = upgradeMultiplier(cell.multiplierIndex);
+    upgraded.push({ row, col });
+  }
+
+  return { board: nextBoard, upgraded };
+}
+
 function blastMatchedCells(
   board: BoardGrid,
   groups: BoardPosition[][]
@@ -174,7 +212,6 @@ function blastMatchedCells(
     const cell = nextBoard[position.row][position.col];
     candyCounts[cell.candy] = (candyCounts[cell.candy] ?? 0) + 1;
     highestMultiplierIndex = Math.max(highestMultiplierIndex, cell.multiplierIndex);
-    cell.multiplierIndex = upgradeMultiplier(cell.multiplierIndex);
   }
 
   for (const group of groups) {
@@ -283,6 +320,18 @@ function getOrthogonalNeighbors(position: BoardPosition): BoardPosition[] {
 
 function isInsideBoard(position: BoardPosition): boolean {
   return position.row >= 0 && position.row < BOARD_ROWS && position.col >= 0 && position.col < BOARD_COLUMNS;
+}
+
+function hasOrthogonalContactInOtherWave(
+  position: BoardPosition,
+  waveKeys: Set<string>[],
+  currentWaveIndex: number
+): boolean {
+  return getOrthogonalNeighbors(position).some((neighbor) => {
+    if (!isInsideBoard(neighbor)) return false;
+    const key = positionKey(neighbor);
+    return waveKeys.some((keys, waveIndex) => waveIndex !== currentWaveIndex && keys.has(key));
+  });
 }
 
 function getGroupBonus(groupSize: number): number {
