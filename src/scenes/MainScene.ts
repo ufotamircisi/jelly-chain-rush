@@ -32,7 +32,17 @@ import { createGameState } from '../game/gameState';
 import { areGoalsComplete, getGoalProgress } from '../game/levels';
 import { calculateRewardSummary } from '../game/rewards';
 import { createTranslator, SUPPORTED_LOCALES, type TranslationKey } from '../locales';
-import { loadSave, saveData, updateLanguage, updateSoundEnabled } from '../save/saveData';
+import {
+  exportBackupCode,
+  getCurrentPlayableLevel,
+  importBackupCode,
+  loadSave,
+  markLevelCompleted,
+  saveData,
+  updateLanguage,
+  updateSoundEnabled,
+  updateVibrationEnabled
+} from '../save/saveData';
 import {
   BOARD_COLUMNS,
   BOARD_ROWS,
@@ -54,6 +64,11 @@ const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
 const CANDY_IMAGE_SIZE = CELL_SIZE * 0.84;
 const CASCADE_SETTLE_DELAY = 650;
+const APP_VERSION = '0.1.0';
+const VISIBLE_LEVEL_COUNT = 50;
+const PRIVACY_URL = 'https://lumisoftstudios.com/jelly-chain-rush/privacy';
+const TERMS_URL = 'https://lumisoftstudios.com/jelly-chain-rush/terms';
+const SUPPORT_URL = 'https://lumisoftstudios.com/contact';
 const TODAY = () => getLocalDateKey();
 
 const MULTIPLIER_TINTS = [
@@ -97,6 +112,7 @@ export class MainScene extends Phaser.Scene {
   private locale!: LocaleCode;
   private t!: (key: TranslationKey) => string;
   private screen: ScreenKey = 'play';
+  private playMode: 'road' | 'game' = 'road';
   private boardContainer?: Phaser.GameObjects.Container;
   private rewardSummary?: RewardSummary;
   private cellContainers = new Map<string, Phaser.GameObjects.Container>();
@@ -129,9 +145,7 @@ export class MainScene extends Phaser.Scene {
     this.state = createGameState(this.save);
     this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
     this.bindOverlay();
-    this.drawBoard();
     this.renderOverlay();
-    this.time.delayedCall(1, () => this.startInitialDrop());
 
     if (this.isDailyRewardAvailable()) {
       this.renderDailyRewardModal();
@@ -145,24 +159,14 @@ export class MainScene extends Phaser.Scene {
       this.handleShake();
     });
 
-    this.el('language-button').addEventListener('click', () => {
+    this.el('settings-button').addEventListener('click', () => {
       this.playButtonTap();
-      const index = SUPPORTED_LOCALES.indexOf(this.locale);
-      this.locale = SUPPORTED_LOCALES[(index + 1) % SUPPORTED_LOCALES.length];
-      this.save = updateLanguage(this.save, this.locale);
-      this.t = createTranslator(this.locale);
-      this.renderOverlay();
+      this.renderSettingsModal();
     });
 
-    this.optionalEl('sound-button')?.addEventListener('click', () => {
-      const soundEnabled = !this.save.soundEnabled;
-      this.save = updateSoundEnabled(this.save, soundEnabled);
-      this.sfx.setMuted(!soundEnabled);
-      if (soundEnabled) {
-        this.sfx.unlock();
-        this.playButtonTap();
-      }
-      this.renderOverlay();
+    this.el('continue-level-button').addEventListener('click', () => {
+      this.playButtonTap();
+      this.startLevel(this.getCurrentPlayableLevel());
     });
 
     this.el('collect-all-button').addEventListener('click', () => {
@@ -184,20 +188,24 @@ export class MainScene extends Phaser.Scene {
       this.el(`nav-${key}`).addEventListener('click', () => {
         this.playButtonTap();
         this.screen = key;
+        if (key === 'play') {
+          this.playMode = 'road';
+        }
         this.renderOverlay();
       });
     }
   }
 
   private renderOverlay(): void {
-    this.el('phone-frame').classList.toggle('is-gameplay-active', this.screen === 'play');
+    const gameplayActive = this.screen === 'play' && this.playMode === 'game';
+    this.el('phone-frame').classList.toggle('is-gameplay-active', gameplayActive);
     this.el('shake-button').toggleAttribute('disabled', !this.canUseShake());
     this.el('phone-frame').classList.toggle('is-island-active', this.screen === 'island');
     this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
     this.setText('game-title', this.t('title'));
     this.renderLogo();
-    this.setText('language-button', `${this.t('language')}: ${this.locale.toUpperCase()}`);
-    this.renderSoundButton();
+    this.el('settings-button').setAttribute('aria-label', this.t('settings'));
+    this.el('settings-button').setAttribute('title', this.t('settings'));
     this.setText('level-label', this.t('level'));
     this.setText('level-value', String(this.state.level));
     this.setText('goal-label', this.t('goal'));
@@ -217,11 +225,14 @@ export class MainScene extends Phaser.Scene {
     this.setText('multiplier-rewards-button', this.t('viewRewards'));
     this.setText('shake-button', this.t('shakeButton'));
     this.setText('get-energy-button', this.t('getEnergy'));
-    this.el('get-energy-button').classList.toggle('is-visible', this.screen === 'play' && this.state.status === 'playing' && this.state.energy < SHAKE_ENERGY_COST);
+    this.el('get-energy-button').classList.toggle('is-visible', gameplayActive && this.state.status === 'playing' && this.state.energy < SHAKE_ENERGY_COST);
     this.setText('island-title', this.t('islandTitle'));
     this.setText('collect-all-button', this.t('collectAll'));
     this.setText('market-title', this.t('market'));
+    this.el('level-road-section').classList.toggle('is-active', this.screen === 'play' && this.playMode === 'road');
+    this.el('gameplay-section').classList.toggle('is-active', gameplayActive);
 
+    this.renderLevelRoad();
     this.renderGoals();
     this.renderMultiplierRewards();
     this.renderIsland();
@@ -236,14 +247,8 @@ export class MainScene extends Phaser.Scene {
     title.innerHTML = `<img src="${UI_ASSETS.logo}" alt="${this.t('title')}" />`;
   }
 
-  private renderSoundButton(): void {
-    const button = this.optionalEl('sound-button');
-    if (!button) return;
-
-    const label = this.t(this.save.soundEnabled ? 'soundOn' : 'soundOff');
-    button.textContent = this.save.soundEnabled ? '\u{1F50A}' : '\u{1F507}';
-    button.setAttribute('aria-label', label);
-    button.setAttribute('title', label);
+  private getCurrentPlayableLevel(): number {
+    return getCurrentPlayableLevel(this.save.completedLevels, this.save.highestUnlockedLevel);
   }
 
   private renderGoals(): void {
@@ -283,6 +288,217 @@ export class MainScene extends Phaser.Scene {
       </div>
     `);
     this.modalButton('close', () => this.closeModal());
+  }
+
+  private renderLevelRoad(): void {
+    const currentPlayableLevel = this.getCurrentPlayableLevel();
+    this.setText('level-road-title', this.t('levelRoad'));
+    this.setText('road-current-label', this.t('currentLevel'));
+    this.setText('road-current-value', String(currentPlayableLevel));
+    this.setText('road-completed-label', this.t('completedLevels'));
+    this.setText('road-completed-value', `${this.save.completedLevels.length}/${VISIBLE_LEVEL_COUNT}`);
+    this.setText('road-unlocked-label', this.t('highestUnlockedLevel'));
+    this.setText('road-unlocked-value', String(this.save.highestUnlockedLevel));
+    this.setText('continue-level-button', this.t('continueLevel').replace('{level}', String(currentPlayableLevel)));
+
+    const road = this.el('level-road-list');
+    road.innerHTML = '<div class="level-road-path" aria-hidden="true"></div>';
+
+    for (let level = 1; level <= VISIBLE_LEVEL_COUNT; level += 1) {
+      const completed = this.save.completedLevels.includes(level);
+      const unlocked = level <= this.save.highestUnlockedLevel;
+      const current = level === currentPlayableLevel;
+      const playable = unlocked && (!completed || current);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `level-node${completed ? ' is-completed' : ''}${current ? ' is-current' : ''}${unlocked ? ' is-unlocked' : ' is-locked'}`;
+      button.disabled = !playable;
+      button.style.left = `${level % 2 === 0 ? 58 : 32}%`;
+      button.style.setProperty('--level-index', String(level));
+      button.setAttribute('aria-label', `${this.t('level')} ${level}${unlocked ? '' : ` ${this.t('levelLocked')}`}`);
+      button.innerHTML = `
+        <span class="level-node-number">${level}</span>
+        ${completed ? '<span class="level-node-check" aria-hidden="true">✓</span>' : ''}
+        ${!unlocked ? '<span class="level-node-lock" aria-hidden="true">🔒</span>' : ''}
+      `;
+      if (playable) {
+        button.addEventListener('click', () => {
+          this.playButtonTap();
+          this.startLevel(level);
+        });
+      }
+      road.appendChild(button);
+    }
+
+    if (!road.dataset.initialScrollSet) {
+      road.dataset.initialScrollSet = 'true';
+      window.requestAnimationFrame(() => {
+        const currentNode = road.querySelector<HTMLElement>('.level-node.is-current');
+        if (currentNode) {
+          road.scrollTop = Math.max(0, currentNode.offsetTop - road.clientHeight * 0.38);
+        }
+      });
+    }
+  }
+
+  private renderSettingsModal(message = ''): void {
+    const languageOptions = SUPPORTED_LOCALES.map((locale) => `<option value="${locale}"${locale === this.locale ? ' selected' : ''}>${locale.toUpperCase()}</option>`).join('');
+    const lastSaved = this.save.lastSavedAt ? new Date(this.save.lastSavedAt).toLocaleString(this.locale === 'tr' ? 'tr-TR' : 'en-US') : this.t('neverSaved');
+
+    this.openModal(`
+      <div class="modal-card settings-card">
+        <div class="settings-header">
+          <h2>${this.t('settings')}</h2>
+          <button class="settings-close" type="button" data-action="close" aria-label="${this.t('close')}">×</button>
+        </div>
+        <section class="settings-section settings-toggles">
+          <label>
+            <span>${this.t('sound')}</span>
+            <input id="settings-sound-toggle" type="checkbox"${this.save.soundEnabled ? ' checked' : ''} />
+          </label>
+          <label>
+            <span>${this.t('vibration')}</span>
+            <input id="settings-vibration-toggle" type="checkbox"${this.save.vibrationEnabled ? ' checked' : ''} />
+          </label>
+          <label>
+            <span>${this.t('language')}</span>
+            <select id="settings-language-select">${languageOptions}</select>
+          </label>
+        </section>
+        <section class="settings-section">
+          <h3>${this.t('playerProgress')}</h3>
+          <p class="settings-save-note">${this.t('autoSaveEnabled')}</p>
+          <div class="progress-grid">
+            <article><span>${this.t('currentLevel')}</span><strong>${this.save.currentLevel}</strong></article>
+            <article><span>${this.t('completedLevels')}</span><strong>${this.save.completedLevels.length}</strong></article>
+            <article><span>${this.t('highestUnlockedLevel')}</span><strong>${this.save.highestUnlockedLevel}</strong></article>
+            <article><span>${this.t('energy')}</span><strong>${this.state.energy}</strong></article>
+            <article><span>${this.t('diamonds')}</span><strong>${this.state.diamonds}</strong></article>
+            <article><span>${this.t('shake')}</span><strong>${this.state.shakesRemaining}</strong></article>
+          </div>
+          <p class="settings-last-saved">${this.t('lastSaved')}: ${lastSaved}</p>
+        </section>
+        <section class="settings-section settings-actions">
+          <button type="button" data-action="show-backup">${this.t('showBackupCode')}</button>
+          <button type="button" data-action="enter-backup">${this.t('enterBackupCode')}</button>
+        </section>
+        <section class="settings-section legal-links">
+          <button type="button" data-action="privacy">${this.t('privacyPolicy')}</button>
+          <button type="button" data-action="terms">${this.t('termsOfUse')}</button>
+          <button type="button" data-action="support">${this.t('support')}</button>
+        </section>
+        <p class="settings-version">${this.t('version')}: ${APP_VERSION}</p>
+        <div class="modal-feedback" aria-live="polite">${message}</div>
+      </div>
+    `);
+
+    this.modalButton('close', () => this.closeModal());
+    this.modalButton('show-backup', () => this.renderBackupCodeModal());
+    this.modalButton('enter-backup', () => this.renderImportBackupModal());
+    this.modalButton('privacy', () => this.openExternalLink(PRIVACY_URL));
+    this.modalButton('terms', () => this.openExternalLink(TERMS_URL));
+    this.modalButton('support', () => this.openExternalLink(SUPPORT_URL));
+
+    this.el('settings-sound-toggle').addEventListener('change', (event) => {
+      const soundEnabled = (event.currentTarget as HTMLInputElement).checked;
+      this.save = updateSoundEnabled(this.save, soundEnabled);
+      this.sfx.setMuted(!soundEnabled);
+      if (soundEnabled) this.sfx.unlock();
+      this.renderOverlay();
+      this.renderSettingsModal();
+    });
+
+    this.el('settings-vibration-toggle').addEventListener('change', (event) => {
+      this.save = updateVibrationEnabled(this.save, (event.currentTarget as HTMLInputElement).checked);
+      this.renderOverlay();
+      this.renderSettingsModal();
+    });
+
+    this.el('settings-language-select').addEventListener('change', (event) => {
+      const nextLocale = (event.currentTarget as HTMLSelectElement).value as LocaleCode;
+      this.locale = nextLocale;
+      this.save = updateLanguage(this.save, nextLocale);
+      this.t = createTranslator(this.locale);
+      this.renderOverlay();
+      this.renderSettingsModal();
+    });
+  }
+
+  private renderBackupCodeModal(): void {
+    this.syncSaveCurrency();
+    const code = exportBackupCode(this.save);
+    this.openModal(`
+      <div class="modal-card settings-card">
+        <div class="settings-header">
+          <h2>${this.t('backupCode')}</h2>
+          <button class="settings-close" type="button" data-action="close" aria-label="${this.t('close')}">×</button>
+        </div>
+        <textarea id="backup-code-output" class="backup-code-field" readonly>${code}</textarea>
+        <div class="settings-actions">
+          <button type="button" data-action="copy">${this.t('copy')}</button>
+          <button type="button" data-action="back">${this.t('settings')}</button>
+        </div>
+        <div class="modal-feedback" aria-live="polite"></div>
+      </div>
+    `);
+    this.modalButton('close', () => this.closeModal());
+    this.modalButton('back', () => this.renderSettingsModal());
+    this.modalButton('copy', async () => {
+      const output = this.el('backup-code-output') as HTMLTextAreaElement;
+      output.select();
+      try {
+        await navigator.clipboard?.writeText(output.value);
+      } catch {
+        document.execCommand('copy');
+      }
+      this.showWarning(this.t('copied'));
+    });
+  }
+
+  private renderImportBackupModal(message = ''): void {
+    this.openModal(`
+      <div class="modal-card settings-card">
+        <div class="settings-header">
+          <h2>${this.t('enterBackupCode')}</h2>
+          <button class="settings-close" type="button" data-action="close" aria-label="${this.t('close')}">×</button>
+        </div>
+        <textarea id="backup-code-input" class="backup-code-field" placeholder="${this.t('backupCode')}"></textarea>
+        <p>${this.t('importConfirm')}</p>
+        <div class="settings-actions">
+          <button type="button" data-action="import">${this.t('importProgress')}</button>
+          <button type="button" data-action="back">${this.t('settings')}</button>
+        </div>
+        <div class="modal-feedback" aria-live="polite">${message}</div>
+      </div>
+    `);
+    this.modalButton('close', () => this.closeModal());
+    this.modalButton('back', () => this.renderSettingsModal());
+    this.modalButton('import', () => {
+      const input = this.el('backup-code-input') as HTMLTextAreaElement;
+      const imported = importBackupCode(input.value);
+      if (!imported.ok) {
+        this.renderImportBackupModal(this.t('invalidBackupCode'));
+        return;
+      }
+
+      this.save = imported.data;
+      this.locale = this.save.language;
+      this.t = createTranslator(this.locale);
+      this.sfx.setMuted(!this.save.soundEnabled);
+      this.state = createGameState(this.save);
+      this.rewardSummary = undefined;
+      this.playMode = 'road';
+      this.screen = 'play';
+      this.children.removeAll();
+      this.cellContainers.clear();
+      this.candyContainers.clear();
+      this.renderOverlay();
+      this.renderSettingsModal(this.t('progressImported'));
+    });
+  }
+
+  private openExternalLink(url: string): void {
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   private renderIsland(): void {
@@ -558,7 +774,7 @@ export class MainScene extends Phaser.Scene {
       this.renderWinModal();
     } else if (this.state.status === 'failed') {
       this.renderFailModal();
-    } else {
+    } else if (this.el('modal-root').querySelector('.result-card-win, .result-card-fail')) {
       this.closeModal();
     }
   }
@@ -1006,11 +1222,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   private canUseBoardInput(): boolean {
-    return this.state.status === 'playing' && !this.isShaking && !this.isDropping && !this.isResolving;
+    return this.playMode === 'game' && this.state.status === 'playing' && !this.isShaking && !this.isDropping && !this.isResolving;
   }
 
   private canUseShake(): boolean {
-    return this.state.status === 'playing'
+    return this.playMode === 'game'
+      && this.state.status === 'playing'
       && !this.isShaking
       && !this.isDropping
       && !this.isResolving
@@ -1032,28 +1249,37 @@ export class MainScene extends Phaser.Scene {
     this.sfx.playLevelComplete();
     this.vibrate([18, 32, 28]);
     const reward = calculateRewardSummary(this.state);
+    const alreadyCompleted = this.save.completedLevels.includes(this.state.level);
     const energyResult = applyFreeEnergy(this.state.energy, reward.totalEnergy);
     this.rewardSummary = {
       ...reward,
-      actualEnergyGained: energyResult.gained,
-      energyCapped: energyResult.capped
+      levelEnergy: alreadyCompleted ? 0 : reward.levelEnergy,
+      starEnergy: alreadyCompleted ? 0 : reward.starEnergy,
+      starDiamonds: alreadyCompleted ? 0 : reward.starDiamonds,
+      multiplierEnergy: alreadyCompleted ? 0 : reward.multiplierEnergy,
+      multiplierDiamonds: alreadyCompleted ? 0 : reward.multiplierDiamonds,
+      totalEnergy: alreadyCompleted ? 0 : reward.totalEnergy,
+      totalDiamonds: alreadyCompleted ? 0 : reward.totalDiamonds,
+      superChest: alreadyCompleted ? false : reward.superChest,
+      actualEnergyGained: alreadyCompleted ? 0 : energyResult.gained,
+      energyCapped: alreadyCompleted ? false : energyResult.capped
     };
-    this.state.energy = energyResult.energy;
-    this.state.diamonds += this.rewardSummary.totalDiamonds;
+    if (!alreadyCompleted) {
+      this.state.energy = energyResult.energy;
+      this.state.diamonds += this.rewardSummary.totalDiamonds;
+    }
     this.save = {
       ...this.save,
-      currentLevel: this.state.level + 1,
-      highestUnlockedLevel: Math.max(this.save.highestUnlockedLevel, this.state.level + 1),
       energy: this.state.energy,
       diamonds: this.state.diamonds,
-      superChests: this.save.superChests + (this.rewardSummary.superChest ? 1 : 0),
+      superChests: this.save.superChests + (!alreadyCompleted && this.rewardSummary.superChest ? 1 : 0),
       stats: {
         ...this.save.stats,
-        levelsCompleted: this.save.stats.levelsCompleted + 1,
+        highScore: Math.max(this.save.stats.highScore, this.state.score),
         highestMultiplierEver: Math.max(this.save.stats.highestMultiplierEver, this.getHighestMultiplierValue())
       }
     };
-    saveData(this.save);
+    this.save = markLevelCompleted(this.save, this.state.level, this.state.score);
     this.renderOverlay();
   }
 
@@ -1084,10 +1310,30 @@ export class MainScene extends Phaser.Scene {
     return true;
   }
 
+  private startLevel(level: number): void {
+    if (level > this.save.highestUnlockedLevel) {
+      this.sfx.playWarning();
+      this.showWarning(this.t('levelLocked'));
+      return;
+    }
+
+    this.save.currentLevel = Math.max(1, Math.floor(level));
+    saveData(this.save);
+    this.state = createGameState(this.save);
+    this.rewardSummary = undefined;
+    this.screen = 'play';
+    this.playMode = 'game';
+    this.closeModal();
+    this.drawBoard();
+    this.renderOverlay();
+    this.time.delayedCall(1, () => this.startInitialDrop());
+  }
+
   private restartLevel(): void {
     this.state = createGameState(this.save);
     this.rewardSummary = undefined;
     this.screen = 'play';
+    this.playMode = 'game';
     this.closeModal();
     this.drawBoard();
     this.renderOverlay();
@@ -1103,10 +1349,12 @@ export class MainScene extends Phaser.Scene {
     this.state = createGameState(this.save);
     this.rewardSummary = undefined;
     this.screen = 'play';
+    this.playMode = 'road';
     this.closeModal();
-    this.drawBoard();
+    this.children.removeAll();
+    this.cellContainers.clear();
+    this.candyContainers.clear();
     this.renderOverlay();
-    this.time.delayedCall(1, () => this.startInitialDrop());
   }
 
   private renderWinModal(): void {
@@ -1713,7 +1961,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private vibrate(pattern: VibratePattern): void {
-    if ('vibrate' in navigator) {
+    if (this.save.vibrationEnabled && 'vibrate' in navigator) {
       navigator.vibrate(pattern);
     }
   }

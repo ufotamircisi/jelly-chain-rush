@@ -45,6 +45,7 @@ export interface PlayerStats {
   levelsCompleted: number;
   totalBlasts: number;
   highestMultiplierEver: number;
+  highScore: number;
 }
 
 export interface DailyLoginState {
@@ -52,9 +53,18 @@ export interface DailyLoginState {
   lastClaimDate: string;
 }
 
+export interface PlayerSettings {
+  language: LocaleCode;
+  soundEnabled: boolean;
+  vibrationEnabled: boolean;
+}
+
 export interface SaveData {
+  saveVersion: number;
+  lastSavedAt: string;
   currentLevel: number;
   highestUnlockedLevel: number;
+  completedLevels: number[];
   energy: number;
   diamonds: number;
   superChests: number;
@@ -63,8 +73,10 @@ export interface SaveData {
   buildingClaimDates: Record<string, string>;
   dailyLogin: DailyLoginState;
   stats: PlayerStats;
+  settings: PlayerSettings;
   language: LocaleCode;
   soundEnabled: boolean;
+  vibrationEnabled: boolean;
 }
 
 export type LevelStatus = 'playing' | 'won' | 'failed';

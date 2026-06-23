@@ -1,13 +1,24 @@
-import { detectLocale } from '../locales';
 import { STARTING_ENERGY } from '../game/economy';
+import { detectLocale, isLocaleCode } from '../locales';
 import type { LocaleCode, SaveData } from '../types';
 
-const SAVE_KEY = 'jelly-chain-rush.save.v1';
+export const SAVE_VERSION = 2;
+export const SAVE_KEY = 'jelly-chain-rush.save.v2';
+const LEGACY_SAVE_KEY = 'jelly-chain-rush.save.v1';
+
+type ImportResult =
+  | { ok: true; data: SaveData }
+  | { ok: false; error: 'invalid' };
 
 export function createDefaultSave(): SaveData {
-  return {
+  const language = detectLocale();
+
+  return stampSave({
+    saveVersion: SAVE_VERSION,
+    lastSavedAt: '',
     currentLevel: 1,
     highestUnlockedLevel: 1,
+    completedLevels: [],
     energy: STARTING_ENERGY,
     diamonds: 250,
     superChests: 0,
@@ -21,16 +32,23 @@ export function createDefaultSave(): SaveData {
     stats: {
       levelsCompleted: 0,
       totalBlasts: 0,
-      highestMultiplierEver: 0
+      highestMultiplierEver: 0,
+      highScore: 0
     },
-    language: detectLocale(),
-    soundEnabled: true
-  };
+    settings: {
+      language,
+      soundEnabled: true,
+      vibrationEnabled: true
+    },
+    language,
+    soundEnabled: true,
+    vibrationEnabled: true
+  });
 }
 
 export function loadSave(): SaveData {
   const fallback = createDefaultSave();
-  const raw = window.localStorage.getItem(SAVE_KEY);
+  const raw = window.localStorage.getItem(SAVE_KEY) ?? window.localStorage.getItem(LEGACY_SAVE_KEY);
 
   if (!raw) {
     saveData(fallback);
@@ -38,28 +56,7 @@ export function loadSave(): SaveData {
   }
 
   try {
-    const parsed = JSON.parse(raw) as Partial<SaveData>;
-    return {
-      currentLevel: parsed.currentLevel ?? fallback.currentLevel,
-      highestUnlockedLevel: parsed.highestUnlockedLevel ?? parsed.currentLevel ?? fallback.highestUnlockedLevel,
-      energy: parsed.energy ?? fallback.energy,
-      diamonds: parsed.diamonds ?? fallback.diamonds,
-      superChests: parsed.superChests ?? fallback.superChests,
-      chests: parsed.chests ?? fallback.chests,
-      completedBuildingIds: parsed.completedBuildingIds?.length ? parsed.completedBuildingIds : fallback.completedBuildingIds,
-      buildingClaimDates: parsed.buildingClaimDates ?? fallback.buildingClaimDates,
-      dailyLogin: {
-        streak: parsed.dailyLogin?.streak ?? fallback.dailyLogin.streak,
-        lastClaimDate: parsed.dailyLogin?.lastClaimDate ?? fallback.dailyLogin.lastClaimDate
-      },
-      stats: {
-        levelsCompleted: parsed.stats?.levelsCompleted ?? fallback.stats.levelsCompleted,
-        totalBlasts: parsed.stats?.totalBlasts ?? fallback.stats.totalBlasts,
-        highestMultiplierEver: parsed.stats?.highestMultiplierEver ?? fallback.stats.highestMultiplierEver
-      },
-      language: parsed.language ?? fallback.language,
-      soundEnabled: parsed.soundEnabled ?? fallback.soundEnabled
-    };
+    return normalizeSave(JSON.parse(raw), fallback);
   } catch {
     saveData(fallback);
     return fallback;
@@ -67,18 +64,147 @@ export function loadSave(): SaveData {
 }
 
 export function saveData(data: SaveData): void {
-  window.localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-  window.localStorage.setItem('jcr.language', data.language);
+  const next = stampSave(normalizeSave(data));
+  window.localStorage.setItem(SAVE_KEY, JSON.stringify(next));
+  window.localStorage.setItem('jcr.language', next.language);
+  Object.assign(data, next);
+}
+
+export function markLevelCompleted(data: SaveData, level: number, highScore = 0): SaveData {
+  const completedLevels = [...new Set([...data.completedLevels, level])].sort((a, b) => a - b);
+  const highestUnlockedLevel = Math.max(data.highestUnlockedLevel, level + 1);
+  const currentLevel = Math.max(1, Math.min(highestUnlockedLevel, getCurrentPlayableLevel(completedLevels, highestUnlockedLevel)));
+  const next: SaveData = {
+    ...data,
+    currentLevel,
+    highestUnlockedLevel,
+    completedLevels,
+    stats: {
+      ...data.stats,
+      levelsCompleted: completedLevels.length,
+      highScore: Math.max(data.stats.highScore, highScore)
+    }
+  };
+  saveData(next);
+  return loadSave();
+}
+
+export function getCurrentPlayableLevel(completedLevels: number[], highestUnlockedLevel: number): number {
+  for (let level = 1; level <= highestUnlockedLevel; level += 1) {
+    if (!completedLevels.includes(level)) return level;
+  }
+  return highestUnlockedLevel;
 }
 
 export function updateLanguage(data: SaveData, language: LocaleCode): SaveData {
-  const next = { ...data, language };
+  const next = normalizeSave({
+    ...data,
+    language,
+    settings: { ...data.settings, language }
+  });
   saveData(next);
-  return next;
+  return loadSave();
 }
 
 export function updateSoundEnabled(data: SaveData, soundEnabled: boolean): SaveData {
-  const next = { ...data, soundEnabled };
+  const next = normalizeSave({
+    ...data,
+    soundEnabled,
+    settings: { ...data.settings, soundEnabled }
+  });
   saveData(next);
-  return next;
+  return loadSave();
+}
+
+export function updateVibrationEnabled(data: SaveData, vibrationEnabled: boolean): SaveData {
+  const next = normalizeSave({
+    ...data,
+    vibrationEnabled,
+    settings: { ...data.settings, vibrationEnabled }
+  });
+  saveData(next);
+  return loadSave();
+}
+
+export function exportBackupCode(data: SaveData): string {
+  const normalized = stampSave(normalizeSave(data));
+  const json = JSON.stringify(normalized);
+  return window.btoa(unescape(encodeURIComponent(json)));
+}
+
+export function importBackupCode(code: string): ImportResult {
+  try {
+    const json = decodeURIComponent(escape(window.atob(code.trim())));
+    const normalized = normalizeSave(JSON.parse(json));
+    saveData(normalized);
+    return { ok: true, data: loadSave() };
+  } catch {
+    return { ok: false, error: 'invalid' };
+  }
+}
+
+function normalizeSave(input: Partial<SaveData>, fallback = createDefaultSave()): SaveData {
+  const settings = {
+    language: isLocaleCode(input.settings?.language ?? input.language ?? '') ? (input.settings?.language ?? input.language) as LocaleCode : fallback.language,
+    soundEnabled: input.settings?.soundEnabled ?? input.soundEnabled ?? fallback.soundEnabled,
+    vibrationEnabled: input.settings?.vibrationEnabled ?? input.vibrationEnabled ?? fallback.vibrationEnabled
+  };
+  const explicitCompletedLevels = sanitizeNumberArray(input.completedLevels);
+  const legacyCompletedCount = clampNumber(input.stats?.levelsCompleted, 0, 999999, 0);
+  const completedLevels = explicitCompletedLevels.length
+    ? explicitCompletedLevels
+    : Array.from({ length: legacyCompletedCount }, (_, index) => index + 1);
+  const highestUnlockedLevel = Math.max(1, Math.floor(input.highestUnlockedLevel ?? input.currentLevel ?? fallback.highestUnlockedLevel));
+  const currentLevel = Math.max(1, Math.min(highestUnlockedLevel, Math.floor(input.currentLevel ?? getCurrentPlayableLevel(completedLevels, highestUnlockedLevel))));
+
+  return {
+    saveVersion: SAVE_VERSION,
+    lastSavedAt: typeof input.lastSavedAt === 'string' ? input.lastSavedAt : fallback.lastSavedAt,
+    currentLevel,
+    highestUnlockedLevel,
+    completedLevels,
+    energy: clampNumber(input.energy, 0, 999, fallback.energy),
+    diamonds: clampNumber(input.diamonds, 0, 999999, fallback.diamonds),
+    superChests: clampNumber(input.superChests, 0, 999999, fallback.superChests),
+    chests: clampNumber(input.chests, 0, 999999, fallback.chests),
+    completedBuildingIds: sanitizeNumberArray(input.completedBuildingIds).length ? sanitizeNumberArray(input.completedBuildingIds) : fallback.completedBuildingIds,
+    buildingClaimDates: input.buildingClaimDates && typeof input.buildingClaimDates === 'object' ? input.buildingClaimDates : fallback.buildingClaimDates,
+    dailyLogin: {
+      streak: clampNumber(input.dailyLogin?.streak, 0, 9999, fallback.dailyLogin.streak),
+      lastClaimDate: input.dailyLogin?.lastClaimDate ?? fallback.dailyLogin.lastClaimDate
+    },
+    stats: {
+      levelsCompleted: Math.max(completedLevels.length, clampNumber(input.stats?.levelsCompleted, 0, 999999, fallback.stats.levelsCompleted)),
+      totalBlasts: clampNumber(input.stats?.totalBlasts, 0, 999999999, fallback.stats.totalBlasts),
+      highestMultiplierEver: clampNumber(input.stats?.highestMultiplierEver, 0, 1000, fallback.stats.highestMultiplierEver),
+      highScore: clampNumber(input.stats?.highScore, 0, 999999999, fallback.stats.highScore)
+    },
+    settings,
+    language: settings.language,
+    soundEnabled: settings.soundEnabled,
+    vibrationEnabled: settings.vibrationEnabled
+  };
+}
+
+function stampSave(data: SaveData): SaveData {
+  return {
+    ...data,
+    saveVersion: SAVE_VERSION,
+    lastSavedAt: new Date().toISOString(),
+    settings: {
+      language: data.language,
+      soundEnabled: data.soundEnabled,
+      vibrationEnabled: data.vibrationEnabled
+    }
+  };
+}
+
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const number = typeof value === 'number' && Number.isFinite(value) ? Math.floor(value) : fallback;
+  return Math.max(min, Math.min(max, number));
+}
+
+function sanitizeNumberArray(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((item) => Number(item)).filter((item) => Number.isInteger(item) && item > 0))].sort((a, b) => a - b);
 }
