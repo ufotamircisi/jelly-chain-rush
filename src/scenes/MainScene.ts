@@ -69,6 +69,7 @@ const LEVEL_ROAD_SEGMENT_SIZE = 50;
 const LEVEL_NODE_SPACING = 66;
 const LEVEL_ROAD_TOP_PADDING = 56;
 const LEVEL_ROAD_BOTTOM_PADDING = 88;
+const LEVEL_ROAD_FIRST_NODE_RAISE = 28;
 const PRIVACY_URL = 'https://lumisoftstudios.com/jelly-chain-rush/privacy';
 const TERMS_URL = 'https://lumisoftstudios.com/jelly-chain-rush/terms';
 const SUPPORT_URL = 'https://lumisoftstudios.com/contact';
@@ -329,7 +330,7 @@ export class MainScene extends Phaser.Scene {
       button.className = `level-node${completed ? ' is-completed' : ''}${current ? ' is-current' : ''}${unlocked ? ' is-unlocked' : ' is-locked'}`;
       button.disabled = !playable;
       button.style.left = `${this.getLevelNodeLeft(segmentIndex)}%`;
-      button.style.top = `${roadHeight - LEVEL_ROAD_BOTTOM_PADDING - segmentIndex * LEVEL_NODE_SPACING}px`;
+      button.style.top = `${roadHeight - LEVEL_ROAD_BOTTOM_PADDING - LEVEL_ROAD_FIRST_NODE_RAISE - segmentIndex * LEVEL_NODE_SPACING}px`;
       button.setAttribute('aria-label', `${this.t('level')} ${level}${unlocked ? '' : ` ${this.t('levelLocked')}`}`);
       button.innerHTML = `
         <img class="level-node-image" src="${nodeImage}" alt="" aria-hidden="true" />
