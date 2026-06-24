@@ -70,20 +70,19 @@ const LEVEL_ROAD_SEGMENT_SIZE = 50;
 const LEVEL_ROAD_MAP_ASPECT_RATIO = 1672 / 941;
 const LEVEL_ROAD_FALLBACK_WIDTH = 390;
 const LEVEL_ROAD_NODE_PATH = [
-  { x: 0.46, y: 0.145 },
-  { x: 0.57, y: 0.21 },
-  { x: 0.44, y: 0.275 },
-  { x: 0.56, y: 0.34 },
-  { x: 0.45, y: 0.405 },
-  { x: 0.55, y: 0.47 },
-  { x: 0.45, y: 0.535 },
-  { x: 0.56, y: 0.6 },
-  { x: 0.46, y: 0.665 },
-  { x: 0.57, y: 0.73 },
-  { x: 0.47, y: 0.795 },
-  { x: 0.58, y: 0.86 },
-  { x: 0.49, y: 0.925 },
-  { x: 0.63, y: 0.975 }
+  { x: 0.6, y: 0.105 },
+  { x: 0.47, y: 0.175 },
+  { x: 0.57, y: 0.25 },
+  { x: 0.45, y: 0.325 },
+  { x: 0.56, y: 0.4 },
+  { x: 0.44, y: 0.475 },
+  { x: 0.55, y: 0.55 },
+  { x: 0.45, y: 0.625 },
+  { x: 0.56, y: 0.7 },
+  { x: 0.46, y: 0.775 },
+  { x: 0.57, y: 0.85 },
+  { x: 0.48, y: 0.925 },
+  { x: 0.61, y: 0.975 }
 ] as const;
 const PRIVACY_URL = 'https://lumisoftstudios.com/jelly-chain-rush/privacy';
 const TERMS_URL = 'https://lumisoftstudios.com/jelly-chain-rush/terms';
