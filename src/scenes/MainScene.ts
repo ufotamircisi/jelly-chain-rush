@@ -47,6 +47,7 @@ import {
   BOARD_COLUMNS,
   BOARD_ROWS,
   SHAKES_PER_LEVEL,
+  type BoardGrid,
   type BoardPosition,
   type CandyType,
   type GameState,
@@ -1006,7 +1007,7 @@ export class MainScene extends Phaser.Scene {
     this.isShaking = true;
     this.dragStart = undefined;
     this.renderOverlay();
-    this.sfx.playStartChime();
+    this.sfx.playShakeRattle();
 
     this.tweens.add({
       targets: this.boardContainer,
@@ -1064,7 +1065,7 @@ export class MainScene extends Phaser.Scene {
 
   private startInitialDrop(): void {
     if (this.isDropping || this.isResolving || this.state.status !== 'playing') return;
-    this.startDropSequence({ playChime: true });
+    this.startDropSequence();
   }
 
   private handleCellPointerDown(position: BoardPosition): void {
@@ -1214,6 +1215,11 @@ export class MainScene extends Phaser.Scene {
       this.save.stats.highestMultiplierEver = Math.max(this.save.stats.highestMultiplierEver, this.getHighestMultiplierValue());
       saveData(this.save);
       this.playCascadeFeedback(result.steps);
+      this.sfx.playGameplayCallout(
+        result.steps.length,
+        Math.max(...result.steps.map((step) => step.matched.length)),
+        this.getHighestUpgradedMultiplierIndex(multiplierUpgrade.board, multiplierUpgrade.upgraded)
+      );
       if (multiplierUpgrade.upgraded.length > 0) {
         this.time.delayedCall(Math.max(180, result.steps.length * CASCADE_SETTLE_DELAY), () => {
           this.showMultiplierUpgradeFeedback(multiplierUpgrade.upgraded);
@@ -1347,6 +1353,7 @@ export class MainScene extends Phaser.Scene {
     this.closeModal();
     this.drawBoard();
     this.renderOverlay();
+    this.sfx.playLevelStart();
     this.time.delayedCall(1, () => this.startInitialDrop());
   }
 
@@ -1358,6 +1365,7 @@ export class MainScene extends Phaser.Scene {
     this.closeModal();
     this.drawBoard();
     this.renderOverlay();
+    this.sfx.playLevelStart();
     this.time.delayedCall(1, () => this.startInitialDrop());
   }
 
@@ -1762,6 +1770,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private showMultiplierUpgradeFeedback(upgraded: BoardPosition[]): void {
+    this.sfx.playMultiplierUpgrade();
     for (const position of upgraded) {
       const container = this.cellContainers.get(this.positionKey(position));
       if (!container) continue;
@@ -1779,6 +1788,13 @@ export class MainScene extends Phaser.Scene {
 
     const center = this.getBlastCenter(upgraded);
     this.showBurstLabel(this.t('comboMultiplierUp'), center.x, center.y - 34, false);
+  }
+
+  private getHighestUpgradedMultiplierIndex(board: BoardGrid, upgraded: BoardPosition[]): number {
+    return upgraded.reduce((highest, position) => {
+      const cell = board[position.row]?.[position.col];
+      return Math.max(highest, cell?.multiplierIndex ?? 0);
+    }, 0);
   }
 
   private playBlastFeedback(step: CascadeStep, cascadeIndex: number): void {

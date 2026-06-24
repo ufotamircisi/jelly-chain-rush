@@ -183,7 +183,9 @@ export function applyComboMultiplierUpgrade(board: BoardGrid, steps: CascadeStep
     const [row, col] = key.split(':').map(Number);
     const cell = nextBoard[row]?.[col];
     if (!cell) continue;
-    cell.multiplierIndex = upgradeMultiplier(cell.multiplierIndex);
+    const nextMultiplierIndex = upgradeMultiplier(cell.multiplierIndex);
+    if (nextMultiplierIndex === cell.multiplierIndex) continue;
+    cell.multiplierIndex = nextMultiplierIndex;
     upgraded.push({ row, col });
   }
 

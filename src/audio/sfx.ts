@@ -2,7 +2,11 @@ type WebAudioWindow = Window & {
   webkitAudioContext?: typeof AudioContext;
 };
 
+type VoiceCallout = 'nice' | 'great' | 'awesome' | 'fantastic' | 'incredible' | 'amazing' | 'legendary';
+
 const VOLUME = {
+  master: 0.72,
+  voice: 0.72,
   ui: 0.035,
   invalid: 0.045,
   warning: 0.06,
@@ -17,18 +21,59 @@ const VOLUME = {
   drop: 0.055
 } as const;
 
+const VOICE_MODULES = import.meta.glob<string>('../assets/audio/voice/en/*.wav', {
+  eager: true,
+  import: 'default'
+});
+
+const VOICE_FILES: Record<VoiceCallout, string> = {
+  nice: 'nice.wav',
+  great: 'great.wav',
+  awesome: 'awesome.wav',
+  fantastic: 'fantastic.wav',
+  incredible: 'incredible.wav',
+  amazing: 'amazing.wav',
+  legendary: 'legendary.wav'
+};
+
+const VOICE_PRIORITY: Record<VoiceCallout, number> = {
+  nice: 1,
+  great: 2,
+  awesome: 3,
+  amazing: 4,
+  fantastic: 5,
+  incredible: 6,
+  legendary: 7
+};
+
+const VOICE_COOLDOWN_MS = 1750;
+const HIGH_MULTIPLIER_CALLOUTS: Record<number, VoiceCallout> = {
+  7: 'amazing',
+  8: 'fantastic',
+  9: 'incredible',
+  10: 'legendary'
+};
+
 export class CandySfx {
   private context?: AudioContext;
   private master?: GainNode;
   private muted: boolean;
   private unlocked = false;
+  private voices = new Map<VoiceCallout, HTMLAudioElement>();
+  private lastVoiceAt = 0;
+  private currentVoice?: HTMLAudioElement;
 
   constructor(soundEnabled: boolean) {
     this.muted = !soundEnabled;
+    this.prepareVoices();
   }
 
   setMuted(muted: boolean): void {
     this.muted = muted;
+    if (muted) {
+      this.currentVoice?.pause();
+      this.currentVoice = undefined;
+    }
   }
 
   unlock(): void {
@@ -46,6 +91,27 @@ export class CandySfx {
       { frequency: 880, duration: 0.15, delay: 0.075, volume: 0.07 },
       { frequency: 1320, duration: 0.11, delay: 0.15, volume: 0.045 }
     ]));
+  }
+
+  playLevelStart(): void {
+    this.safePlay(() => {
+      this.playChord([
+        { frequency: 784, duration: 0.16, delay: 0, volume: 0.082 },
+        { frequency: 988, duration: 0.16, delay: 0.18, volume: 0.076 },
+        { frequency: 1318, duration: 0.2, delay: 0.36, volume: 0.06 }
+      ]);
+      this.playTone(1760, 0.16, 0.026, 0.54, 'sine', 2200);
+      this.playNoise(0.42, 0.024, 1800, 6200, 0.45, 'bandpass');
+    });
+  }
+
+  playShakeRattle(): void {
+    this.safePlay(() => {
+      this.playNoise(0.24, 0.072, 260, 1800, 0, 'bandpass');
+      this.playNoise(0.16, 0.038, 1200, 3600, 0.11, 'bandpass');
+      this.playSweep(210, 620, 0.18, 0.048, 0.03, 'triangle');
+      this.playTone(980, 0.045, 0.022, 0.2, 'sine');
+    });
   }
 
   playDropShimmer(): void {
@@ -124,6 +190,22 @@ export class CandySfx {
     ]));
   }
 
+  playMultiplierUpgrade(): void {
+    this.safePlay(() => {
+      this.playTone(880, 0.08, 0.062, 0, 'sine', 1320);
+      this.playTone(1320, 0.1, 0.052, 0.08, 'sine', 1760);
+      this.playTone(1980, 0.12, 0.038, 0.18, 'sine', 2480);
+      this.playNoise(0.2, 0.026, 2200, 6500, 0.08, 'bandpass');
+    });
+  }
+
+  playGameplayCallout(cascadeWaves: number, largestPop: number, newlyReachedMultiplierIndex = 0): void {
+    const callout = this.getGameplayCallout(cascadeWaves, largestPop, newlyReachedMultiplierIndex);
+    if (callout) {
+      this.playVoice(callout);
+    }
+  }
+
   private playSmallBlast(): void {
     this.playSweep(390, 720, 0.075, VOLUME.smallBlast, 0, 'sine');
     this.playTone(1080, 0.055, 0.035, 0.045, 'sine');
@@ -164,6 +246,63 @@ export class CandySfx {
       { frequency: 2220, duration: 0.14, delay: 0.28, volume: VOLUME.premium * 0.34 }
     ]);
     this.playNoise(0.22, 0.04, 1700, 5200, 0.06, 'bandpass');
+  }
+
+  private getGameplayCallout(cascadeWaves: number, largestPop: number, newlyReachedMultiplierIndex: number): VoiceCallout | undefined {
+    const multiplierCallout = HIGH_MULTIPLIER_CALLOUTS[newlyReachedMultiplierIndex];
+    if (multiplierCallout) return multiplierCallout;
+    if (largestPop >= 10) return 'incredible';
+    if (cascadeWaves >= 5) return 'fantastic';
+    if (cascadeWaves === 4) return 'awesome';
+    if (cascadeWaves === 3) return 'great';
+    if (cascadeWaves === 2) return 'nice';
+    return undefined;
+  }
+
+  private prepareVoices(): void {
+    for (const [key, fileName] of Object.entries(VOICE_FILES) as [VoiceCallout, string][]) {
+      const src = VOICE_MODULES[`../assets/audio/voice/en/${fileName}`];
+      if (!src) continue;
+      try {
+        const audio = new Audio(src);
+        audio.preload = 'auto';
+        audio.volume = VOLUME.voice;
+        this.voices.set(key, audio);
+      } catch {
+        // Missing or blocked local audio should never block gameplay.
+      }
+    }
+  }
+
+  private playVoice(callout: VoiceCallout): void {
+    if (this.muted || !this.unlocked) return;
+
+    const now = window.performance.now();
+    const currentKey = this.getCurrentVoiceKey();
+    const currentPriority = currentKey ? VOICE_PRIORITY[currentKey] : 0;
+    const nextPriority = VOICE_PRIORITY[callout];
+    if (now - this.lastVoiceAt < VOICE_COOLDOWN_MS && nextPriority <= currentPriority) return;
+
+    const voice = this.voices.get(callout);
+    if (!voice) return;
+
+    try {
+      this.currentVoice?.pause();
+      voice.currentTime = 0;
+      voice.volume = VOLUME.voice;
+      this.currentVoice = voice;
+      this.lastVoiceAt = now;
+      void voice.play().catch(() => undefined);
+    } catch {
+      // Voice callouts are optional local polish; never throw into gameplay.
+    }
+  }
+
+  private getCurrentVoiceKey(): VoiceCallout | undefined {
+    for (const [key, voice] of this.voices) {
+      if (voice === this.currentVoice && !voice.paused && !voice.ended) return key;
+    }
+    return undefined;
   }
 
   private playChord(notes: { frequency: number; duration: number; delay: number; volume: number }[]): void {
@@ -285,7 +424,7 @@ export class CandySfx {
 
   private createMasterGain(audio: AudioContext): GainNode {
     const master = audio.createGain();
-    master.gain.setValueAtTime(0.72, audio.currentTime);
+    master.gain.setValueAtTime(VOLUME.master, audio.currentTime);
     master.connect(audio.destination);
     return master;
   }
