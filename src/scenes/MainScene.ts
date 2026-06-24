@@ -70,7 +70,6 @@ const LEVEL_ROAD_SEGMENT_SIZE = 50;
 const LEVEL_ROAD_MAP_ASPECT_RATIO = 1672 / 941;
 const LEVEL_ROAD_FALLBACK_WIDTH = 390;
 const LEVEL_ROAD_NODE_PATH = [
-  { x: 0.61, y: 0.08 },
   { x: 0.46, y: 0.145 },
   { x: 0.57, y: 0.21 },
   { x: 0.44, y: 0.275 },
@@ -83,7 +82,8 @@ const LEVEL_ROAD_NODE_PATH = [
   { x: 0.57, y: 0.73 },
   { x: 0.47, y: 0.795 },
   { x: 0.58, y: 0.86 },
-  { x: 0.49, y: 0.925 }
+  { x: 0.49, y: 0.925 },
+  { x: 0.63, y: 0.975 }
 ] as const;
 const PRIVACY_URL = 'https://lumisoftstudios.com/jelly-chain-rush/privacy';
 const TERMS_URL = 'https://lumisoftstudios.com/jelly-chain-rush/terms';
