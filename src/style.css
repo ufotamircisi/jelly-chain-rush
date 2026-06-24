@@ -359,11 +359,8 @@ button {
   overflow-y: auto;
   border: 3px solid rgba(255, 255, 255, 0.7);
   border-radius: 24px;
-  background:
-    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.45), transparent 5rem),
-    radial-gradient(circle at 86% 72%, rgba(255, 241, 166, 0.48), transparent 6rem),
-    linear-gradient(180deg, #8feeff 0%, #ffe0f3 46%, #7bdc89 100%);
-  box-shadow: inset 0 0 28px rgba(255, 255, 255, 0.34), 0 12px 24px rgba(25, 76, 145, 0.22);
+  background: linear-gradient(180deg, #9fecff 0%, #ffe5f5 48%, #73d97e 100%);
+  box-shadow: inset 0 0 24px rgba(255, 255, 255, 0.22), 0 12px 24px rgba(25, 76, 145, 0.22);
   overscroll-behavior: contain;
   scrollbar-width: none;
 }
@@ -374,85 +371,83 @@ button {
 
 .level-road-list::before {
   display: block;
-  height: 2920px;
+  height: var(--level-road-height, 3380px);
   content: "";
 }
 
-.level-road-path {
+.level-road-map-art {
   position: absolute;
-  left: 50%;
-  top: 34px;
-  width: 24px;
-  height: 2780px;
-  border-radius: 999px;
-  transform: translateX(-50%);
-  background:
-    repeating-linear-gradient(180deg, #fff 0 22px, #ff72bd 22px 44px, #fff1a6 44px 66px, #79eeff 66px 88px);
-  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.38), 0 10px 18px rgba(61, 35, 98, 0.18);
+  inset: 0;
+  height: var(--level-road-height, 3380px);
+  pointer-events: none;
+  background-image: var(--level-road-map);
+  background-position: center bottom;
+  background-repeat: repeat-y;
+  background-size: 100% auto;
+  filter: saturate(1.07) contrast(1.02);
 }
 
 .level-node {
   position: absolute;
-  top: calc(2880px - (var(--level-index, 1) * 55px));
   display: grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
-  border: 4px solid rgba(255, 255, 255, 0.9);
-  border-radius: 999px;
+  width: 68px;
+  height: 68px;
+  border: 0;
+  padding: 0;
   color: #fff;
-  background: linear-gradient(180deg, #ff72bd, #b737bd);
-  box-shadow: 0 7px 0 rgba(123, 43, 191, 0.36), 0 10px 18px rgba(61, 35, 98, 0.22), inset 0 4px 0 rgba(255, 255, 255, 0.32);
+  background: transparent;
+  filter: drop-shadow(0 8px 8px rgba(61, 35, 98, 0.28));
   font-size: 18px;
   font-weight: 900;
   transform: translateX(-50%);
 }
 
-.level-node.is-completed {
-  background: linear-gradient(180deg, #adff47, #22b86b);
-  box-shadow: 0 7px 0 #168e67, 0 10px 18px rgba(61, 35, 98, 0.2), inset 0 4px 0 rgba(255, 255, 255, 0.32);
+.level-node:not(:disabled) {
+  cursor: pointer;
+}
+
+.level-node-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.level-node.is-locked {
+  color: rgba(255, 255, 255, 0.72);
+  filter: drop-shadow(0 5px 6px rgba(61, 35, 98, 0.18)) saturate(0.72) brightness(0.82);
+}
+
+.level-node-number {
+  position: relative;
+  z-index: 1;
+  min-width: 32px;
+  border-radius: 999px;
+  padding: 4px 5px;
+  color: #fff;
+  line-height: 1;
+  text-align: center;
+  text-shadow:
+    0 2px 0 #6f329f,
+    0 0 7px rgba(61, 35, 98, 0.62);
+}
+
+.level-node.is-completed .level-node-number {
+  text-shadow:
+    0 2px 0 #147547,
+    0 0 7px rgba(17, 93, 56, 0.62);
 }
 
 .level-node.is-current {
   animation: current-level-pulse 900ms ease-in-out infinite alternate;
 }
 
-.level-node.is-locked {
-  color: rgba(255, 255, 255, 0.76);
-  background: linear-gradient(180deg, #bcc7d9, #7b83a1);
-  box-shadow: 0 5px 0 #626b87, 0 8px 15px rgba(61, 35, 98, 0.16);
-  opacity: 0.72;
-}
-
-.level-node-number {
-  line-height: 1;
-}
-
-.level-node-check,
-.level-node-lock {
-  position: absolute;
-  right: -5px;
-  bottom: -4px;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border: 2px solid #fff;
-  border-radius: 999px;
-  color: #fff;
-  background: #22b86b;
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.level-node-lock {
-  background: #7b83a1;
-  font-size: 11px;
-}
-
 @keyframes current-level-pulse {
-  from { box-shadow: 0 7px 0 rgba(123, 43, 191, 0.36), 0 0 0 3px rgba(255, 255, 255, 0.28), 0 0 18px rgba(255, 241, 166, 0.5); transform: translateX(-50%) scale(1); }
-  to { box-shadow: 0 7px 0 rgba(123, 43, 191, 0.36), 0 0 0 8px rgba(255, 241, 166, 0.28), 0 0 26px rgba(255, 90, 166, 0.62); transform: translateX(-50%) scale(1.07); }
+  from { filter: drop-shadow(0 8px 8px rgba(61, 35, 98, 0.28)) drop-shadow(0 0 10px rgba(255, 241, 166, 0.7)); transform: translateX(-50%) scale(1); }
+  to { filter: drop-shadow(0 8px 8px rgba(61, 35, 98, 0.28)) drop-shadow(0 0 22px rgba(255, 90, 166, 0.9)); transform: translateX(-50%) scale(1.08); }
 }
 
 .view-island {

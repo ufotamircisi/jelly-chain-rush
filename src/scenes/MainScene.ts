@@ -65,7 +65,10 @@ const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
 const CANDY_IMAGE_SIZE = CELL_SIZE * 0.84;
 const CASCADE_SETTLE_DELAY = 650;
 const APP_VERSION = '0.1.0';
-const VISIBLE_LEVEL_COUNT = 50;
+const LEVEL_ROAD_SEGMENT_SIZE = 50;
+const LEVEL_NODE_SPACING = 66;
+const LEVEL_ROAD_TOP_PADDING = 56;
+const LEVEL_ROAD_BOTTOM_PADDING = 88;
 const PRIVACY_URL = 'https://lumisoftstudios.com/jelly-chain-rush/privacy';
 const TERMS_URL = 'https://lumisoftstudios.com/jelly-chain-rush/terms';
 const SUPPORT_URL = 'https://lumisoftstudios.com/contact';
@@ -292,34 +295,45 @@ export class MainScene extends Phaser.Scene {
 
   private renderLevelRoad(): void {
     const currentPlayableLevel = this.getCurrentPlayableLevel();
+    const segmentStart = Math.floor((currentPlayableLevel - 1) / LEVEL_ROAD_SEGMENT_SIZE) * LEVEL_ROAD_SEGMENT_SIZE + 1;
+    const segmentEnd = segmentStart + LEVEL_ROAD_SEGMENT_SIZE - 1;
+    const roadHeight = LEVEL_ROAD_TOP_PADDING + LEVEL_ROAD_BOTTOM_PADDING + LEVEL_NODE_SPACING * (LEVEL_ROAD_SEGMENT_SIZE - 1);
+    const continueKey = this.save.hasStartedGame ? 'continueLevel' : 'newGameLevel';
     this.setText('level-road-title', this.t('levelRoad'));
     this.setText('road-current-label', this.t('currentLevel'));
     this.setText('road-current-value', String(currentPlayableLevel));
     this.setText('road-completed-label', this.t('completedLevels'));
-    this.setText('road-completed-value', `${this.save.completedLevels.length}/${VISIBLE_LEVEL_COUNT}`);
+    this.setText('road-completed-value', String(this.save.completedLevels.length));
     this.setText('road-unlocked-label', this.t('highestUnlockedLevel'));
     this.setText('road-unlocked-value', String(this.save.highestUnlockedLevel));
-    this.setText('continue-level-button', this.t('continueLevel').replace('{level}', String(currentPlayableLevel)));
+    this.setText('continue-level-button', this.t(continueKey).replace('{level}', String(currentPlayableLevel)));
 
     const road = this.el('level-road-list');
-    road.innerHTML = '<div class="level-road-path" aria-hidden="true"></div>';
+    road.style.setProperty('--level-road-map', `url("${UI_ASSETS.levelRoad.map}")`);
+    road.style.setProperty('--level-road-height', `${roadHeight}px`);
+    road.innerHTML = '<div class="level-road-map-art" aria-hidden="true"></div>';
 
-    for (let level = 1; level <= VISIBLE_LEVEL_COUNT; level += 1) {
+    for (let level = segmentStart; level <= segmentEnd; level += 1) {
       const completed = this.save.completedLevels.includes(level);
       const unlocked = level <= this.save.highestUnlockedLevel;
       const current = level === currentPlayableLevel;
       const playable = unlocked && (!completed || current);
+      const segmentIndex = level - segmentStart;
+      const nodeImage = completed
+        ? UI_ASSETS.levelRoad.nodeCompleted
+        : unlocked
+          ? UI_ASSETS.levelRoad.nodeDefault
+          : UI_ASSETS.levelRoad.nodeLocked;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `level-node${completed ? ' is-completed' : ''}${current ? ' is-current' : ''}${unlocked ? ' is-unlocked' : ' is-locked'}`;
       button.disabled = !playable;
-      button.style.left = `${level % 2 === 0 ? 58 : 32}%`;
-      button.style.setProperty('--level-index', String(level));
+      button.style.left = `${this.getLevelNodeLeft(segmentIndex)}%`;
+      button.style.top = `${roadHeight - LEVEL_ROAD_BOTTOM_PADDING - segmentIndex * LEVEL_NODE_SPACING}px`;
       button.setAttribute('aria-label', `${this.t('level')} ${level}${unlocked ? '' : ` ${this.t('levelLocked')}`}`);
       button.innerHTML = `
+        <img class="level-node-image" src="${nodeImage}" alt="" aria-hidden="true" />
         <span class="level-node-number">${level}</span>
-        ${completed ? '<span class="level-node-check" aria-hidden="true">✓</span>' : ''}
-        ${!unlocked ? '<span class="level-node-lock" aria-hidden="true">🔒</span>' : ''}
       `;
       if (playable) {
         button.addEventListener('click', () => {
@@ -339,6 +353,11 @@ export class MainScene extends Phaser.Scene {
         }
       });
     }
+  }
+
+  private getLevelNodeLeft(segmentIndex: number): number {
+    const wave = [32, 54, 68, 48, 28, 42, 64, 58];
+    return wave[segmentIndex % wave.length];
   }
 
   private renderSettingsModal(message = ''): void {
@@ -1318,6 +1337,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.save.currentLevel = Math.max(1, Math.floor(level));
+    this.save.hasStartedGame = true;
     saveData(this.save);
     this.state = createGameState(this.save);
     this.rewardSummary = undefined;

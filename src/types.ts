@@ -62,6 +62,7 @@ export interface PlayerSettings {
 export interface SaveData {
   saveVersion: number;
   lastSavedAt: string;
+  hasStartedGame: boolean;
   currentLevel: number;
   highestUnlockedLevel: number;
   completedLevels: number[];

@@ -5,6 +5,10 @@ import navMarket from './ui/nav/nav_icon_market.png';
 import statEnergy from './ui/stats/icon_energy.png';
 import statDiamond from './ui/stats/icon_diamond.png';
 import statShake from './ui/stats/icon_shake.png';
+import levelRoadMap from './ui/level-road/level_road_map.png';
+import levelNodeDefault from './ui/level-road/level_node_default.png';
+import levelNodeCompleted from './ui/level-road/level_node_completed.png';
+import levelNodeLocked from './ui/level-road/level_node_locked.png';
 
 export const UI_ASSETS = {
   logo,
@@ -17,5 +21,11 @@ export const UI_ASSETS = {
     energy: statEnergy,
     diamond: statDiamond,
     shake: statShake
+  },
+  levelRoad: {
+    map: levelRoadMap,
+    nodeDefault: levelNodeDefault,
+    nodeCompleted: levelNodeCompleted,
+    nodeLocked: levelNodeLocked
   }
 } as const;

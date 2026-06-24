@@ -2,9 +2,9 @@ import { STARTING_ENERGY } from '../game/economy';
 import { detectLocale, isLocaleCode } from '../locales';
 import type { LocaleCode, SaveData } from '../types';
 
-export const SAVE_VERSION = 2;
-export const SAVE_KEY = 'jelly-chain-rush.save.v2';
-const LEGACY_SAVE_KEY = 'jelly-chain-rush.save.v1';
+export const SAVE_VERSION = 3;
+export const SAVE_KEY = 'jelly-chain-rush.save.v3';
+const LEGACY_SAVE_KEYS = ['jelly-chain-rush.save.v2', 'jelly-chain-rush.save.v1'];
 
 type ImportResult =
   | { ok: true; data: SaveData }
@@ -16,6 +16,7 @@ export function createDefaultSave(): SaveData {
   return stampSave({
     saveVersion: SAVE_VERSION,
     lastSavedAt: '',
+    hasStartedGame: false,
     currentLevel: 1,
     highestUnlockedLevel: 1,
     completedLevels: [],
@@ -48,7 +49,7 @@ export function createDefaultSave(): SaveData {
 
 export function loadSave(): SaveData {
   const fallback = createDefaultSave();
-  const raw = window.localStorage.getItem(SAVE_KEY) ?? window.localStorage.getItem(LEGACY_SAVE_KEY);
+  const raw = window.localStorage.getItem(SAVE_KEY) ?? LEGACY_SAVE_KEYS.map((key) => window.localStorage.getItem(key)).find(Boolean);
 
   if (!raw) {
     saveData(fallback);
@@ -156,10 +157,14 @@ function normalizeSave(input: Partial<SaveData>, fallback = createDefaultSave())
     : Array.from({ length: legacyCompletedCount }, (_, index) => index + 1);
   const highestUnlockedLevel = Math.max(1, Math.floor(input.highestUnlockedLevel ?? input.currentLevel ?? fallback.highestUnlockedLevel));
   const currentLevel = Math.max(1, Math.min(highestUnlockedLevel, Math.floor(input.currentLevel ?? getCurrentPlayableLevel(completedLevels, highestUnlockedLevel))));
+  const statsHighScore = clampNumber(input.stats?.highScore, 0, 999999999, fallback.stats.highScore);
+  const totalBlasts = clampNumber(input.stats?.totalBlasts, 0, 999999999, fallback.stats.totalBlasts);
+  const hasProgress = currentLevel > 1 || highestUnlockedLevel > 1 || completedLevels.length > 0 || statsHighScore > 0 || totalBlasts > 0;
 
   return {
     saveVersion: SAVE_VERSION,
     lastSavedAt: typeof input.lastSavedAt === 'string' ? input.lastSavedAt : fallback.lastSavedAt,
+    hasStartedGame: input.hasStartedGame ?? hasProgress,
     currentLevel,
     highestUnlockedLevel,
     completedLevels,
@@ -175,9 +180,9 @@ function normalizeSave(input: Partial<SaveData>, fallback = createDefaultSave())
     },
     stats: {
       levelsCompleted: Math.max(completedLevels.length, clampNumber(input.stats?.levelsCompleted, 0, 999999, fallback.stats.levelsCompleted)),
-      totalBlasts: clampNumber(input.stats?.totalBlasts, 0, 999999999, fallback.stats.totalBlasts),
+      totalBlasts,
       highestMultiplierEver: clampNumber(input.stats?.highestMultiplierEver, 0, 1000, fallback.stats.highestMultiplierEver),
-      highScore: clampNumber(input.stats?.highScore, 0, 999999999, fallback.stats.highScore)
+      highScore: statsHighScore
     },
     settings,
     language: settings.language,
