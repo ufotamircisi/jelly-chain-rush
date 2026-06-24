@@ -67,10 +67,24 @@ const CANDY_IMAGE_SIZE = CELL_SIZE * 0.84;
 const CASCADE_SETTLE_DELAY = 650;
 const APP_VERSION = '0.1.0';
 const LEVEL_ROAD_SEGMENT_SIZE = 50;
-const LEVEL_NODE_SPACING = 66;
-const LEVEL_ROAD_TOP_PADDING = 56;
-const LEVEL_ROAD_BOTTOM_PADDING = 88;
-const LEVEL_ROAD_FIRST_NODE_RAISE = 28;
+const LEVEL_ROAD_MAP_ASPECT_RATIO = 1672 / 941;
+const LEVEL_ROAD_FALLBACK_WIDTH = 390;
+const LEVEL_ROAD_NODE_PATH = [
+  { x: 0.6, y: 0.095 },
+  { x: 0.59, y: 0.16 },
+  { x: 0.55, y: 0.24 },
+  { x: 0.53, y: 0.32 },
+  { x: 0.51, y: 0.4 },
+  { x: 0.51, y: 0.48 },
+  { x: 0.44, y: 0.55 },
+  { x: 0.44, y: 0.62 },
+  { x: 0.5, y: 0.68 },
+  { x: 0.52, y: 0.73 },
+  { x: 0.57, y: 0.79 },
+  { x: 0.59, y: 0.85 },
+  { x: 0.56, y: 0.91 },
+  { x: 0.62, y: 0.97 }
+] as const;
 const PRIVACY_URL = 'https://lumisoftstudios.com/jelly-chain-rush/privacy';
 const TERMS_URL = 'https://lumisoftstudios.com/jelly-chain-rush/terms';
 const SUPPORT_URL = 'https://lumisoftstudios.com/contact';
@@ -299,7 +313,6 @@ export class MainScene extends Phaser.Scene {
     const currentPlayableLevel = this.getCurrentPlayableLevel();
     const segmentStart = Math.floor((currentPlayableLevel - 1) / LEVEL_ROAD_SEGMENT_SIZE) * LEVEL_ROAD_SEGMENT_SIZE + 1;
     const segmentEnd = segmentStart + LEVEL_ROAD_SEGMENT_SIZE - 1;
-    const roadHeight = LEVEL_ROAD_TOP_PADDING + LEVEL_ROAD_BOTTOM_PADDING + LEVEL_NODE_SPACING * (LEVEL_ROAD_SEGMENT_SIZE - 1);
     const continueKey = this.save.hasStartedGame ? 'continueLevel' : 'newGameLevel';
     this.setText('level-road-title', this.t('levelRoad'));
     this.setText('road-current-label', this.t('currentLevel'));
@@ -311,6 +324,8 @@ export class MainScene extends Phaser.Scene {
     this.setText('continue-level-button', this.t(continueKey).replace('{level}', String(currentPlayableLevel)));
 
     const road = this.el('level-road-list');
+    const tileHeight = this.getLevelRoadTileHeight(road);
+    const roadHeight = tileHeight * Math.ceil(LEVEL_ROAD_SEGMENT_SIZE / LEVEL_ROAD_NODE_PATH.length);
     road.style.setProperty('--level-road-map', `url("${UI_ASSETS.levelRoad.map}")`);
     road.style.setProperty('--level-road-height', `${roadHeight}px`);
     road.innerHTML = '<div class="level-road-map-art" aria-hidden="true"></div>';
@@ -330,8 +345,9 @@ export class MainScene extends Phaser.Scene {
       button.type = 'button';
       button.className = `level-node${completed ? ' is-completed' : ''}${current ? ' is-current' : ''}${unlocked ? ' is-unlocked' : ' is-locked'}`;
       button.disabled = !playable;
-      button.style.left = `${this.getLevelNodeLeft(segmentIndex)}%`;
-      button.style.top = `${roadHeight - LEVEL_ROAD_BOTTOM_PADDING - LEVEL_ROAD_FIRST_NODE_RAISE - segmentIndex * LEVEL_NODE_SPACING}px`;
+      const position = this.getLevelNodePosition(segmentIndex, tileHeight, roadHeight);
+      button.style.left = `${position.x}%`;
+      button.style.top = `${position.y}px`;
       button.setAttribute('aria-label', `${this.t('level')} ${level}${unlocked ? '' : ` ${this.t('levelLocked')}`}`);
       button.innerHTML = `
         <img class="level-node-image" src="${nodeImage}" alt="" aria-hidden="true" />
@@ -357,9 +373,18 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  private getLevelNodeLeft(segmentIndex: number): number {
-    const wave = [32, 54, 68, 48, 28, 42, 64, 58];
-    return wave[segmentIndex % wave.length];
+  private getLevelRoadTileHeight(road: HTMLElement): number {
+    const width = road.clientWidth || LEVEL_ROAD_FALLBACK_WIDTH;
+    return Math.round(width * LEVEL_ROAD_MAP_ASPECT_RATIO);
+  }
+
+  private getLevelNodePosition(segmentIndex: number, tileHeight: number, roadHeight: number): { x: number; y: number } {
+    const point = LEVEL_ROAD_NODE_PATH[segmentIndex % LEVEL_ROAD_NODE_PATH.length];
+    const tileIndex = Math.floor(segmentIndex / LEVEL_ROAD_NODE_PATH.length);
+    return {
+      x: point.x * 100,
+      y: roadHeight - tileIndex * tileHeight - point.y * tileHeight
+    };
   }
 
   private renderSettingsModal(message = ''): void {

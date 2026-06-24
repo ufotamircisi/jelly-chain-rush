@@ -391,8 +391,8 @@ button {
   position: absolute;
   display: grid;
   place-items: center;
-  width: 68px;
-  height: 68px;
+  width: 64px;
+  height: 64px;
   border: 0;
   padding: 0;
   color: #fff;
@@ -400,7 +400,7 @@ button {
   filter: drop-shadow(0 8px 8px rgba(61, 35, 98, 0.28));
   font-size: 18px;
   font-weight: 900;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
 }
 
 .level-node:not(:disabled) {
@@ -446,8 +446,8 @@ button {
 }
 
 @keyframes current-level-pulse {
-  from { filter: drop-shadow(0 8px 8px rgba(61, 35, 98, 0.28)) drop-shadow(0 0 10px rgba(255, 241, 166, 0.7)); transform: translateX(-50%) scale(1); }
-  to { filter: drop-shadow(0 8px 8px rgba(61, 35, 98, 0.28)) drop-shadow(0 0 22px rgba(255, 90, 166, 0.9)); transform: translateX(-50%) scale(1.08); }
+  from { filter: drop-shadow(0 8px 8px rgba(61, 35, 98, 0.28)) drop-shadow(0 0 10px rgba(255, 241, 166, 0.7)); transform: translate(-50%, -50%) scale(1); }
+  to { filter: drop-shadow(0 8px 8px rgba(61, 35, 98, 0.28)) drop-shadow(0 0 22px rgba(255, 90, 166, 0.9)); transform: translate(-50%, -50%) scale(1.08); }
 }
 
 .view-island {
