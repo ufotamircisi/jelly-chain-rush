@@ -69,8 +69,9 @@ const BOARD_SIZE = 370;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
-const CANDY_IMAGE_SIZE = CELL_SIZE * 0.95;
-const CANDY_IMAGE_OFFSET_Y = -1;
+const CANDY_IMAGE_SIZE = CELL_SIZE * 0.96;
+const CANDY_IMAGE_OFFSET_Y = -2;
+const MULTIPLIER_LABEL_OFFSET_Y = 14;
 const CASCADE_SETTLE_DELAY_MS = 1000;
 const APP_VERSION = '0.1.0';
 const SHOW_BANNER_PLACEHOLDER = true;
@@ -857,7 +858,7 @@ export class MainScene extends Phaser.Scene {
         const y = row * CELL_SIZE + CELL_SIZE / 2;
         const container = this.add.container(x, y);
         this.drawMultiplierFloor(container, cell.multiplierIndex);
-        const multiplierLabel = this.add.text(0, 17, getMultiplierLabel(cell.multiplierIndex), {
+        const multiplierLabel = this.add.text(0, MULTIPLIER_LABEL_OFFSET_Y, getMultiplierLabel(cell.multiplierIndex), {
           fontFamily: 'Arial',
           fontSize: cell.multiplierIndex >= 10 ? '12px' : cell.multiplierIndex >= 7 ? '13px' : '12px',
           color: cell.multiplierIndex >= 9 ? '#8a4a00' : '#ffffff',
