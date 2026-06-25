@@ -21,8 +21,15 @@ if (params.has('buildingPreview')) {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
     },
+    render: {
+      antialias: true,
+      antialiasGL: true,
+      pixelArt: false
+    },
     scene: [MainScene]
   };
+  // `resolution` is removed from Phaser 3.60+ types but still honoured at runtime.
+  (config as Record<string, unknown>)['resolution'] = Math.min(window.devicePixelRatio || 1, 2);
 
   new Phaser.Game(config);
 }

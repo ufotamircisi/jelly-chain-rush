@@ -173,6 +173,7 @@ export class MainScene extends Phaser.Scene {
     this.state = createGameState(this.save);
     this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
     this.bindOverlay();
+    this.bindBoardInput();
     this.renderOverlay();
 
     if (this.isDailyRewardAvailable()) {
@@ -222,6 +223,64 @@ export class MainScene extends Phaser.Scene {
         this.renderOverlay();
       });
     }
+  }
+
+  private bindBoardInput(): void {
+    // Prevent browser scroll/gesture takeover while the canvas is active.
+    const canvasParent = document.getElementById('game');
+    if (canvasParent) {
+      canvasParent.addEventListener('touchstart', (e) => {
+        if (this.playMode === 'game' && this.state.status === 'playing') {
+          e.preventDefault();
+        }
+      }, { passive: false });
+      canvasParent.addEventListener('touchmove', (e) => {
+        if (this.playMode === 'game' && this.state.status === 'playing') {
+          e.preventDefault();
+        }
+      }, { passive: false });
+    }
+
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (!this.canUseBoardInput()) return;
+      const cell = this.worldToCell(pointer.x, pointer.y);
+      if (cell) this.dragStart = cell;
+    });
+
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (!this.dragStart) return;
+      if (!this.canUseBoardInput()) {
+        this.dragStart = undefined;
+        return;
+      }
+      const start = this.dragStart;
+      this.dragStart = undefined;
+      const end = this.worldToCell(pointer.x, pointer.y);
+      if (!end || (end.row === start.row && end.col === start.col)) return;
+      this.handleSwipe(start, this.snapToAdjacentCell(start, end));
+    });
+
+    this.input.on('pointercancel', () => {
+      this.dragStart = undefined;
+    });
+  }
+
+  private worldToCell(x: number, y: number): BoardPosition | undefined {
+    const col = Math.floor((x - BOARD_X) / CELL_SIZE);
+    const row = Math.floor((y - BOARD_Y) / CELL_SIZE);
+    if (row >= 0 && row < BOARD_ROWS && col >= 0 && col < BOARD_COLUMNS) {
+      return { row, col };
+    }
+    return undefined;
+  }
+
+  private snapToAdjacentCell(start: BoardPosition, end: BoardPosition): BoardPosition {
+    const dr = end.row - start.row;
+    const dc = end.col - start.col;
+    if (Math.abs(dr) >= Math.abs(dc)) {
+      return { row: start.row + Math.sign(dr), col: start.col };
+    }
+    return { row: start.row, col: start.col + Math.sign(dc) };
   }
 
   private renderOverlay(): void {
@@ -875,9 +934,6 @@ export class MainScene extends Phaser.Scene {
         container.add(candyContainer);
         container.add(multiplierLabel);
         container.setSize(CELL_SIZE, CELL_SIZE);
-        container.setInteractive(new Phaser.Geom.Rectangle(-CELL_SIZE / 2, -CELL_SIZE / 2, CELL_SIZE, CELL_SIZE), Phaser.Geom.Rectangle.Contains);
-        container.on('pointerdown', () => this.handleCellPointerDown({ row, col }));
-        container.on('pointerup', () => this.handleCellPointerUp({ row, col }));
         this.boardContainer.add(container);
         this.cellContainers.set(this.positionKey({ row, col }), container);
         this.candyContainers.set(this.positionKey({ row, col }), candyContainer);
@@ -1113,23 +1169,6 @@ export class MainScene extends Phaser.Scene {
   private startInitialDrop(): void {
     if (this.isDropping || this.isResolving || this.state.status !== 'playing') return;
     this.startDropSequence();
-  }
-
-  private handleCellPointerDown(position: BoardPosition): void {
-    if (!this.canUseBoardInput()) return;
-    this.dragStart = position;
-  }
-
-  private handleCellPointerUp(position: BoardPosition): void {
-    if (!this.canUseBoardInput() || !this.dragStart) return;
-    const start = this.dragStart;
-    this.dragStart = undefined;
-
-    if (start.row === position.row && start.col === position.col) {
-      return;
-    }
-
-    this.handleSwipe(start, position);
   }
 
   private handleSwipe(first: BoardPosition, second: BoardPosition): void {

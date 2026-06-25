@@ -9,6 +9,7 @@ body,
   height: 100%;
   margin: 0;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
@@ -21,6 +22,7 @@ body {
     linear-gradient(180deg, #43b7ff 0%, #a7efff 42%, #ffd2ef 67%, #3778df 100%);
   font-family: Arial, Helvetica, sans-serif;
   touch-action: manipulation;
+  overscroll-behavior: none;
 }
 
 button {
@@ -328,8 +330,8 @@ button {
   font-size: 22px;
   font-weight: 900;
   text-align: center;
-  text-shadow: 0 2px 0 #fff, 0 4px 10px rgba(123, 43, 191, 0.28);
-  -webkit-text-stroke: 1px #fff;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 8px rgba(123, 43, 191, 0.18);
+  letter-spacing: -0.2px;
 }
 
 .level-road-stats {
@@ -549,14 +551,26 @@ button {
 }
 
 .board-canvas {
-  width: min(374px, calc(100vw - 28px));
+  /* Constrain by both width and available vertical height so shake button is never hidden.
+     430px = header(110) + non-board gameplay(237) + bottom-nav(76) + 7px view margin */
+  width: min(
+    374px,
+    calc(100vw - 28px),
+    calc(100dvh - 430px - env(safe-area-inset-top) - env(safe-area-inset-bottom))
+  );
   aspect-ratio: 1;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .board-canvas canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
+  touch-action: none;
+  /* Boost candy vibrancy: +12% saturation, +6% contrast without touching assets */
+  filter: saturate(1.12) contrast(1.06);
 }
 
 .helper-text,
@@ -723,16 +737,18 @@ button {
   font-size: 27px;
   font-weight: 900;
   text-shadow:
-    0 2px 0 #fff,
-    0 4px 0 rgba(255, 90, 166, 0.6),
-    0 8px 14px rgba(61, 35, 98, 0.22);
-  -webkit-text-stroke: 1px #fff;
+    0 1px 0 rgba(255, 255, 255, 0.9),
+    0 3px 8px rgba(61, 35, 98, 0.18);
+  letter-spacing: -0.3px;
 }
 
 .section-heading h2 {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 26px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .collect-button {
@@ -1071,7 +1087,7 @@ button {
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: 70px;
+  bottom: calc(70px + env(safe-area-inset-bottom));
   z-index: 4;
   display: none;
   grid-template-columns: 54px 1fr;
@@ -1543,8 +1559,10 @@ button {
   font-size: 28px;
   line-height: 1;
   color: #ff4fa3;
-  text-shadow: 0 3px 0 #7b2bbf, 0 8px 18px rgba(123, 43, 191, 0.22);
-  -webkit-text-stroke: 1px #fff;
+  text-shadow:
+    0 2px 0 #b72e9a,
+    0 6px 14px rgba(123, 43, 191, 0.2);
+  letter-spacing: -0.5px;
 }
 
 .result-level {
