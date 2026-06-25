@@ -23,6 +23,7 @@ export function regenerateCandies(board: BoardGrid): BoardGrid {
 
 export interface CascadeStep {
   matched: BoardPosition[];
+  boardAfter: BoardGrid;
   scoreDelta: number;
   candyCounts: Partial<Record<CandyType, number>>;
   largestGroupSize: number;
@@ -137,6 +138,7 @@ export function resolveMatchesAndCascades(board: BoardGrid): CascadeResult {
     }
     steps.push({
       matched: step.matched,
+      boardAfter: cloneBoard(nextBoard),
       scoreDelta: step.scoreDelta,
       candyCounts: step.candyCounts,
       largestGroupSize: step.largestGroupSize,

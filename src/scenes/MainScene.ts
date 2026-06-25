@@ -69,9 +69,9 @@ const BOARD_SIZE = 370;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
-const CANDY_IMAGE_SIZE = CELL_SIZE * 0.94;
-const CANDY_IMAGE_OFFSET_Y = 0;
-const CASCADE_SETTLE_DELAY = 650;
+const CANDY_IMAGE_SIZE = CELL_SIZE * 0.95;
+const CANDY_IMAGE_OFFSET_Y = -1;
+const CASCADE_SETTLE_DELAY_MS = 1000;
 const APP_VERSION = '0.1.0';
 const SHOW_BANNER_PLACEHOLDER = true;
 const LEVEL_ROAD_SEGMENT_SIZE = 50;
@@ -1264,15 +1264,16 @@ export class MainScene extends Phaser.Scene {
         this.getHighestUpgradedMultiplierIndex(multiplierUpgrade.board, multiplierUpgrade.upgraded)
       );
       if (multiplierUpgrade.upgraded.length > 0) {
-        this.time.delayedCall(Math.max(180, result.steps.length * CASCADE_SETTLE_DELAY), () => {
+        this.time.delayedCall(Math.max(180, result.steps.length * CASCADE_SETTLE_DELAY_MS), () => {
           this.showMultiplierUpgradeFeedback(multiplierUpgrade.upgraded);
         });
       }
     }
 
-    const delay = Math.max(260, result.steps.length * CASCADE_SETTLE_DELAY);
+    const delay = Math.max(260, result.steps.length * CASCADE_SETTLE_DELAY_MS);
     this.time.delayedCall(delay, () => {
       this.isResolving = false;
+      this.state.board = multiplierUpgrade.board;
       this.drawBoard();
       this.animateBoardSettle();
 
@@ -1823,8 +1824,15 @@ export class MainScene extends Phaser.Scene {
 
   private playCascadeFeedback(steps: CascadeStep[]): void {
     steps.forEach((step, index) => {
-      this.time.delayedCall(index * CASCADE_SETTLE_DELAY, () => {
+      this.time.delayedCall(index * CASCADE_SETTLE_DELAY_MS, () => {
         this.playBlastFeedback(step, index);
+        if (index < steps.length - 1) {
+          this.time.delayedCall(260, () => {
+            this.state.board = step.boardAfter;
+            this.drawBoard();
+            this.animateBoardSettle();
+          });
+        }
       });
     });
   }
