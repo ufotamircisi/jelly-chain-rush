@@ -69,9 +69,10 @@ const BOARD_SIZE = 370;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
-const CANDY_IMAGE_SIZE = CELL_SIZE * 0.84;
+const CANDY_IMAGE_SIZE = CELL_SIZE * 0.9;
 const CASCADE_SETTLE_DELAY = 650;
 const APP_VERSION = '0.1.0';
+const SHOW_BANNER_PLACEHOLDER = true;
 const LEVEL_ROAD_SEGMENT_SIZE = 50;
 const LEVEL_ROAD_MAP_ASPECT_RATIO = 1672 / 941;
 const LEVEL_ROAD_FALLBACK_WIDTH = 390;
@@ -224,11 +225,13 @@ export class MainScene extends Phaser.Scene {
   private renderOverlay(): void {
     const gameplayActive = this.screen === 'play' && this.playMode === 'game';
     this.el('phone-frame').classList.toggle('is-gameplay-active', gameplayActive);
+    this.el('phone-frame').classList.toggle('has-top-banner', SHOW_BANNER_PLACEHOLDER);
     this.el('shake-button').toggleAttribute('disabled', !this.canUseShake());
     this.el('phone-frame').classList.toggle('is-island-active', this.screen === 'island');
     this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
     this.setText('game-title', this.t('title'));
     this.setText('top-ad-banner-text', this.t('adArea'));
+    this.el('top-ad-banner').setAttribute('aria-label', this.t('adArea'));
     this.renderLogo();
     this.el('settings-button').setAttribute('aria-label', this.t('settings'));
     this.el('settings-button').setAttribute('title', this.t('settings'));
@@ -269,7 +272,14 @@ export class MainScene extends Phaser.Scene {
   }
 
   private renderLogo(): void {
+    this.el('top-ad-banner').classList.toggle('is-active', SHOW_BANNER_PLACEHOLDER);
     const title = this.el('game-title');
+    title.classList.toggle('is-hidden-for-banner', SHOW_BANNER_PLACEHOLDER);
+    if (SHOW_BANNER_PLACEHOLDER) {
+      title.innerHTML = '';
+      return;
+    }
+
     title.innerHTML = `<img src="${UI_ASSETS.logo}" alt="${this.t('title')}" />`;
   }
 

@@ -103,11 +103,11 @@ button {
 }
 
 .top-ad-banner {
-  display: grid;
+  display: none;
   place-items: center;
   width: min(320px, 92%);
-  height: 50px;
-  margin: 0 auto 4px;
+  height: 48px;
+  margin: 0 auto 5px;
   border: 1px solid rgba(255, 255, 255, 0.52);
   border-radius: 8px;
   color: rgba(61, 35, 98, 0.66);
@@ -119,9 +119,13 @@ button {
   text-transform: uppercase;
 }
 
+.top-ad-banner.is-active {
+  display: grid;
+}
+
 .game-header {
-  min-height: 104px;
-  padding-top: 3px;
+  min-height: 110px;
+  padding-top: 7px;
 }
 
 .header-controls {
@@ -168,6 +172,10 @@ button {
     0 4px 0 #7b2bbf,
     0 9px 18px rgba(61, 35, 98, 0.26);
   -webkit-text-stroke: 2px #fff;
+}
+
+.game-logo.is-hidden-for-banner {
+  display: none;
 }
 
 .game-logo img {
@@ -297,7 +305,7 @@ button {
 }
 
 .level-road-section {
-  height: calc(100dvh - 240px - env(safe-area-inset-top));
+  height: calc(100dvh - 186px - env(safe-area-inset-top));
   min-height: 0;
   overflow: hidden;
 }
@@ -470,13 +478,13 @@ button {
 }
 
 .view-island {
-  height: calc(100dvh - 240px - env(safe-area-inset-top));
+  height: calc(100dvh - 186px - env(safe-area-inset-top));
   min-height: 0;
   overflow: hidden;
 }
 
 .view-market {
-  height: calc(100dvh - 232px - env(safe-area-inset-top));
+  height: calc(100dvh - 178px - env(safe-area-inset-top));
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1683,12 +1691,12 @@ button {
   }
 
   .game-header {
-    min-height: 101px;
+    min-height: 108px;
   }
 
   .game-logo {
-    max-width: 216px;
-    height: 43px;
+    max-width: 226px;
+    height: 48px;
     font-size: 25px;
   }
 
@@ -1746,11 +1754,11 @@ button {
 
 @media (max-height: 760px) {
   .game-header {
-    min-height: 98px;
+    min-height: 104px;
   }
 
   .game-logo {
-    height: 40px;
+    height: 45px;
     font-size: 23px;
   }
 
