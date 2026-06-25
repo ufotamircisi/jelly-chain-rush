@@ -69,7 +69,8 @@ const BOARD_SIZE = 370;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
-const CANDY_IMAGE_SIZE = CELL_SIZE * 0.9;
+const CANDY_IMAGE_SIZE = CELL_SIZE * 0.94;
+const CANDY_IMAGE_OFFSET_Y = 0;
 const CASCADE_SETTLE_DELAY = 650;
 const APP_VERSION = '0.1.0';
 const SHOW_BANNER_PLACEHOLDER = true;
@@ -933,7 +934,7 @@ export class MainScene extends Phaser.Scene {
   private drawCandyIcon(container: Phaser.GameObjects.Container, candyType: CandyType): void {
     const textureKey = CANDY_TEXTURE_KEY_BY_TYPE[candyType];
     if (textureKey && this.textures.exists(textureKey)) {
-      const candyImage = this.add.image(0, -7, textureKey)
+      const candyImage = this.add.image(0, CANDY_IMAGE_OFFSET_Y, textureKey)
         .setDisplaySize(CANDY_IMAGE_SIZE, CANDY_IMAGE_SIZE)
         .setOrigin(0.5)
         .setName(textureKey);
