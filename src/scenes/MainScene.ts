@@ -31,7 +31,7 @@ import {
 import { createGameState } from '../game/gameState';
 import { areGoalsComplete, getGoalProgress } from '../game/levels';
 import { calculateRewardSummary } from '../game/rewards';
-import { createTranslator, SUPPORTED_LOCALES, type TranslationKey } from '../locales';
+import { createTranslator, LOCALE_NATIVE_NAMES, SUPPORTED_LOCALES, type TranslationKey } from '../locales';
 import {
   claimRewardedMilestone,
   createAdFlowPlan,
@@ -407,7 +407,10 @@ export class MainScene extends Phaser.Scene {
   }
 
   private renderSettingsModal(message = ''): void {
-    const languageOptions = SUPPORTED_LOCALES.map((locale) => `<option value="${locale}"${locale === this.locale ? ' selected' : ''}>${locale.toUpperCase()}</option>`).join('');
+    const languageOptions = SUPPORTED_LOCALES.map((locale) => {
+      const label = LOCALE_NATIVE_NAMES[locale] ?? locale.toUpperCase();
+      return `<option value="${locale}"${locale === this.locale ? ' selected' : ''}>${label}</option>`;
+    }).join('');
     const lastSaved = this.save.lastSavedAt ? new Date(this.save.lastSavedAt).toLocaleString(this.locale === 'tr' ? 'tr-TR' : 'en-US') : this.t('neverSaved');
 
     this.openModal(`

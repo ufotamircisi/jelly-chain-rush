@@ -1,28 +1,39 @@
 import type { LocaleCode } from '../types';
+import { de, es, fr, id, it, nl, pl, pt, vi } from './additionalLocales';
 import en from './en';
 import tr from './tr';
 
 type TranslationTable = typeof en;
 export type TranslationKey = keyof TranslationTable;
 
-const fallbackLocales: Record<Exclude<LocaleCode, 'en' | 'tr'>, TranslationTable> = {
-  es: en,
-  pt: en,
-  fr: en,
-  de: en,
-  it: en,
-  id: en,
-  vi: en,
-  nl: en,
-  pl: en
-};
-
 export const SUPPORTED_LOCALES: LocaleCode[] = ['en', 'tr', 'es', 'pt', 'fr', 'de', 'it', 'id', 'vi', 'nl', 'pl'];
+
+export const LOCALE_NATIVE_NAMES: Record<LocaleCode, string> = {
+  en: 'English',
+  tr: 'Turkce',
+  es: 'Espanol',
+  pt: 'Portugues',
+  fr: 'Francais',
+  de: 'Deutsch',
+  it: 'Italiano',
+  id: 'Bahasa Indonesia',
+  vi: 'Tieng Viet',
+  nl: 'Nederlands',
+  pl: 'Polski'
+};
 
 export const translations: Record<LocaleCode, TranslationTable> = {
   en,
   tr,
-  ...fallbackLocales
+  es,
+  pt,
+  fr,
+  de,
+  it,
+  id,
+  vi,
+  nl,
+  pl
 };
 
 export function detectLocale(): LocaleCode {
@@ -48,5 +59,5 @@ export function isLocaleCode(value: string): value is LocaleCode {
 
 export function createTranslator(locale: LocaleCode) {
   const table = translations[locale] ?? translations.en;
-  return (key: TranslationKey): string => table[key] ?? translations.en[key];
+  return (key: TranslationKey): string => table[key];
 }

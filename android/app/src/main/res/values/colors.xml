@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#2A66DC</color>
+    <color name="colorPrimaryDark">#143B9F</color>
+    <color name="colorAccent">#FF5AA6</color>
+    <color name="jelly_status_bar">#2A66DC</color>
+    <color name="jelly_navigation_bar">#143B9F</color>
+</resources>
