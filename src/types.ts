@@ -66,6 +66,8 @@ export interface SaveData {
   currentLevel: number;
   highestUnlockedLevel: number;
   completedLevels: number[];
+  shownForcedAdMilestones: number[];
+  claimedRewardedMilestones: number[];
   energy: number;
   diamonds: number;
   superChests: number;

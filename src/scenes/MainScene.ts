@@ -33,6 +33,12 @@ import { areGoalsComplete, getGoalProgress } from '../game/levels';
 import { calculateRewardSummary } from '../game/rewards';
 import { createTranslator, SUPPORTED_LOCALES, type TranslationKey } from '../locales';
 import {
+  claimRewardedMilestone,
+  createAdFlowPlan,
+  markForcedBreakShown,
+  type AdFlowPlan
+} from '../services/adPlaceholderService';
+import {
   exportBackupCode,
   getCurrentPlayableLevel,
   importBackupCode,
@@ -141,7 +147,8 @@ export class MainScene extends Phaser.Scene {
   private dragStart?: BoardPosition;
   private sfx!: CandySfx;
   private selectedBuildingId?: number;
-  private pendingAdFlow?: { completedLevel: number; rewardedHandled: boolean };
+  private pendingAdFlow?: AdFlowPlan & { forcedHandled: boolean; rewardedHandled: boolean };
+  private completedLevelWasReplay = false;
 
   constructor() {
     super('MainScene');
@@ -221,6 +228,7 @@ export class MainScene extends Phaser.Scene {
     this.el('phone-frame').classList.toggle('is-island-active', this.screen === 'island');
     this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
     this.setText('game-title', this.t('title'));
+    this.setText('top-ad-banner-text', this.t('adArea'));
     this.renderLogo();
     this.el('settings-button').setAttribute('aria-label', this.t('settings'));
     this.el('settings-button').setAttribute('title', this.t('settings'));
@@ -1300,6 +1308,7 @@ export class MainScene extends Phaser.Scene {
     this.vibrate([18, 32, 28]);
     const reward = calculateRewardSummary(this.state);
     const alreadyCompleted = this.save.completedLevels.includes(this.state.level);
+    this.completedLevelWasReplay = alreadyCompleted;
     const energyResult = applyFreeEnergy(this.state.energy, reward.totalEnergy);
     this.rewardSummary = {
       ...reward,
@@ -1372,6 +1381,7 @@ export class MainScene extends Phaser.Scene {
     saveData(this.save);
     this.state = createGameState(this.save);
     this.rewardSummary = undefined;
+    this.completedLevelWasReplay = false;
     this.screen = 'play';
     this.playMode = 'game';
     this.closeModal();
@@ -1384,6 +1394,7 @@ export class MainScene extends Phaser.Scene {
   private restartLevel(): void {
     this.state = createGameState(this.save);
     this.rewardSummary = undefined;
+    this.completedLevelWasReplay = false;
     this.screen = 'play';
     this.playMode = 'game';
     this.closeModal();
@@ -1451,14 +1462,22 @@ export class MainScene extends Phaser.Scene {
 
   private beginNextLevelFlow(): void {
     const completedLevel = this.state.level;
+    const plan = createAdFlowPlan(this.save, completedLevel, this.completedLevelWasReplay);
 
-    if (completedLevel % 5 !== 0) {
+    if (!plan.showForcedBreak && !plan.showRewardedOffer) {
       this.startNextLevel();
       return;
     }
 
-    this.pendingAdFlow = { completedLevel, rewardedHandled: false };
-    this.renderMandatoryAdModal();
+    this.pendingAdFlow = { ...plan, forcedHandled: !plan.showForcedBreak, rewardedHandled: !plan.showRewardedOffer };
+
+    if (plan.showForcedBreak) {
+      this.save = markForcedBreakShown(this.save, completedLevel);
+      this.renderMandatoryAdModal();
+      return;
+    }
+
+    this.renderRewardedAdOfferModal();
   }
 
   private renderMandatoryAdModal(): void {
@@ -1477,7 +1496,13 @@ export class MainScene extends Phaser.Scene {
 
   private continueAfterMandatoryAd(): void {
     const flow = this.pendingAdFlow;
-    if (flow?.completedLevel && flow.completedLevel % 10 === 0 && !flow.rewardedHandled) {
+    if (!flow) {
+      this.startNextLevel();
+      return;
+    }
+
+    flow.forcedHandled = true;
+    if (flow.showRewardedOffer && !flow.rewardedHandled) {
       this.renderRewardedAdOfferModal();
       return;
     }
@@ -1514,14 +1539,14 @@ export class MainScene extends Phaser.Scene {
     if (!flow || flow.rewardedHandled) return;
 
     flow.rewardedHandled = true;
-    const energyResult = applyMarketEnergy(this.state.energy, 100);
-    this.state.energy = energyResult.energy;
-    this.state.diamonds += 50;
     this.save.energy = this.state.energy;
     this.save.diamonds = this.state.diamonds;
-    saveData(this.save);
+    const result = claimRewardedMilestone(this.save, flow.completedLevel);
+    this.save = result.save;
+    this.state.energy = this.save.energy;
+    this.state.diamonds = this.save.diamonds;
     this.sfx.playPurchaseSuccess();
-    if (energyResult.capped) {
+    if (result.capped) {
       this.showWarning(this.t('energyFull'));
     }
     this.startNextLevel();

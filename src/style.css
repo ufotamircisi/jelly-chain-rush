@@ -41,7 +41,7 @@ button {
   height: 100vh;
   height: 100dvh;
   max-height: 100dvh;
-  padding: 4px 10px 70px;
+  padding: max(4px, env(safe-area-inset-top)) 10px 70px;
   overflow: hidden;
   color: #3d2362;
   background:
@@ -94,6 +94,7 @@ button {
 }
 
 .game-header,
+.top-ad-banner,
 .view,
 .bottom-nav,
 .modal-root {
@@ -101,9 +102,26 @@ button {
   z-index: 1;
 }
 
+.top-ad-banner {
+  display: grid;
+  place-items: center;
+  width: min(320px, 92%);
+  height: 50px;
+  margin: 0 auto 4px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 8px;
+  color: rgba(61, 35, 98, 0.66);
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 .game-header {
-  min-height: 110px;
-  padding-top: 7px;
+  min-height: 104px;
+  padding-top: 3px;
 }
 
 .header-controls {
@@ -279,7 +297,7 @@ button {
 }
 
 .level-road-section {
-  height: calc(100dvh - 186px);
+  height: calc(100dvh - 240px - env(safe-area-inset-top));
   min-height: 0;
   overflow: hidden;
 }
@@ -452,13 +470,13 @@ button {
 }
 
 .view-island {
-  height: calc(100dvh - 186px);
+  height: calc(100dvh - 240px - env(safe-area-inset-top));
   min-height: 0;
   overflow: hidden;
 }
 
 .view-market {
-  height: calc(100dvh - 178px);
+  height: calc(100dvh - 232px - env(safe-area-inset-top));
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1665,12 +1683,12 @@ button {
   }
 
   .game-header {
-    min-height: 108px;
+    min-height: 101px;
   }
 
   .game-logo {
-    max-width: 226px;
-    height: 48px;
+    max-width: 216px;
+    height: 43px;
     font-size: 25px;
   }
 
@@ -1728,11 +1746,11 @@ button {
 
 @media (max-height: 760px) {
   .game-header {
-    min-height: 104px;
+    min-height: 98px;
   }
 
   .game-logo {
-    height: 45px;
+    height: 40px;
     font-size: 23px;
   }
 
