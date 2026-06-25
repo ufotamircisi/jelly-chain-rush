@@ -113,24 +113,24 @@ const MULTIPLIER_TINTS = [
 ];
 
 const ISLAND_BUILDING_LAYOUT: Record<number, { x: number; y: number; size: 'small' | 'medium' | 'large' }> = {
-  1: { x: 46, y: 760, size: 'small' },
-  2: { x: 28, y: 724, size: 'small' },
-  3: { x: 68, y: 704, size: 'small' },
-  4: { x: 40, y: 664, size: 'small' },
-  5: { x: 74, y: 626, size: 'medium' },
-  6: { x: 25, y: 598, size: 'medium' },
-  7: { x: 55, y: 560, size: 'medium' },
-  8: { x: 78, y: 520, size: 'medium' },
-  9: { x: 33, y: 492, size: 'medium' },
-  10: { x: 63, y: 454, size: 'medium' },
-  11: { x: 45, y: 416, size: 'large' },
-  12: { x: 73, y: 378, size: 'medium' },
-  13: { x: 28, y: 350, size: 'large' },
-  14: { x: 57, y: 318, size: 'large' },
-  15: { x: 76, y: 282, size: 'large' },
-  16: { x: 36, y: 258, size: 'large' },
-  17: { x: 50, y: 218, size: 'large' },
-  18: { x: 66, y: 188, size: 'large' }
+  1: { x: 46, y: 749, size: 'small' },
+  2: { x: 28, y: 713, size: 'small' },
+  3: { x: 68, y: 693, size: 'small' },
+  4: { x: 40, y: 653, size: 'small' },
+  5: { x: 74, y: 615, size: 'medium' },
+  6: { x: 25, y: 587, size: 'medium' },
+  7: { x: 55, y: 549, size: 'medium' },
+  8: { x: 78, y: 509, size: 'medium' },
+  9: { x: 33, y: 481, size: 'medium' },
+  10: { x: 63, y: 443, size: 'medium' },
+  11: { x: 45, y: 405, size: 'large' },
+  12: { x: 73, y: 367, size: 'medium' },
+  13: { x: 28, y: 339, size: 'large' },
+  14: { x: 34, y: 298, size: 'large' },
+  15: { x: 74, y: 350, size: 'large' },
+  16: { x: 36, y: 239, size: 'large' },
+  17: { x: 39, y: 198, size: 'large' },
+  18: { x: 76, y: 150, size: 'large' }
 };
 
 export class MainScene extends Phaser.Scene {
