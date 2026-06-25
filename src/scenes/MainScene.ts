@@ -113,24 +113,24 @@ const MULTIPLIER_TINTS = [
 ];
 
 const ISLAND_BUILDING_LAYOUT: Record<number, { x: number; y: number; size: 'small' | 'medium' | 'large' }> = {
-  1: { x: 39, y: 830, size: 'small' },
-  2: { x: 61, y: 798, size: 'small' },
-  3: { x: 34, y: 758, size: 'small' },
-  4: { x: 64, y: 718, size: 'small' },
-  5: { x: 52, y: 676, size: 'medium' },
-  6: { x: 70, y: 626, size: 'medium' },
-  7: { x: 42, y: 590, size: 'medium' },
-  8: { x: 34, y: 538, size: 'medium' },
-  9: { x: 58, y: 508, size: 'medium' },
-  10: { x: 70, y: 462, size: 'medium' },
-  11: { x: 52, y: 420, size: 'large' },
-  12: { x: 34, y: 374, size: 'medium' },
-  13: { x: 61, y: 342, size: 'large' },
-  14: { x: 34, y: 452, size: 'large' },
-  15: { x: 72, y: 292, size: 'large' },
-  16: { x: 38, y: 276, size: 'large' },
-  17: { x: 45, y: 226, size: 'large' },
-  18: { x: 66, y: 204, size: 'large' }
+  1: { x: 46, y: 760, size: 'small' },
+  2: { x: 28, y: 724, size: 'small' },
+  3: { x: 68, y: 704, size: 'small' },
+  4: { x: 40, y: 664, size: 'small' },
+  5: { x: 74, y: 626, size: 'medium' },
+  6: { x: 25, y: 598, size: 'medium' },
+  7: { x: 55, y: 560, size: 'medium' },
+  8: { x: 78, y: 520, size: 'medium' },
+  9: { x: 33, y: 492, size: 'medium' },
+  10: { x: 63, y: 454, size: 'medium' },
+  11: { x: 45, y: 416, size: 'large' },
+  12: { x: 73, y: 378, size: 'medium' },
+  13: { x: 28, y: 350, size: 'large' },
+  14: { x: 57, y: 318, size: 'large' },
+  15: { x: 76, y: 282, size: 'large' },
+  16: { x: 36, y: 258, size: 'large' },
+  17: { x: 50, y: 218, size: 'large' },
+  18: { x: 66, y: 188, size: 'large' }
 };
 
 export class MainScene extends Phaser.Scene {
@@ -612,8 +612,8 @@ export class MainScene extends Phaser.Scene {
     if (!map.dataset.initialScrollSet) {
       map.dataset.initialScrollSet = 'true';
       window.requestAnimationFrame(() => {
-        map.scrollLeft = 140;
-        map.scrollTop = map.scrollHeight - map.clientHeight;
+        map.scrollLeft = 0;
+        map.scrollTop = Math.max(0, map.scrollHeight - map.clientHeight - 138);
       });
     }
 
