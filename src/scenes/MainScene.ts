@@ -286,13 +286,13 @@ export class MainScene extends Phaser.Scene {
   private renderOverlay(): void {
     const gameplayActive = this.screen === 'play' && this.playMode === 'game';
     this.el('phone-frame').classList.toggle('is-gameplay-active', gameplayActive);
-    this.el('phone-frame').classList.toggle('has-top-banner', SHOW_BANNER_PLACEHOLDER && this.screen === 'play');
+    this.el('phone-frame').classList.toggle('has-top-banner', gameplayActive);
     this.el('shake-button').toggleAttribute('disabled', !this.canUseShake());
     this.el('phone-frame').classList.toggle('is-island-active', this.screen === 'island');
     this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
     this.setText('game-title', this.t('title'));
-    this.setText('top-ad-banner-text', this.t('adArea'));
-    this.el('top-ad-banner').setAttribute('aria-label', this.t('adArea'));
+    this.setText('top-ad-banner-text', this.t('title'));
+    this.el('top-ad-banner').setAttribute('aria-label', this.t('title'));
     this.renderLogo();
     this.el('settings-button').setAttribute('aria-label', this.t('settings'));
     this.el('settings-button').setAttribute('title', this.t('settings'));
@@ -333,16 +333,13 @@ export class MainScene extends Phaser.Scene {
   }
 
   private renderLogo(): void {
-    const showBanner = SHOW_BANNER_PLACEHOLDER && this.screen === 'play';
-    this.el('top-ad-banner').classList.toggle('is-active', showBanner);
+    const showBrandSlot = this.screen === 'play' && this.playMode === 'game';
+    this.el('top-ad-banner').classList.toggle('is-active', showBrandSlot);
     const title = this.el('game-title');
-    title.classList.toggle('is-hidden-for-banner', showBanner);
-    if (showBanner) {
-      title.innerHTML = '';
-      return;
+    title.classList.toggle('is-hidden-for-banner', showBrandSlot);
+    if (!showBrandSlot) {
+      title.innerHTML = `<img src="${UI_ASSETS.logo}" alt="${this.t('title')}" />`;
     }
-
-    title.innerHTML = `<img src="${UI_ASSETS.logo}" alt="${this.t('title')}" />`;
   }
 
   private getCurrentPlayableLevel(): number {
