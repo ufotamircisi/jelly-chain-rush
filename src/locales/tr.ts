@@ -158,7 +158,7 @@ const tr: typeof en = {
   marketBoosters: 'Güçlendiriciler daha sonra',
   marketPacks: 'Elmas paketleri daha sonra',
   removeAdsTitle: 'Reklamları Kaldır',
-  removeAdsLabel: 'Zorunlu reklamları kalıcı olarak kaldır. – 99,99 TL',
+  removeAdsLabel: 'Reklamları Kaldır = 99.99 TL',
   removeAdsNote: 'Ödüllü reklamlar kalkmaz.',
   buildingCandyStand: 'Şeker Tezgahı',
   buildingGummyStand: 'Jelibon Standı',

@@ -157,7 +157,7 @@ const en = {
   marketBoosters: 'Boosters later',
   marketPacks: 'Diamond packs later',
   removeAdsTitle: 'Remove Ads',
-  removeAdsLabel: 'Permanently remove forced ads. – $4.99',
+  removeAdsLabel: 'Remove Ads = $4.99',
   removeAdsNote: 'Rewarded ads are not removed.',
   buildingCandyStand: 'Candy Stand',
   buildingGummyStand: 'Gummy Stand',
