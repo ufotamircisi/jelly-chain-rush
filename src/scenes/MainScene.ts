@@ -738,13 +738,21 @@ export class MainScene extends Phaser.Scene {
       }))
     );
 
+    // Remove Ads – UI placeholder only, no real IAP implementation
+    const removeAdsTitle = this.locale === 'tr' ? 'Reklamları Kaldır' : 'Remove Ads';
+    const removeAdsLabel = this.locale === 'tr'
+      ? 'Zorunlu reklamları kalıcı kaldır – 99,99 TL'
+      : 'Permanently remove forced ads – $4.99';
     this.renderMarketSection(
       list,
-      this.t('comingSoon'),
-      [
-        { label: this.t('freeEnergyComingSoon'), iconSrc: UI_ASSETS.stats.energy, iconLabel: this.t('energy'), onClick: () => this.showWarning(this.t('comingSoon')), active: false },
-        { label: this.t('marketBoosters'), iconSrc: UI_ASSETS.stats.shake, iconLabel: this.t('shake'), onClick: () => this.showWarning(this.t('comingSoon')), active: false }
-      ]
+      removeAdsTitle,
+      [{
+        label: removeAdsLabel,
+        iconSrc: UI_ASSETS.stats.diamond,
+        iconLabel: removeAdsTitle,
+        onClick: () => this.showWarning(this.t('marketPurchaseReadySoon')),
+        active: true
+      }]
     );
   }
 
