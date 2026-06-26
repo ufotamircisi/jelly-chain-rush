@@ -1,6 +1,6 @@
 import { STARTING_ENERGY } from '../game/economy';
 import { detectLocale, isLocaleCode } from '../locales';
-import type { LocaleCode, SaveData } from '../types';
+import { SHAKES_PER_LEVEL, type LocaleCode, type SaveData } from '../types';
 
 export const SAVE_VERSION = 3;
 export const SAVE_KEY = 'jelly-chain-rush.save.v3';
@@ -23,6 +23,8 @@ export function createDefaultSave(): SaveData {
     shownForcedAdMilestones: [],
     claimedRewardedMilestones: [],
     energy: STARTING_ENERGY,
+    shakes: SHAKES_PER_LEVEL,
+    lastRegenAt: '',
     diamonds: 250,
     superChests: 0,
     chests: 0,
@@ -173,6 +175,8 @@ function normalizeSave(input: Partial<SaveData>, fallback = createDefaultSave())
     shownForcedAdMilestones: sanitizeNumberArray(input.shownForcedAdMilestones),
     claimedRewardedMilestones: sanitizeNumberArray(input.claimedRewardedMilestones),
     energy: clampNumber(input.energy, 0, 999, fallback.energy),
+    shakes: clampNumber(input.shakes, 0, 99, SHAKES_PER_LEVEL),
+    lastRegenAt: typeof input.lastRegenAt === 'string' && input.lastRegenAt ? input.lastRegenAt : '',
     diamonds: clampNumber(input.diamonds, 0, 999999, fallback.diamonds),
     superChests: clampNumber(input.superChests, 0, 999999, fallback.superChests),
     chests: clampNumber(input.chests, 0, 999999, fallback.chests),

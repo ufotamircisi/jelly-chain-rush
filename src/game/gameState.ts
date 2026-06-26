@@ -1,6 +1,6 @@
 import { createBoard } from './boardModel';
 import { getLevelConfig } from './levels';
-import { SHAKES_PER_LEVEL, type GameState, type SaveData } from '../types';
+import type { GameState, SaveData } from '../types';
 
 export function createGameState(save: SaveData): GameState {
   const definition = getLevelConfig(save.currentLevel);
@@ -9,7 +9,7 @@ export function createGameState(save: SaveData): GameState {
     level: save.currentLevel,
     definition,
     score: 0,
-    shakesRemaining: SHAKES_PER_LEVEL,
+    shakesRemaining: save.shakes,
     energy: save.energy,
     diamonds: save.diamonds,
     candyBlasts: {},

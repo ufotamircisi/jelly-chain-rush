@@ -22,10 +22,16 @@ import { getDailyReward } from '../game/dailyRewards';
 import {
   applyFreeEnergy,
   applyMarketEnergy,
+  applyOfflineRegen,
+  getRegenMsUntilNext,
   HARD_ENERGY_CAP,
   MARKET_DIAMOND_PACKS,
   MARKET_ENERGY_ITEMS,
   MARKET_SHAKE_ITEMS,
+  REGEN_ENERGY_AMOUNT,
+  REGEN_ENERGY_CAP,
+  REGEN_SHAKES_AMOUNT,
+  REGEN_SHAKES_CAP,
   SHAKE_ENERGY_COST
 } from '../game/economy';
 import { createGameState } from '../game/gameState';
@@ -167,6 +173,17 @@ export class MainScene extends Phaser.Scene {
 
   create(): void {
     this.save = loadSave();
+    // Apply offline regen before creating game state so shakes/energy are up to date
+    const regenOnLoad = applyOfflineRegen(this.save.energy, this.save.shakes, this.save.lastRegenAt);
+    this.save.energy = regenOnLoad.energy;
+    this.save.shakes = regenOnLoad.shakes;
+    this.save.lastRegenAt = regenOnLoad.lastRegenAt;
+    if (regenOnLoad.energyGained > 0 || regenOnLoad.shakesGained > 0) {
+      saveData(this.save);
+    } else if (!this.save.lastRegenAt) {
+      saveData(this.save);
+    }
+
     this.locale = this.save.language;
     this.t = createTranslator(this.locale);
     this.sfx = new CandySfx(this.save.soundEnabled);
@@ -175,6 +192,9 @@ export class MainScene extends Phaser.Scene {
     this.bindOverlay();
     this.bindBoardInput();
     this.renderOverlay();
+
+    // Countdown display: update every second; regen check every minute
+    this.time.addEvent({ delay: 1_000, loop: true, callback: this.tickRegen, callbackScope: this });
 
     if (this.isDailyRewardAvailable()) {
       this.renderDailyRewardModal();
@@ -330,6 +350,7 @@ export class MainScene extends Phaser.Scene {
     this.renderNav();
     this.renderUiIcons();
     this.renderModalForStatus();
+    this.renderRegenCountdown();
   }
 
   private renderLogo(): void {
@@ -1487,6 +1508,7 @@ export class MainScene extends Phaser.Scene {
     this.pendingAdFlow = undefined;
     this.save.currentLevel = Math.max(this.save.currentLevel, this.state.level + 1);
     this.save.energy = this.state.energy;
+    this.save.shakes = this.state.shakesRemaining;
     this.save.diamonds = this.state.diamonds;
     saveData(this.save);
     this.state = createGameState(this.save);
@@ -1504,14 +1526,16 @@ export class MainScene extends Phaser.Scene {
     const reward = this.rewardSummary ?? calculateRewardSummary(this.state);
     const rewardRows = [
       `<article><span>${this.t('levelReward')}</span><strong>+${reward.levelEnergy} ${this.t('energy')}</strong></article>`,
-      `<article><span>${this.t('starReward')}</span><strong>+${reward.starEnergy} ${this.t('energy')} +${reward.starDiamonds} ${this.t('diamonds')}</strong></article>`
+      `<article><span>${this.t('starReward')}</span><strong>+${reward.starEnergy} ${this.t('energy')}</strong></article>`
     ];
 
     if (reward.multiplierEnergy > 0 || reward.multiplierDiamonds > 0) {
-      rewardRows.push(`<article><span>${this.t('multiplierBonus')}</span><strong>+${reward.multiplierEnergy} ${this.t('energy')} +${reward.multiplierDiamonds} ${this.t('diamonds')}</strong></article>`);
+      const mulDiamondPart = reward.multiplierDiamonds > 0 ? ` +${reward.multiplierDiamonds} ${this.t('diamonds')}` : '';
+      rewardRows.push(`<article><span>${this.t('multiplierBonus')}</span><strong>+${reward.multiplierEnergy} ${this.t('energy')}${mulDiamondPart}</strong></article>`);
     }
 
-    rewardRows.push(`<article><span>${this.t('totalReward')}</span><strong>+${reward.totalEnergy} ${this.t('energy')} +${reward.totalDiamonds} ${this.t('diamonds')}</strong></article>`);
+    const totalDiamondPart = reward.totalDiamonds > 0 ? ` +${reward.totalDiamonds} ${this.t('diamonds')}` : '';
+    rewardRows.push(`<article><span>${this.t('totalReward')}</span><strong>+${reward.totalEnergy} ${this.t('energy')}${totalDiamondPart}</strong></article>`);
 
     if (reward.superChest) {
       rewardRows.push(`<article class="result-special-row"><span>${this.t('superChest')}</span><strong>${this.t('superChestUnlocked')}</strong></article>`);
@@ -2174,9 +2198,56 @@ export class MainScene extends Phaser.Scene {
 
   private syncSaveCurrency(): void {
     this.save.energy = this.state.energy;
+    this.save.shakes = this.state.shakesRemaining;
     this.save.diamonds = this.state.diamonds;
     this.save.currentLevel = this.state.level;
     saveData(this.save);
+  }
+
+  private tickRegen(): void {
+    const result = applyOfflineRegen(this.save.energy, this.save.shakes, this.save.lastRegenAt);
+    if (result.energyGained > 0 || result.shakesGained > 0) {
+      this.save.energy = result.energy;
+      this.save.shakes = result.shakes;
+      this.save.lastRegenAt = result.lastRegenAt;
+      this.state.energy = result.energy;
+      saveData(this.save);
+      this.renderOverlay();
+    }
+    this.renderRegenCountdown();
+  }
+
+  private renderRegenCountdown(): void {
+    const el = document.getElementById('regen-countdown');
+    if (!el) return;
+
+    if (this.screen !== 'play') {
+      el.textContent = '';
+      return;
+    }
+
+    const energyNeedsRegen = this.state.energy < REGEN_ENERGY_CAP;
+    const shakesNeedRegen = this.save.shakes < REGEN_SHAKES_CAP;
+
+    if (!energyNeedsRegen && !shakesNeedRegen) {
+      el.textContent = '';
+      return;
+    }
+
+    const ms = getRegenMsUntilNext(this.save.lastRegenAt);
+    const minutes = Math.floor(ms / 60_000);
+    const seconds = Math.floor((ms % 60_000) / 1_000);
+    const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+    const gains: string[] = [];
+    if (energyNeedsRegen) {
+      gains.push(this.t('regenEnergyGain').replace('{amount}', String(REGEN_ENERGY_AMOUNT)));
+    }
+    if (shakesNeedRegen) {
+      gains.push(this.t('regenShakeGain').replace('{amount}', String(REGEN_SHAKES_AMOUNT)));
+    }
+
+    el.textContent = `${gains.join(' ')} ${this.t('regenIn').replace('{time}', timeStr)}`.trim();
   }
 
   private isDailyRewardAvailable(): boolean {

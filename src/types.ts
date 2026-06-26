@@ -69,6 +69,8 @@ export interface SaveData {
   shownForcedAdMilestones: number[];
   claimedRewardedMilestones: number[];
   energy: number;
+  shakes: number;
+  lastRegenAt: string;
   diamonds: number;
   superChests: number;
   chests: number;

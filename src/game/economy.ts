@@ -4,6 +4,61 @@ export const HARD_ENERGY_CAP = 999;
 export const SHAKE_ENERGY_COST = 20;
 export const LEVEL_COMPLETE_ENERGY_REWARD = 100;
 
+export const REGEN_INTERVAL_MS = 15 * 60 * 1000;
+export const REGEN_ENERGY_AMOUNT = 20;
+export const REGEN_ENERGY_CAP = 100;
+export const REGEN_SHAKES_AMOUNT = 1;
+export const REGEN_SHAKES_CAP = 5;
+const MAX_REGEN_TICKS = 24;
+
+export function applyOfflineRegen(
+  energy: number,
+  shakes: number,
+  lastRegenAt: string
+): { energy: number; shakes: number; lastRegenAt: string; energyGained: number; shakesGained: number } {
+  const now = Date.now();
+  const lastMs = lastRegenAt ? new Date(lastRegenAt).getTime() : 0;
+
+  if (!lastMs || !Number.isFinite(lastMs) || lastMs > now) {
+    return { energy, shakes, lastRegenAt: new Date(now).toISOString(), energyGained: 0, shakesGained: 0 };
+  }
+
+  const ticks = Math.min(Math.floor((now - lastMs) / REGEN_INTERVAL_MS), MAX_REGEN_TICKS);
+  if (ticks === 0) return { energy, shakes, lastRegenAt, energyGained: 0, shakesGained: 0 };
+
+  let e = energy;
+  let s = shakes;
+  let eg = 0;
+  let sg = 0;
+
+  for (let i = 0; i < ticks; i++) {
+    if (e < REGEN_ENERGY_CAP) {
+      const gain = Math.min(REGEN_ENERGY_AMOUNT, REGEN_ENERGY_CAP - e);
+      e += gain;
+      eg += gain;
+    }
+    if (s < REGEN_SHAKES_CAP) {
+      s = Math.min(s + REGEN_SHAKES_AMOUNT, REGEN_SHAKES_CAP);
+      sg++;
+    }
+  }
+
+  return {
+    energy: e,
+    shakes: s,
+    lastRegenAt: new Date(lastMs + ticks * REGEN_INTERVAL_MS).toISOString(),
+    energyGained: eg,
+    shakesGained: sg
+  };
+}
+
+export function getRegenMsUntilNext(lastRegenAt: string): number {
+  if (!lastRegenAt) return REGEN_INTERVAL_MS;
+  const lastMs = new Date(lastRegenAt).getTime();
+  if (!Number.isFinite(lastMs)) return REGEN_INTERVAL_MS;
+  return Math.max(0, lastMs + REGEN_INTERVAL_MS - Date.now());
+}
+
 export const MARKET_ENERGY_ITEMS = [
   { energy: 50, cost: 50, labelKey: 'marketEnergySmall' },
   { energy: 100, cost: 90, labelKey: 'marketEnergyMedium' },
