@@ -74,7 +74,7 @@ const CANDY_IMAGE_OFFSET_Y = -2;
 const MULTIPLIER_LABEL_OFFSET_Y = 14;
 const CASCADE_SETTLE_DELAY_MS = 1000;
 const APP_VERSION = '0.1.0';
-const SHOW_BANNER_PLACEHOLDER = true;
+const SHOW_BANNER_PLACEHOLDER = false;
 const LEVEL_ROAD_SEGMENT_SIZE = 50;
 const LEVEL_ROAD_MAP_ASPECT_RATIO = 1672 / 941;
 const LEVEL_ROAD_FALLBACK_WIDTH = 390;
@@ -286,7 +286,7 @@ export class MainScene extends Phaser.Scene {
   private renderOverlay(): void {
     const gameplayActive = this.screen === 'play' && this.playMode === 'game';
     this.el('phone-frame').classList.toggle('is-gameplay-active', gameplayActive);
-    this.el('phone-frame').classList.toggle('has-top-banner', SHOW_BANNER_PLACEHOLDER);
+    this.el('phone-frame').classList.toggle('has-top-banner', SHOW_BANNER_PLACEHOLDER && this.screen === 'play');
     this.el('shake-button').toggleAttribute('disabled', !this.canUseShake());
     this.el('phone-frame').classList.toggle('is-island-active', this.screen === 'island');
     this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
@@ -333,10 +333,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   private renderLogo(): void {
-    this.el('top-ad-banner').classList.toggle('is-active', SHOW_BANNER_PLACEHOLDER);
+    const showBanner = SHOW_BANNER_PLACEHOLDER && this.screen === 'play';
+    this.el('top-ad-banner').classList.toggle('is-active', showBanner);
     const title = this.el('game-title');
-    title.classList.toggle('is-hidden-for-banner', SHOW_BANNER_PLACEHOLDER);
-    if (SHOW_BANNER_PLACEHOLDER) {
+    title.classList.toggle('is-hidden-for-banner', showBanner);
+    if (showBanner) {
       title.innerHTML = '';
       return;
     }

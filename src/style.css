@@ -1815,3 +1815,78 @@ button {
     min-height: 44px;
   }
 }
+
+/* ===== SCREEN-SPECIFIC COMPACT HUD ===== */
+
+/* Gameplay: hide logo + goal/score cards → compact 4-card single-row header */
+.phone-frame.is-gameplay-active .game-logo,
+.phone-frame.is-gameplay-active .counter-goal,
+.phone-frame.is-gameplay-active .counter-score {
+  display: none;
+}
+
+.phone-frame.is-gameplay-active .game-header {
+  min-height: 50px;
+  padding-top: 4px;
+}
+
+.phone-frame.is-gameplay-active .counter-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Board gains vertical room from the shorter header */
+.phone-frame.is-gameplay-active .board-canvas {
+  width: min(
+    374px,
+    calc(100vw - 28px),
+    calc(100dvh - 370px - env(safe-area-inset-top) - env(safe-area-inset-bottom))
+  );
+}
+
+/* Ada (Island): compact 2-card resource row, no logo, no gameplay cards */
+.phone-frame.is-island-active .game-logo,
+.phone-frame.is-island-active .counter-level,
+.phone-frame.is-island-active .counter-goal,
+.phone-frame.is-island-active .counter-score,
+.phone-frame.is-island-active .counter-shakes {
+  display: none;
+}
+
+.phone-frame.is-island-active .game-header {
+  min-height: 50px;
+  padding-top: 4px;
+}
+
+.phone-frame.is-island-active .counter-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 220px;
+  margin-inline: auto;
+}
+
+.phone-frame.is-island-active .view-island {
+  height: calc(100dvh - 128px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}
+
+/* Market: compact 2-card resource row, no logo, no gameplay cards */
+.phone-frame.is-market-active .game-logo,
+.phone-frame.is-market-active .counter-level,
+.phone-frame.is-market-active .counter-goal,
+.phone-frame.is-market-active .counter-score,
+.phone-frame.is-market-active .counter-shakes {
+  display: none;
+}
+
+.phone-frame.is-market-active .game-header {
+  min-height: 50px;
+  padding-top: 4px;
+}
+
+.phone-frame.is-market-active .counter-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 220px;
+  margin-inline: auto;
+}
+
+.phone-frame.is-market-active .view-market {
+  height: calc(100dvh - 120px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}
