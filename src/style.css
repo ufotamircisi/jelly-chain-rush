@@ -569,8 +569,6 @@ button {
   width: 100% !important;
   height: 100% !important;
   touch-action: none;
-  /* Boost candy vibrancy: +12% saturation, +6% contrast without touching assets */
-  filter: saturate(1.12) contrast(1.06);
 }
 
 .helper-text,
