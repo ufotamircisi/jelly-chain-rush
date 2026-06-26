@@ -337,7 +337,9 @@ export class MainScene extends Phaser.Scene {
     this.el('top-ad-banner').classList.toggle('is-active', showBrandSlot);
     const title = this.el('game-title');
     title.classList.toggle('is-hidden-for-banner', showBrandSlot);
-    if (!showBrandSlot) {
+    if (showBrandSlot) {
+      this.el('top-ad-banner-text').innerHTML = `<img class="top-brand-logo" src="${UI_ASSETS.logo}" alt="${this.t('title')}" />`;
+    } else {
       title.innerHTML = `<img src="${UI_ASSETS.logo}" alt="${this.t('title')}" />`;
     }
   }
