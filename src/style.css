@@ -46,10 +46,7 @@ button {
   padding: max(8px, env(safe-area-inset-top)) 10px calc(76px + env(safe-area-inset-bottom));
   overflow: hidden;
   color: #3d2362;
-  background:
-    linear-gradient(180deg, rgba(52, 166, 255, 0.82), rgba(191, 242, 255, 0.58) 38%, rgba(255, 195, 231, 0.34) 60%, rgba(78, 190, 210, 0.58) 100%),
-    radial-gradient(circle at 8% 72%, rgba(255, 98, 171, 0.34), transparent 5.5rem),
-    radial-gradient(circle at 96% 76%, rgba(255, 222, 91, 0.34), transparent 5.8rem);
+  background: url('./assets/backgrounds/gameplay_candyland_bg.png') center / cover no-repeat;
   box-shadow: 0 0 52px rgba(27, 52, 142, 0.34);
 }
 
