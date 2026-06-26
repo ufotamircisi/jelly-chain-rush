@@ -333,15 +333,10 @@ export class MainScene extends Phaser.Scene {
   }
 
   private renderLogo(): void {
-    const showBrandSlot = this.screen === 'play' && this.playMode === 'game';
-    this.el('top-ad-banner').classList.toggle('is-active', showBrandSlot);
+    this.el('top-ad-banner').classList.remove('is-active');
     const title = this.el('game-title');
-    title.classList.toggle('is-hidden-for-banner', showBrandSlot);
-    if (showBrandSlot) {
-      this.el('top-ad-banner-text').innerHTML = `<img class="top-brand-logo" src="${UI_ASSETS.logo}" alt="${this.t('title')}" />`;
-    } else {
-      title.innerHTML = `<img src="${UI_ASSETS.logo}" alt="${this.t('title')}" />`;
-    }
+    title.classList.remove('is-hidden-for-banner');
+    title.innerHTML = `<img src="${UI_ASSETS.logo}" alt="${this.t('title')}" />`;
   }
 
   private getCurrentPlayableLevel(): number {

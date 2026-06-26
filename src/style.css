@@ -1880,15 +1880,19 @@ button {
 
 /* ===== SCREEN-SPECIFIC COMPACT HUD ===== */
 
-/* Gameplay: hide logo + goal/score cards → compact 4-card header + brand slot */
-.phone-frame.is-gameplay-active .game-logo,
+/* Gameplay: hide goal/score cards → compact 4-card header; logo shows compactly */
 .phone-frame.is-gameplay-active .counter-goal,
 .phone-frame.is-gameplay-active .counter-score {
   display: none;
 }
 
+.phone-frame.is-gameplay-active .game-logo {
+  height: 40px;
+  margin-bottom: 2px;
+}
+
 .phone-frame.is-gameplay-active .game-header {
-  min-height: 103px;
+  min-height: 96px;
   padding-top: 4px;
 }
 
@@ -1896,24 +1900,12 @@ button {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-/* Brand/ad slot on gameplay: premium glass card with logo asset */
-.phone-frame.is-gameplay-active .top-ad-banner {
-  background: rgba(255, 255, 255, 0.46);
-}
-
-.top-brand-logo {
-  display: block;
-  height: 30px;
-  max-width: 260px;
-  object-fit: contain;
-}
-
-/* Board accounts for taller header (brand slot 48px + 5px margin + 50px cards) */
+/* Board accounts for compact header (logo 40px + margin + 50px cards) */
 .phone-frame.is-gameplay-active .board-canvas {
   width: min(
     374px,
     calc(100vw - 28px),
-    calc(100dvh - 422px - env(safe-area-inset-top) - env(safe-area-inset-bottom))
+    calc(100dvh - 414px - env(safe-area-inset-top) - env(safe-area-inset-bottom))
   );
 }
 
