@@ -349,10 +349,31 @@ export class MainScene extends Phaser.Scene {
   private renderGoals(): void {
     const list = this.el('goal-list');
     list.innerHTML = '';
-    for (const goal of this.state.definition.goals) {
+    // Candy/multiplier chips first (visual), score chip last (text, full-width)
+    const goals = this.state.definition.goals;
+    const order = [
+      ...goals.map((g, i) => ({ goal: g, i })).filter(({ goal }) => goal.type !== 'score'),
+      ...goals.map((g, i) => ({ goal: g, i })).filter(({ goal }) => goal.type === 'score')
+    ];
+    for (const { goal, i } of order) {
+      const complete = this.isGoalComplete(goal);
+      const progress = getGoalProgress(this.state, goal);
       const item = document.createElement('article');
-      item.className = `goal-chip${this.isGoalComplete(goal) ? ' is-complete' : ''}`;
-      item.textContent = this.formatGoal(goal);
+      item.id = `goal-chip-${i}`;
+
+      if (goal.type === 'candy' && goal.candy) {
+        const remaining = Math.max(0, goal.target - progress);
+        const src = CANDY_ASSET_PACK.find((a) => a.candyType === goal.candy)?.src ?? '';
+        item.className = `goal-chip${complete ? ' is-complete' : ''}`;
+        item.innerHTML = `<img class="goal-chip-icon" src="${src}" alt=""><span class="goal-chip-count">${remaining}</span>`;
+      } else if (goal.type === 'score') {
+        item.className = `goal-chip goal-chip-score${complete ? ' is-complete' : ''}`;
+        item.innerHTML = `<span class="goal-chip-label">${this.t('goalScore')}</span><span class="goal-chip-count">${this.formatScore(progress)} / ${this.formatScore(goal.target)}</span>`;
+      } else {
+        item.className = `goal-chip${complete ? ' is-complete' : ''}`;
+        item.innerHTML = `<span class="goal-chip-label">×</span><span class="goal-chip-count">${progress} / ${goal.target}</span>`;
+      }
+
       list.appendChild(item);
     }
   }
@@ -1867,6 +1888,7 @@ export class MainScene extends Phaser.Scene {
     steps.forEach((step, index) => {
       this.time.delayedCall(index * CASCADE_SETTLE_DELAY_MS, () => {
         this.playBlastFeedback(step, index);
+        this.time.delayedCall(90, () => this.triggerGoalFlyAnimations(step));
         if (index < steps.length - 1) {
           this.time.delayedCall(260, () => {
             this.state.board = step.boardAfter;
@@ -2234,5 +2256,134 @@ export class MainScene extends Phaser.Scene {
 
   private positionKey(position: BoardPosition): string {
     return `${position.row}:${position.col}`;
+  }
+
+  private triggerGoalFlyAnimations(step: CascadeStep): void {
+    const goals = this.state.definition.goals;
+    goals.forEach((goal, goalIndex) => {
+      if (goal.type === 'candy' && goal.candy) {
+        const positions = step.candyPositions[goal.candy];
+        if (positions && positions.length > 0 && !this.isGoalComplete(goal)) {
+          this.flyToGoal(goal.candy, positions, goalIndex);
+        }
+      }
+    });
+    if (step.scoreDelta > 0 && goals.some((g) => g.type === 'score')) {
+      const center = this.getBlastCenter(step.matched);
+      this.flyScoreToGoal(center.x, center.y);
+    }
+  }
+
+  private flyToGoal(candyType: CandyType, positions: BoardPosition[], goalIndex: number): void {
+    const goalEl = document.getElementById(`goal-chip-${goalIndex}`);
+    if (!goalEl) return;
+    const src = CANDY_ASSET_PACK.find((a) => a.candyType === candyType)?.src;
+    if (!src) return;
+
+    const MAX_FLYERS = 5;
+    const canvas = this.game.canvas;
+    const canvasRect = canvas.getBoundingClientRect();
+    const sx = canvasRect.width / GAME_SIZE;
+    const sy = canvasRect.height / GAME_SIZE;
+
+    positions.slice(0, MAX_FLYERS).forEach((pos, i) => {
+      const worldX = BOARD_X + pos.col * CELL_SIZE + CELL_SIZE / 2;
+      const worldY = BOARD_Y + pos.row * CELL_SIZE + CELL_SIZE / 2;
+      const startX = canvasRect.left + worldX * sx;
+      const startY = canvasRect.top + worldY * sy;
+      const goalRect = goalEl.getBoundingClientRect();
+      const tx = goalRect.left + goalRect.width / 2;
+      const ty = goalRect.top + goalRect.height / 2;
+      const ctrlX = startX + (tx - startX) * 0.35 + (i % 2 === 0 ? 26 : -26);
+      const ctrlY = Math.min(startY, ty) - 52 - i * 6;
+
+      const div = document.createElement('div');
+      div.style.cssText =
+        `position:fixed;left:${startX - 14}px;top:${startY - 14}px;` +
+        `width:28px;height:28px;` +
+        `background:url('${src}') center/contain no-repeat;` +
+        `border-radius:50%;pointer-events:none;z-index:9999;will-change:transform,opacity;`;
+      document.body.appendChild(div);
+
+      const flyObj = { t: 0 };
+      this.tweens.add({
+        targets: flyObj,
+        t: 1,
+        delay: i * 55,
+        duration: 580,
+        ease: 'Cubic.easeIn',
+        onUpdate: () => {
+          const t = flyObj.t;
+          const u = 1 - t;
+          const x = u * u * startX + 2 * u * t * ctrlX + t * t * tx;
+          const y = u * u * startY + 2 * u * t * ctrlY + t * t * ty;
+          div.style.left = `${x - 14}px`;
+          div.style.top = `${y - 14}px`;
+          div.style.transform = `scale(${1 - t * 0.38})`;
+          div.style.opacity = t > 0.78 ? String(Math.max(0, 1 - (t - 0.78) / 0.22)) : '1';
+        },
+        onComplete: () => {
+          div.remove();
+          if (i === 0) this.pulseGoalChip(goalEl);
+        }
+      });
+    });
+  }
+
+  private flyScoreToGoal(blastX: number, blastY: number): void {
+    const scoreIdx = this.state.definition.goals.findIndex((g) => g.type === 'score');
+    if (scoreIdx < 0) return;
+    const goalEl = document.getElementById(`goal-chip-${scoreIdx}`);
+    if (!goalEl) return;
+
+    const canvas = this.game.canvas;
+    const canvasRect = canvas.getBoundingClientRect();
+    const sx = canvasRect.width / GAME_SIZE;
+    const sy = canvasRect.height / GAME_SIZE;
+    const startX = canvasRect.left + blastX * sx;
+    const startY = canvasRect.top + blastY * sy;
+    const goalRect = goalEl.getBoundingClientRect();
+    const tx = goalRect.left + goalRect.width / 2;
+    const ty = goalRect.top + goalRect.height / 2;
+    const ctrlX = startX + (tx - startX) * 0.3 + 18;
+    const ctrlY = Math.min(startY, ty) - 46;
+
+    const orb = document.createElement('div');
+    orb.style.cssText =
+      `position:fixed;left:${startX - 11}px;top:${startY - 11}px;` +
+      `width:22px;height:22px;border-radius:50%;` +
+      `background:radial-gradient(circle at 38% 32%, #fff7b0 0%, #ffc020 70%);` +
+      `box-shadow:0 0 8px rgba(255,175,0,0.75);` +
+      `pointer-events:none;z-index:9999;will-change:transform,opacity;`;
+    document.body.appendChild(orb);
+
+    const flyObj = { t: 0 };
+    this.tweens.add({
+      targets: flyObj,
+      t: 1,
+      duration: 500,
+      ease: 'Cubic.easeIn',
+      onUpdate: () => {
+        const t = flyObj.t;
+        const u = 1 - t;
+        const x = u * u * startX + 2 * u * t * ctrlX + t * t * tx;
+        const y = u * u * startY + 2 * u * t * ctrlY + t * t * ty;
+        orb.style.left = `${x - 11}px`;
+        orb.style.top = `${y - 11}px`;
+        orb.style.transform = `scale(${1 - t * 0.48})`;
+        orb.style.opacity = t > 0.8 ? String(Math.max(0, 1 - (t - 0.8) / 0.2)) : '1';
+      },
+      onComplete: () => {
+        orb.remove();
+        this.pulseGoalChip(goalEl);
+      }
+    });
+  }
+
+  private pulseGoalChip(el: HTMLElement): void {
+    el.classList.remove('is-popping');
+    void el.offsetWidth;
+    el.classList.add('is-popping');
+    el.addEventListener('animationend', () => el.classList.remove('is-popping'), { once: true });
   }
 }

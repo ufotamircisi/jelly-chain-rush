@@ -26,6 +26,7 @@ export interface CascadeStep {
   boardAfter: BoardGrid;
   scoreDelta: number;
   candyCounts: Partial<Record<CandyType, number>>;
+  candyPositions: Partial<Record<CandyType, BoardPosition[]>>;
   largestGroupSize: number;
   highestMultiplierIndex: number;
 }
@@ -141,6 +142,7 @@ export function resolveMatchesAndCascades(board: BoardGrid): CascadeResult {
       boardAfter: cloneBoard(nextBoard),
       scoreDelta: step.scoreDelta,
       candyCounts: step.candyCounts,
+      candyPositions: step.candyPositions,
       largestGroupSize: step.largestGroupSize,
       highestMultiplierIndex: step.highestMultiplierIndex
     });
@@ -202,6 +204,7 @@ function blastMatchedCells(
   matched: BoardPosition[];
   scoreDelta: number;
   candyCounts: Partial<Record<CandyType, number>>;
+  candyPositions: Partial<Record<CandyType, BoardPosition[]>>;
   largestGroupSize: number;
   highestMultiplierIndex: number;
 } {
@@ -209,12 +212,14 @@ function blastMatchedCells(
   const removalKeys = new Set(matched.map(positionKey));
   const nextBoard = cloneBoard(board);
   const candyCounts: Partial<Record<CandyType, number>> = {};
+  const candyPositions: Partial<Record<CandyType, BoardPosition[]>> = {};
   let scoreDelta = 0;
   let highestMultiplierIndex = 0;
 
   for (const position of matched) {
     const cell = nextBoard[position.row][position.col];
     candyCounts[cell.candy] = (candyCounts[cell.candy] ?? 0) + 1;
+    (candyPositions[cell.candy] ??= []).push(position);
     highestMultiplierIndex = Math.max(highestMultiplierIndex, cell.multiplierIndex);
   }
 
@@ -246,6 +251,7 @@ function blastMatchedCells(
     matched,
     scoreDelta,
     candyCounts,
+    candyPositions,
     largestGroupSize: Math.max(...groups.map((group) => group.length)),
     highestMultiplierIndex
   };
