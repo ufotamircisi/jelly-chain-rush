@@ -739,17 +739,14 @@ export class MainScene extends Phaser.Scene {
     );
 
     // Remove Ads – UI placeholder only, no real IAP implementation
-    const removeAdsTitle = this.locale === 'tr' ? 'Reklamları Kaldır' : 'Remove Ads';
-    const removeAdsLabel = this.locale === 'tr'
-      ? 'Zorunlu reklamları kalıcı kaldır – 99,99 TL'
-      : 'Permanently remove forced ads – $4.99';
     this.renderMarketSection(
       list,
-      removeAdsTitle,
+      this.t('removeAdsTitle'),
       [{
-        label: removeAdsLabel,
+        label: this.t('removeAdsLabel'),
+        note: this.t('removeAdsNote'),
         iconSrc: UI_ASSETS.stats.diamond,
-        iconLabel: removeAdsTitle,
+        iconLabel: this.t('removeAdsTitle'),
         onClick: () => this.showWarning(this.t('marketPurchaseReadySoon')),
         active: true
       }]
@@ -759,7 +756,7 @@ export class MainScene extends Phaser.Scene {
   private renderMarketSection(
     list: HTMLElement,
     title: string,
-    items: { label: string; iconSrc: string; iconLabel: string; onClick: () => void; active: boolean }[]
+    items: { label: string; note?: string; iconSrc: string; iconLabel: string; onClick: () => void; active: boolean }[]
   ): void {
     const section = document.createElement('section');
     section.className = 'market-section';
@@ -770,7 +767,10 @@ export class MainScene extends Phaser.Scene {
       card.className = 'market-card';
       card.innerHTML = `
         <span class="market-icon has-asset-icon" aria-hidden="true"><img src="${item.iconSrc}" alt="" /></span>
-        <strong>${item.label}</strong>
+        <div class="market-card-body">
+          <strong>${item.label}</strong>
+          ${item.note ? `<small class="market-card-note">${item.note}</small>` : ''}
+        </div>
         <button type="button">${item.active ? this.t('marketAction') : this.t('comingSoon')}</button>
       `;
       card.querySelector('button')?.addEventListener('click', () => {
