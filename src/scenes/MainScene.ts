@@ -1448,6 +1448,12 @@ export class MainScene extends Phaser.Scene {
         // goalsCompletedEarly=true: player chose to continue; let remaining shakes exhaust naturally
       }
 
+      // During multiplier-reward continuation: auto-win when max multiplier (x1000) is reached
+      if (this.goalsCompletedEarly && this.state.highestMultiplierIndex >= 10) {
+        this.triggerLevelWin();
+        return;
+      }
+
       if (this.state.shakesRemaining <= 0) {
         if (this.goalsCompletedEarly) {
           this.triggerLevelWin();
@@ -2237,6 +2243,8 @@ export class MainScene extends Phaser.Scene {
 
     if (powerful && this.boardContainer) {
       if (size >= 5) this.vibrate(size >= 10 ? [12, 18, 18] : 16);
+      this.tweens.killTweensOf(this.boardContainer);
+      this.boardContainer.setPosition(BOARD_X, BOARD_Y);
       this.tweens.add({
         targets: this.boardContainer,
         x: BOARD_X + (huge ? 6 : 4),
@@ -2261,7 +2269,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private emitSparkles(x: number, y: number, size: number, highMultiplier: boolean, specialMultiplier: boolean): void {
-    const count = size >= 10 ? 24 : size >= 6 ? 18 : size >= 5 ? 14 : size >= 4 ? 10 : 7;
+    const count = size >= 10 ? 14 : size >= 6 ? 10 : size >= 5 ? 8 : size >= 4 ? 6 : 5;
     const color = specialMultiplier ? 0xffd33f : highMultiplier ? 0xffffff : 0xfff1a6;
 
     for (let index = 0; index < count; index += 1) {

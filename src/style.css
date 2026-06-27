@@ -39,6 +39,8 @@ button {
 
 .phone-frame {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(100vw, 430px);
   height: 100vh;
   height: 100dvh;
@@ -123,6 +125,7 @@ button {
 }
 
 .game-header {
+  flex-shrink: 0;
   min-height: 110px;
   padding-top: 7px;
 }
@@ -306,10 +309,17 @@ button {
 
 .view.is-active {
   display: block;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .view-play {
   margin-top: 2px;
+}
+
+.view-play.is-active {
+  display: flex;
+  flex-direction: column;
 }
 
 .level-road-section,
@@ -317,13 +327,21 @@ button {
   display: none;
 }
 
-.level-road-section.is-active,
+.level-road-section.is-active {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .gameplay-section.is-active {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .level-road-section {
-  height: calc(100dvh - 186px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   min-height: 0;
   overflow: hidden;
 }
@@ -398,7 +416,8 @@ button {
 
 .level-road-list {
   position: relative;
-  height: calc(100% - 140px);
+  flex: 1 1 auto;
+  height: auto;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -496,13 +515,11 @@ button {
 }
 
 .view-island {
-  height: calc(100dvh - 186px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   min-height: 0;
   overflow: hidden;
 }
 
 .view-market {
-  height: calc(100dvh - 178px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -517,6 +534,7 @@ button {
 }
 
 .goal-panel {
+  flex-shrink: 0;
   width: 100%;
   margin: 2px 0 5px;
   padding: 4px 7px;
@@ -607,6 +625,7 @@ button {
 
 .gameplay-section {
   position: relative;
+  /* flex layout applied via .gameplay-section.is-active */
 }
 
 .challenge-intro {
@@ -774,6 +793,9 @@ button {
   position: relative;
   display: flex;
   justify-content: center;
+  align-items: center;
+  flex: 1 1 auto;
+  min-height: 40px;
   width: 100%;
   margin: 3px auto 6px;
   padding: 3px;
@@ -793,13 +815,10 @@ button {
 }
 
 .board-canvas {
-  /* Constrain by both width and available vertical height so shake button is never hidden.
-     430px = header(110) + non-board gameplay(237) + bottom-nav(76) + 7px view margin */
-  width: min(
-    374px,
-    calc(100vw - 28px),
-    calc(100dvh - 430px - env(safe-area-inset-top) - env(safe-area-inset-bottom))
-  );
+  /* Width is capped by viewport; max-height constrains the square to the stage's flex height
+     so the board shrinks before the shake button is ever pushed off-screen. */
+  width: min(374px, calc(100vw - 28px));
+  max-height: 100%;
   aspect-ratio: 1;
   touch-action: none;
   -webkit-user-select: none;
@@ -815,6 +834,7 @@ button {
 
 .helper-text,
 .warning-text {
+  flex-shrink: 0;
   min-height: 18px;
   margin: 2px 0;
   text-align: center;
@@ -834,6 +854,7 @@ button {
   grid-template-columns: 1fr auto;
   align-items: center;
   column-gap: 8px;
+  flex-shrink: 0;
   width: 100%;
   min-height: 42px;
   margin: 5px 0 0;
@@ -898,6 +919,7 @@ button {
 
 .shake-button {
   display: block;
+  flex-shrink: 0;
   width: min(342px, 92%);
   min-height: 54px;
   margin: 11px auto 0;

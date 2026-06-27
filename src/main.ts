@@ -28,8 +28,10 @@ if (params.has('buildingPreview')) {
     },
     scene: [MainScene]
   };
-  // `resolution` is removed from Phaser 3.60+ types but still honoured at runtime.
-  (config as Record<string, unknown>)['resolution'] = Math.min(window.devicePixelRatio || 1, 2);
+  // `resolution` is removed from Phaser 3.60+ types but still honoured at runtime
+  // in most builds. Cap at 3 so high-DPR Android devices (2.5x-3x) render sharp
+  // candy textures without an excessive render-buffer size.
+  (config as Record<string, unknown>)['resolution'] = Math.min(window.devicePixelRatio || 1, 3);
 
   new Phaser.Game(config);
 }
