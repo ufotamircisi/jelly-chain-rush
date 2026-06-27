@@ -1396,8 +1396,12 @@ export class MainScene extends Phaser.Scene {
           this.renderGoalCompleteModal();
           return;
         }
-        this.triggerLevelWin();
-        return;
+        if (!this.goalsCompletedEarly) {
+          // Goals complete with 0 shakes on first trigger — immediate win
+          this.triggerLevelWin();
+          return;
+        }
+        // goalsCompletedEarly=true: player chose to continue; let remaining shakes exhaust naturally
       }
 
       if (this.state.shakesRemaining <= 0) {

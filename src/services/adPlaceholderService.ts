@@ -24,8 +24,7 @@ export function createAdFlowPlan(save: SaveData, completedLevel: number, wasAlre
       && completedLevel % FORCED_AD_INTERVAL === 0
       && !save.shownForcedAdMilestones.includes(completedLevel),
     showRewardedOffer:
-      firstCompletion
-      && completedLevel % REWARDED_AD_INTERVAL === 0
+      completedLevel % REWARDED_AD_INTERVAL === 0
       && !save.claimedRewardedMilestones.includes(completedLevel)
   };
 }
