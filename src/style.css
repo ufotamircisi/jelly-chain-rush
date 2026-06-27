@@ -533,9 +533,21 @@ button {
 }
 
 .goal-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
-  gap: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.goal-chips-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  align-items: stretch;
+}
+
+.goal-chips-row .goal-chip {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .goal-chip {
@@ -582,7 +594,6 @@ button {
   align-items: center;
   justify-content: flex-start;
   gap: 6px;
-  grid-column: 1 / -1;
   padding: 4px 10px;
   min-height: 30px;
 }
@@ -594,6 +605,27 @@ button {
 
 .goal-chip-score .goal-chip-count {
   font-size: 11px;
+}
+
+.goal-chip-mult-badge {
+  font-size: 19px;
+  font-weight: 900;
+  color: #7650d7;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+
+.goal-chip-mult-progress {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(61, 35, 98, 0.55);
+  line-height: 1;
+}
+
+.goal-chip-mult.is-complete .goal-chip-mult-badge,
+.goal-chip-mult.is-complete .goal-chip-mult-progress {
+  color: #168e67;
 }
 
 .goal-chip.is-complete {
@@ -1971,12 +2003,12 @@ button {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-/* Board accounts for compact header (logo 40px + margin + 50px cards + 20px regen pill) */
+/* Board accounts for compact header + goal panel + helper + reward + shake button */
 .phone-frame.is-gameplay-active .board-canvas {
   width: min(
     374px,
     calc(100vw - 28px),
-    calc(100dvh - 434px - env(safe-area-inset-top) - env(safe-area-inset-bottom))
+    calc(100dvh - 448px - env(safe-area-inset-top) - env(safe-area-inset-bottom))
   );
 }
 

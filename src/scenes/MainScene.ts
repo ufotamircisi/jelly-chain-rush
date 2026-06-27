@@ -383,31 +383,39 @@ export class MainScene extends Phaser.Scene {
   private renderGoals(): void {
     const list = this.el('goal-list');
     list.innerHTML = '';
-    // Candy/multiplier chips first (visual), score chip last (text, full-width)
     const goals = this.state.definition.goals;
-    const order = [
-      ...goals.map((g, i) => ({ goal: g, i })).filter(({ goal }) => goal.type !== 'score'),
-      ...goals.map((g, i) => ({ goal: g, i })).filter(({ goal }) => goal.type === 'score')
-    ];
-    for (const { goal, i } of order) {
+    const nonScoreGoals = goals.map((g, i) => ({ goal: g, i })).filter(({ goal }) => goal.type !== 'score');
+    const scoreGoals = goals.map((g, i) => ({ goal: g, i })).filter(({ goal }) => goal.type === 'score');
+
+    if (nonScoreGoals.length > 0) {
+      const row = document.createElement('div');
+      row.className = 'goal-chips-row';
+      for (const { goal, i } of nonScoreGoals) {
+        const complete = this.isGoalComplete(goal);
+        const progress = getGoalProgress(this.state, goal);
+        const item = document.createElement('article');
+        item.id = `goal-chip-${i}`;
+        if (goal.type === 'candy' && goal.candy) {
+          const remaining = Math.max(0, goal.target - progress);
+          const src = CANDY_ASSET_PACK.find((a) => a.candyType === goal.candy)?.src ?? '';
+          item.className = `goal-chip${complete ? ' is-complete' : ''}`;
+          item.innerHTML = `<img class="goal-chip-icon" src="${src}" alt=""><span class="goal-chip-count">${remaining}</span>`;
+        } else {
+          item.className = `goal-chip goal-chip-mult${complete ? ' is-complete' : ''}`;
+          item.innerHTML = `<span class="goal-chip-mult-badge">×${goal.target}</span><span class="goal-chip-mult-progress">${complete ? '✓' : `×${progress}`}</span>`;
+        }
+        row.appendChild(item);
+      }
+      list.appendChild(row);
+    }
+
+    for (const { goal, i } of scoreGoals) {
       const complete = this.isGoalComplete(goal);
       const progress = getGoalProgress(this.state, goal);
       const item = document.createElement('article');
       item.id = `goal-chip-${i}`;
-
-      if (goal.type === 'candy' && goal.candy) {
-        const remaining = Math.max(0, goal.target - progress);
-        const src = CANDY_ASSET_PACK.find((a) => a.candyType === goal.candy)?.src ?? '';
-        item.className = `goal-chip${complete ? ' is-complete' : ''}`;
-        item.innerHTML = `<img class="goal-chip-icon" src="${src}" alt=""><span class="goal-chip-count">${remaining}</span>`;
-      } else if (goal.type === 'score') {
-        item.className = `goal-chip goal-chip-score${complete ? ' is-complete' : ''}`;
-        item.innerHTML = `<span class="goal-chip-label">${this.t('goalScore')}</span><span class="goal-chip-count">${this.formatScore(progress)} / ${this.formatScore(goal.target)}</span>`;
-      } else {
-        item.className = `goal-chip${complete ? ' is-complete' : ''}`;
-        item.innerHTML = `<span class="goal-chip-label">×</span><span class="goal-chip-count">${progress} / ${goal.target}</span>`;
-      }
-
+      item.className = `goal-chip goal-chip-score${complete ? ' is-complete' : ''}`;
+      item.innerHTML = `<span class="goal-chip-label">${this.t('goalScore')}</span><span class="goal-chip-count">${this.formatScore(progress)} / ${this.formatScore(goal.target)}</span>`;
       list.appendChild(item);
     }
   }
