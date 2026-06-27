@@ -981,7 +981,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private drawBoard(): void {
-    this.children.removeAll();
+    this.children.removeAll(true);
     this.cellContainers.clear();
     this.candyContainers.clear();
     this.boardContainer = this.add.container(BOARD_X, BOARD_Y);
@@ -1517,6 +1517,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private triggerLevelFail(): void {
+    if (this.state.status !== 'playing') return;
     this.challengeTimerRunning = false;
     this.challengeBoardLocked = false;
     this.state.status = 'failed';
