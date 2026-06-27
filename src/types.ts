@@ -78,6 +78,7 @@ export interface SaveData {
   colorBombDiscovered: boolean;
   energyStarClaimedLevel: number;
   colorBombClaimedLevel: number;
+  levelStars: Record<number, number>;
   diamonds: number;
   superChests: number;
   chests: number;

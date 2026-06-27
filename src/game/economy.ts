@@ -8,6 +8,7 @@ export const LEVEL_COMPLETE_ENERGY_REWARD = 100;
 export const REGEN_INTERVAL_MS = 15 * 60 * 1000;
 export const REGEN_ENERGY_AMOUNT = 20;
 export const REGEN_ENERGY_CAP = 100;
+export const REGEN_START_THRESHOLD = 10;
 const MAX_REGEN_TICKS = 24;
 
 export function applyOfflineRegen(
@@ -15,6 +16,16 @@ export function applyOfflineRegen(
   shakes: number,
   lastRegenAt: string
 ): { energy: number; shakes: number; lastRegenAt: string; energyGained: number; shakesGained: number } {
+  // Regen only activates when energy first drops to REGEN_START_THRESHOLD or below.
+  // While lastRegenAt is empty and energy is above threshold, regen has not yet started.
+  if (energy > REGEN_START_THRESHOLD && !lastRegenAt) {
+    return { energy, shakes, lastRegenAt, energyGained: 0, shakesGained: 0 };
+  }
+  // Once energy reaches the cap, stop regen and clear the timer.
+  if (energy >= REGEN_ENERGY_CAP) {
+    return { energy, shakes, lastRegenAt: '', energyGained: 0, shakesGained: 0 };
+  }
+
   const now = Date.now();
   const lastMs = lastRegenAt ? new Date(lastRegenAt).getTime() : 0;
 

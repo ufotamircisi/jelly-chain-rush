@@ -4,35 +4,41 @@ import type { GameState, RewardSummary } from '../types';
 
 export function calculateRewardSummary(state: GameState): RewardSummary {
   const stars = calculateStars(state);
-  const starReward = getStarReward(stars);
+  const starDiamonds = getStarDiamondsCumulative(stars);
   const multiplierReward = getMultiplierReward(state.highestMultiplierIndex);
 
   return {
     stars,
     levelEnergy: LEVEL_COMPLETE_ENERGY_REWARD,
-    starEnergy: starReward.energy,
-    starDiamonds: 0,
+    starEnergy: 0,
+    starDiamonds,
     multiplierLabel: getMultiplierLabel(state.highestMultiplierIndex) || 'x0',
     multiplierEnergy: multiplierReward.energy,
     multiplierDiamonds: multiplierReward.diamonds,
     superChest: multiplierReward.superChest,
-    totalEnergy: LEVEL_COMPLETE_ENERGY_REWARD + starReward.energy + multiplierReward.energy,
+    totalEnergy: LEVEL_COMPLETE_ENERGY_REWARD + multiplierReward.energy,
     totalDiamonds: multiplierReward.diamonds,
-    actualEnergyGained: LEVEL_COMPLETE_ENERGY_REWARD + starReward.energy + multiplierReward.energy,
+    actualEnergyGained: LEVEL_COMPLETE_ENERGY_REWARD + multiplierReward.energy,
     energyCapped: false
   };
 }
 
+// 1 star: completed; 2 stars: final multiplier ≥ x64; 3 stars: final multiplier ≥ x128
 function calculateStars(state: GameState): number {
-  if (state.continued || state.shakesRemaining <= 0) return 1;
-  if (state.shakesRemaining >= 4) return 3;
-  return 2;
+  if (state.highestMultiplierIndex >= 7) return 3; // x128
+  if (state.highestMultiplierIndex >= 6) return 2; // x64
+  return 1;
+}
+
+// Cumulative diamonds for star tier (not incremental — incremental is computed in triggerLevelWin)
+export function getStarDiamondsCumulative(stars: number): number {
+  if (stars >= 3) return 15; // 5 + 10
+  if (stars >= 2) return 5;
+  return 0;
 }
 
 function getStarReward(stars: number): { energy: number; diamonds: number } {
-  if (stars >= 3) return { energy: 20, diamonds: 20 };
-  if (stars === 2) return { energy: 10, diamonds: 15 };
-  return { energy: 10, diamonds: 10 };
+  return { energy: 0, diamonds: getStarDiamondsCumulative(stars) };
 }
 
 function getMultiplierReward(multiplierIndex: number): { energy: number; diamonds: number; superChest: boolean } {

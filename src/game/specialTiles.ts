@@ -1,6 +1,7 @@
 import type { BoardGrid, CandyType, SaveData } from '../types';
 
 export const ENERGY_STAR_THRESHOLD = 4;
+export const COLOR_BOMB_THRESHOLD = 4;
 export const ENERGY_STAR_REWARD = 100;
 export const COLOR_BOMB_REWARD_ENERGY = 100;
 export const COLOR_BOMB_REWARD_DIAMONDS = 100;
@@ -8,7 +9,7 @@ export const COLOR_BOMB_REWARD_DIAMONDS = 100;
 const ENERGY_STAR_DISCOVERY_LEVEL = 4;
 const COLOR_BOMB_DISCOVERY_LEVEL = 8;
 const ENERGY_STAR_PITY_INTERVAL = 15;
-const COLOR_BOMB_PITY_INTERVAL = 35;
+const COLOR_BOMB_PITY_INTERVAL = 25;
 
 const NORMAL_CANDY_TYPES: CandyType[] = [
   'greenGummy', 'purpleJelly', 'redHeart', 'yellowStar', 'blueRound', 'orangeBean'
@@ -66,8 +67,17 @@ export function injectSpecialTilesIntoBoard(
     next[pos.row][pos.col].candy = 'energyStar';
   }
 
+  const colorBombPositions = [
+    { row: 2, col: 2 },
+    { row: 2, col: 4 },
+    { row: 4, col: 2 },
+    { row: 4, col: 4 }
+  ];
+
   if (includeColorBomb) {
-    next[3][3].candy = 'colorBomb';
+    for (const pos of colorBombPositions) {
+      next[pos.row][pos.col].candy = 'colorBomb';
+    }
   }
 
   return next;

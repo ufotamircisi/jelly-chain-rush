@@ -30,6 +30,7 @@ import {
   MARKET_SHAKE_ITEMS,
   REGEN_ENERGY_AMOUNT,
   REGEN_ENERGY_CAP,
+  REGEN_START_THRESHOLD,
   RESTART_COST,
   SHAKE_ENERGY_COST
 } from '../game/economy';
@@ -37,6 +38,7 @@ import { createGameState } from '../game/gameState';
 import {
   COLOR_BOMB_REWARD_DIAMONDS,
   COLOR_BOMB_REWARD_ENERGY,
+  COLOR_BOMB_THRESHOLD,
   consumeCandyFromBoard,
   countCandyOnBoard,
   ENERGY_STAR_REWARD,
@@ -49,7 +51,7 @@ import {
   shouldInjectEnergyStar
 } from '../game/specialTiles';
 import { areGoalsComplete, getGoalProgress } from '../game/levels';
-import { calculateRewardSummary } from '../game/rewards';
+import { calculateRewardSummary, getStarDiamondsCumulative } from '../game/rewards';
 import { createTranslator, LOCALE_NATIVE_NAMES, SUPPORTED_LOCALES, type TranslationKey } from '../locales';
 import {
   claimRewardedMilestone,
@@ -172,6 +174,7 @@ export class MainScene extends Phaser.Scene {
   private selectedBuildingId?: number;
   private pendingAdFlow?: AdFlowPlan & { forcedHandled: boolean; rewardedHandled: boolean };
   private completedLevelWasReplay = false;
+  private goalsCompletedEarly = false;
 
   constructor() {
     super('MainScene');
@@ -1388,12 +1391,21 @@ export class MainScene extends Phaser.Scene {
       this.checkSpecialTileEvents();
 
       if (areGoalsComplete(this.state)) {
+        if (!this.goalsCompletedEarly && this.state.shakesRemaining > 0) {
+          this.goalsCompletedEarly = true;
+          this.renderGoalCompleteModal();
+          return;
+        }
         this.triggerLevelWin();
         return;
       }
 
       if (this.state.shakesRemaining <= 0) {
-        this.triggerLevelFail();
+        if (this.goalsCompletedEarly) {
+          this.triggerLevelWin();
+        } else {
+          this.triggerLevelFail();
+        }
         return;
       }
 
@@ -1431,24 +1443,39 @@ export class MainScene extends Phaser.Scene {
     const reward = calculateRewardSummary(this.state);
     const alreadyCompleted = this.save.completedLevels.includes(this.state.level);
     this.completedLevelWasReplay = alreadyCompleted;
-    const energyResult = applyFreeEnergy(this.state.energy, reward.totalEnergy);
+
+    // Star diamonds: only reward the delta between new and previous tier (anti-farming)
+    const previousStars = (this.save.levelStars ?? {})[this.state.level] ?? 0;
+    const newStarDiamonds = getStarDiamondsCumulative(reward.stars) - getStarDiamondsCumulative(previousStars);
+    if (reward.stars > previousStars) {
+      this.save.levelStars = { ...(this.save.levelStars ?? {}), [this.state.level]: reward.stars };
+    }
+
+    const finalLevelEnergy = alreadyCompleted ? 0 : reward.levelEnergy;
+    const finalMultiplierEnergy = alreadyCompleted ? 0 : reward.multiplierEnergy;
+    const finalMultiplierDiamonds = alreadyCompleted ? 0 : reward.multiplierDiamonds;
+    const finalTotalEnergy = finalLevelEnergy + finalMultiplierEnergy;
+    const finalTotalDiamonds = finalMultiplierDiamonds + newStarDiamonds;
+    const energyResult = applyFreeEnergy(this.state.energy, finalTotalEnergy);
+
     this.rewardSummary = {
       ...reward,
-      levelEnergy: alreadyCompleted ? 0 : reward.levelEnergy,
-      starEnergy: alreadyCompleted ? 0 : reward.starEnergy,
-      starDiamonds: alreadyCompleted ? 0 : reward.starDiamonds,
-      multiplierEnergy: alreadyCompleted ? 0 : reward.multiplierEnergy,
-      multiplierDiamonds: alreadyCompleted ? 0 : reward.multiplierDiamonds,
-      totalEnergy: alreadyCompleted ? 0 : reward.totalEnergy,
-      totalDiamonds: alreadyCompleted ? 0 : reward.totalDiamonds,
+      levelEnergy: finalLevelEnergy,
+      starEnergy: 0,
+      starDiamonds: newStarDiamonds,
+      multiplierEnergy: finalMultiplierEnergy,
+      multiplierDiamonds: finalMultiplierDiamonds,
+      totalEnergy: finalTotalEnergy,
+      totalDiamonds: finalTotalDiamonds,
       superChest: alreadyCompleted ? false : reward.superChest,
       actualEnergyGained: alreadyCompleted ? 0 : energyResult.gained,
       energyCapped: alreadyCompleted ? false : energyResult.capped
     };
     if (!alreadyCompleted) {
       this.state.energy = energyResult.energy;
-      this.state.diamonds += this.rewardSummary.totalDiamonds;
+      this.state.diamonds += finalMultiplierDiamonds;
     }
+    this.state.diamonds += newStarDiamonds;
     this.save = {
       ...this.save,
       energy: this.state.energy,
@@ -1471,6 +1498,27 @@ export class MainScene extends Phaser.Scene {
     this.state.status = 'failed';
     this.sfx.playLevelFailed();
     this.renderOverlay();
+  }
+
+  private renderGoalCompleteModal(): void {
+    const multLabel = getMultiplierLabel(this.state.highestMultiplierIndex) || 'x0';
+    const multInfo = this.t('goalCompleteMultiplierInfo').replace('{mult}', multLabel);
+    this.openModal(`
+      <div class="modal modal--goal-complete">
+        <h2>${this.t('goalCompleteTitle')}</h2>
+        <p class="goal-complete-mult">${multInfo}</p>
+        <button class="btn btn--primary" data-action="goal-continue">${this.t('goalCompleteContinue')}</button>
+        <button class="btn btn--ghost" data-action="goal-finish">${this.t('goalCompleteFinish')}</button>
+      </div>
+    `);
+    this.modalButton('goal-continue', () => {
+      this.closeModal();
+      this.renderOverlay();
+    });
+    this.modalButton('goal-finish', () => {
+      this.closeModal();
+      this.triggerLevelWin();
+    });
   }
 
   private continueLevel(shakes: number, diamondCost = 0, source: 'ad' | 'diamonds' = 'diamonds'): boolean {
@@ -1510,6 +1558,7 @@ export class MainScene extends Phaser.Scene {
     this.state = createGameState(this.save);
     this.rewardSummary = undefined;
     this.completedLevelWasReplay = false;
+    this.goalsCompletedEarly = false;
     this.screen = 'play';
     this.playMode = 'game';
     this.closeModal();
@@ -1524,6 +1573,7 @@ export class MainScene extends Phaser.Scene {
     this.state = createGameState(this.save);
     this.rewardSummary = undefined;
     this.completedLevelWasReplay = false;
+    this.goalsCompletedEarly = false;
     this.screen = 'play';
     this.playMode = 'game';
     this.closeModal();
@@ -1569,9 +1619,11 @@ export class MainScene extends Phaser.Scene {
   private renderWinModal(): void {
     const reward = this.rewardSummary ?? calculateRewardSummary(this.state);
     const rewardRows = [
-      `<article><span>${this.t('levelReward')}</span><strong>+${reward.levelEnergy} ${this.t('energy')}</strong></article>`,
-      `<article><span>${this.t('starReward')}</span><strong>+${reward.starEnergy} ${this.t('energy')}</strong></article>`
+      `<article><span>${this.t('levelReward')}</span><strong>+${reward.levelEnergy} ${this.t('energy')}</strong></article>`
     ];
+    if (reward.starDiamonds > 0) {
+      rewardRows.push(`<article><span>${this.t('starReward')}</span><strong>+${reward.starDiamonds} ${this.t('diamonds')}</strong></article>`);
+    }
 
     if (reward.multiplierEnergy > 0 || reward.multiplierDiamonds > 0) {
       const mulDiamondPart = reward.multiplierDiamonds > 0 ? ` +${reward.multiplierDiamonds} ${this.t('diamonds')}` : '';
@@ -2344,7 +2396,7 @@ export class MainScene extends Phaser.Scene {
 
     if (!this.state.colorBombEventFired) {
       const count = countCandyOnBoard(this.state.board, 'colorBomb');
-      if (count >= 1) {
+      if (count >= COLOR_BOMB_THRESHOLD) {
         this.triggerColorBombEvent();
       }
     }
@@ -2372,6 +2424,7 @@ export class MainScene extends Phaser.Scene {
   private triggerColorBombEvent(): void {
     this.state.colorBombEventFired = true;
     this.state.board = consumeCandyFromBoard(this.state.board, 'colorBomb');
+    this.state.shakesRemaining = Math.max(this.state.shakesRemaining, SHAKES_PER_LEVEL);
     this.drawBoard();
 
     const isFirstTime = !this.save.completedLevels.includes(this.state.level)
@@ -2400,7 +2453,7 @@ export class MainScene extends Phaser.Scene {
 
   private tickRegen(): void {
     const result = applyOfflineRegen(this.save.energy, this.save.shakes, this.save.lastRegenAt);
-    if (result.energyGained > 0) {
+    if (result.energyGained > 0 || result.lastRegenAt !== this.save.lastRegenAt) {
       this.save.energy = result.energy;
       this.save.lastRegenAt = result.lastRegenAt;
       this.state.energy = result.energy;
@@ -2414,7 +2467,7 @@ export class MainScene extends Phaser.Scene {
     const el = document.getElementById('regen-countdown');
     if (!el) return;
 
-    if (this.screen !== 'play' || this.state.energy >= REGEN_ENERGY_CAP) {
+    if (this.screen !== 'play' || this.state.energy >= REGEN_ENERGY_CAP || !this.save.lastRegenAt) {
       el.textContent = '';
       return;
     }
