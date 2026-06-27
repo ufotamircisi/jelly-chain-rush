@@ -31,7 +31,7 @@ export function createDefaultSave(): SaveData {
     colorBombDiscovered: false,
     energyStarClaimedLevel: 0,
     colorBombClaimedLevel: 0,
-    diamonds: 250,
+    diamonds: 300,
     superChests: 0,
     chests: 0,
     completedBuildingIds: [1],

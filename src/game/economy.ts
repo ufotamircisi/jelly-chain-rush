@@ -1,7 +1,8 @@
-export const STARTING_ENERGY = 100;
+export const STARTING_ENERGY = 300;
 export const FREE_ENERGY_CAP = 300;
 export const HARD_ENERGY_CAP = 999;
 export const SHAKE_ENERGY_COST = 20;
+export const RESTART_COST = 100;
 export const LEVEL_COMPLETE_ENERGY_REWARD = 100;
 
 export const REGEN_INTERVAL_MS = 15 * 60 * 1000;

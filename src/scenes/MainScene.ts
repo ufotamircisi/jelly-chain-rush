@@ -30,6 +30,7 @@ import {
   MARKET_SHAKE_ITEMS,
   REGEN_ENERGY_AMOUNT,
   REGEN_ENERGY_CAP,
+  RESTART_COST,
   SHAKE_ENERGY_COST
 } from '../game/economy';
 import { createGameState } from '../game/gameState';
@@ -52,6 +53,7 @@ import { calculateRewardSummary } from '../game/rewards';
 import { createTranslator, LOCALE_NATIVE_NAMES, SUPPORTED_LOCALES, type TranslationKey } from '../locales';
 import {
   claimRewardedMilestone,
+  CONTINUE_AD_ENERGY_REWARD,
   createAdFlowPlan,
   markForcedBreakShown,
   type AdFlowPlan
@@ -1483,6 +1485,8 @@ export class MainScene extends Phaser.Scene {
     this.state.continued = true;
     if (source === 'ad') {
       this.state.adContinueUsedForAttempt = true;
+      const adEnergyResult = applyMarketEnergy(this.state.energy, CONTINUE_AD_ENERGY_REWARD);
+      this.state.energy = adEnergyResult.energy;
     }
     this.state.status = 'playing';
     this.syncSaveCurrency();
@@ -1500,6 +1504,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.save.currentLevel = Math.max(1, Math.floor(level));
+    this.save.shakes = SHAKES_PER_LEVEL;
     this.save.hasStartedGame = true;
     saveData(this.save);
     this.state = createGameState(this.save);
@@ -1515,6 +1520,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private restartLevel(): void {
+    this.save.shakes = SHAKES_PER_LEVEL;
     this.state = createGameState(this.save);
     this.rewardSummary = undefined;
     this.completedLevelWasReplay = false;
@@ -1525,6 +1531,21 @@ export class MainScene extends Phaser.Scene {
     this.renderOverlay();
     this.sfx.playLevelStart();
     this.time.delayedCall(1, () => this.startInitialDrop());
+  }
+
+  private tryRestartLevel(): void {
+    if (this.state.energy < RESTART_COST) {
+      this.sfx.playWarning();
+      this.renderEnergyEmptyModal();
+      return;
+    }
+    this.state.energy -= RESTART_COST;
+    this.state.adContinueUsedForAttempt = false;
+    this.state.adEnergyUsedForAttempt = false;
+    this.save.energy = this.state.energy;
+    this.save.diamonds = this.state.diamonds;
+    saveData(this.save);
+    this.restartLevel();
   }
 
   private startNextLevel(): void {
@@ -1637,9 +1658,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   private renderRewardedAdOfferModal(): void {
+    const completedLevel = this.pendingAdFlow?.completedLevel ?? 0;
+    const title = this.t('bonusRewardTitle').replace('{level}', String(completedLevel));
     this.openModal(`
       <div class="modal-card result-card result-card-win">
-        <h2>${this.t('bonusRewardTitle')}</h2>
+        <h2>${title}</h2>
         <p>${this.t('bonusRewardMessage')}</p>
         <div class="result-rewards">
           <article><span>${this.t('bonus')}</span><strong>${this.t('bonusRewardText')}</strong></article>
@@ -1672,6 +1695,7 @@ export class MainScene extends Phaser.Scene {
     this.state.energy = this.save.energy;
     this.state.diamonds = this.save.diamonds;
     this.sfx.playPurchaseSuccess();
+    this.showWarning(this.t('tenLevelBonusClaimed'));
     if (result.capped) {
       this.showWarning(this.t('energyFull'));
     }
@@ -1726,7 +1750,7 @@ export class MainScene extends Phaser.Scene {
     this.modalButton('five', (button) => this.handleContinueClick(button, 5, 400));
     this.modalButton('restart', (button) => {
       this.disableModalButtons(button);
-      this.restartLevel();
+      this.tryRestartLevel();
     });
   }
 
