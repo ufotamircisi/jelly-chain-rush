@@ -16,6 +16,7 @@ export function createGameState(save: SaveData): GameState {
     highestMultiplierIndex: 0,
     continued: false,
     adContinueUsedForAttempt: false,
+    adEnergyUsedForAttempt: false,
     status: 'playing',
     board: createBoard()
   };

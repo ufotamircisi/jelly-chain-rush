@@ -97,6 +97,7 @@ export interface GameState {
   highestMultiplierIndex: number;
   continued: boolean;
   adContinueUsedForAttempt: boolean;
+  adEnergyUsedForAttempt: boolean;
   status: LevelStatus;
   board: BoardGrid;
 }

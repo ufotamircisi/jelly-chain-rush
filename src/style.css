@@ -1514,6 +1514,11 @@ button {
   filter: grayscale(0.18);
 }
 
+.btn-ad-disabled {
+  background: linear-gradient(180deg, #aaa, #888) !important;
+  font-size: 12px;
+}
+
 .settings-card {
   max-height: min(calc(100dvh - 36px - env(safe-area-inset-top) - env(safe-area-inset-bottom)), 680px);
   overflow-y: auto;

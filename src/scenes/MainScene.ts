@@ -30,8 +30,6 @@ import {
   MARKET_SHAKE_ITEMS,
   REGEN_ENERGY_AMOUNT,
   REGEN_ENERGY_CAP,
-  REGEN_SHAKES_AMOUNT,
-  REGEN_SHAKES_CAP,
   SHAKE_ENERGY_COST
 } from '../game/economy';
 import { createGameState } from '../game/gameState';
@@ -228,8 +226,7 @@ export class MainScene extends Phaser.Scene {
     });
     this.el('get-energy-button').addEventListener('click', () => {
       this.playButtonTap();
-      this.screen = 'market';
-      this.renderOverlay();
+      this.renderEnergyEmptyModal();
     });
     this.bindIslandMapPan();
 
@@ -1179,9 +1176,9 @@ export class MainScene extends Phaser.Scene {
 
     if (this.state.energy < SHAKE_ENERGY_COST) {
       this.sfx.playWarning();
-      this.showWarning(this.t('noEnergy'));
       this.blockShakeButton();
       this.renderOverlay();
+      this.renderEnergyEmptyModal();
       return false;
     }
 
@@ -1665,9 +1662,15 @@ export class MainScene extends Phaser.Scene {
 
   private renderFailModal(): void {
     const goals = this.state.definition.goals.map((goal) => `<article>${this.formatGoal(goal)}</article>`).join('');
-    const adContinue = this.state.adContinueUsedForAttempt
-      ? `<p class="result-keep-note">${this.t('adContinueUsed')}</p>`
-      : `<button type="button" data-action="ad">${this.t('watchAdContinue')}</button>`;
+
+    let adContinue: string;
+    if (this.state.adContinueUsedForAttempt) {
+      adContinue = `<p class="result-keep-note">${this.t('adContinueUsed')}</p>`;
+    } else if (this.isAdReady()) {
+      adContinue = `<button type="button" data-action="ad">${this.t('watchAdContinue')}</button>`;
+    } else {
+      adContinue = `<button type="button" disabled class="btn-ad-disabled">${this.t('adNotReady')}</button>`;
+    }
 
     this.openModal(`
       <div class="modal-card result-card result-card-fail">
@@ -1689,7 +1692,7 @@ export class MainScene extends Phaser.Scene {
         </div>
       </div>
     `);
-    if (!this.state.adContinueUsedForAttempt) {
+    if (!this.state.adContinueUsedForAttempt && this.isAdReady()) {
       this.modalButton('ad', (button) => this.handleContinueClick(button, 1, 0, 'ad'));
     }
     this.modalButton('one', (button) => this.handleContinueClick(button, 1, 100));
@@ -1704,6 +1707,80 @@ export class MainScene extends Phaser.Scene {
   private handleContinueClick(button: HTMLButtonElement, shakes: number, diamondCost = 0, source: 'ad' | 'diamonds' = 'diamonds'): void {
     if (!this.continueLevel(shakes, diamondCost, source)) return;
     this.disableModalButtons(button);
+  }
+
+  private renderEnergyEmptyModal(): void {
+    let adEnergy: string;
+    if (this.state.adEnergyUsedForAttempt) {
+      adEnergy = `<p class="result-keep-note">${this.t('adContinueUsed')}</p>`;
+    } else if (this.isAdReady()) {
+      adEnergy = `<button type="button" data-action="ad-energy">${this.t('watchAdEnergy')}</button>`;
+    } else {
+      adEnergy = `<button type="button" disabled class="btn-ad-disabled">${this.t('adNotReady')}</button>`;
+    }
+
+    const energyItems = MARKET_ENERGY_ITEMS.map((item) =>
+      `<button type="button" data-action="energy-${item.energy}">${this.t(item.labelKey)}</button>`
+    ).join('');
+
+    let regenLine = '';
+    if (this.save.energy < REGEN_ENERGY_CAP) {
+      const ms = getRegenMsUntilNext(this.save.lastRegenAt);
+      const minutes = Math.floor(ms / 60_000);
+      const seconds = Math.floor((ms % 60_000) / 1_000);
+      const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      regenLine = `<p class="result-keep-note">${this.t('regenEnergyGain').replace('{amount}', String(REGEN_ENERGY_AMOUNT))} ${this.t('regenIn').replace('{time}', timeStr)}</p>`;
+    }
+
+    this.openModal(`
+      <div class="modal-card result-card">
+        <h2>${this.t('noEnergy')}</h2>
+        <div class="modal-feedback" aria-live="polite"></div>
+        <div class="continue-actions">
+          ${adEnergy}
+          ${energyItems}
+          ${regenLine}
+          <button class="result-secondary-button" type="button" data-action="close">${this.t('close')}</button>
+        </div>
+      </div>
+    `);
+    if (!this.state.adEnergyUsedForAttempt && this.isAdReady()) {
+      this.modalButton('ad-energy', (button) => this.handleEnergyAdClick(button));
+    }
+    for (const item of MARKET_ENERGY_ITEMS) {
+      this.modalButton(`energy-${item.energy}`, (button) => this.handleModalEnergyPurchase(button, item.energy, item.cost));
+    }
+    this.modalButton('close', () => this.closeModal());
+  }
+
+  private handleEnergyAdClick(button: HTMLButtonElement): void {
+    this.state.adEnergyUsedForAttempt = true;
+    this.disableModalButtons(button);
+    // TODO: replace with real ad SDK callback; grant energy only on completion
+    const result = applyMarketEnergy(this.state.energy, REGEN_ENERGY_AMOUNT);
+    this.state.energy = result.energy;
+    this.save.energy = result.energy;
+    saveData(this.save);
+    this.sfx.playPurchaseSuccess();
+    this.closeModal();
+    this.renderOverlay();
+  }
+
+  private handleModalEnergyPurchase(button: HTMLButtonElement, energy: number, cost: number): void {
+    if (this.state.diamonds < cost) {
+      this.sfx.playWarning();
+      this.showWarning(this.t('notEnoughDiamonds'));
+      return;
+    }
+    this.state.diamonds -= cost;
+    const result = applyMarketEnergy(this.state.energy, energy);
+    this.state.energy = result.energy;
+    this.syncSaveCurrency();
+    this.sfx.playPurchaseSuccess();
+    if (result.capped) this.showWarning(this.t('energyFull'));
+    this.disableModalButtons(button);
+    this.closeModal();
+    this.renderOverlay();
   }
 
   private renderDailyRewardModal(): void {
@@ -2206,9 +2283,8 @@ export class MainScene extends Phaser.Scene {
 
   private tickRegen(): void {
     const result = applyOfflineRegen(this.save.energy, this.save.shakes, this.save.lastRegenAt);
-    if (result.energyGained > 0 || result.shakesGained > 0) {
+    if (result.energyGained > 0) {
       this.save.energy = result.energy;
-      this.save.shakes = result.shakes;
       this.save.lastRegenAt = result.lastRegenAt;
       this.state.energy = result.energy;
       saveData(this.save);
@@ -2221,15 +2297,7 @@ export class MainScene extends Phaser.Scene {
     const el = document.getElementById('regen-countdown');
     if (!el) return;
 
-    if (this.screen !== 'play') {
-      el.textContent = '';
-      return;
-    }
-
-    const energyNeedsRegen = this.state.energy < REGEN_ENERGY_CAP;
-    const shakesNeedRegen = this.save.shakes < REGEN_SHAKES_CAP;
-
-    if (!energyNeedsRegen && !shakesNeedRegen) {
+    if (this.screen !== 'play' || this.state.energy >= REGEN_ENERGY_CAP) {
       el.textContent = '';
       return;
     }
@@ -2238,16 +2306,11 @@ export class MainScene extends Phaser.Scene {
     const minutes = Math.floor(ms / 60_000);
     const seconds = Math.floor((ms % 60_000) / 1_000);
     const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    el.textContent = `${this.t('regenEnergyGain').replace('{amount}', String(REGEN_ENERGY_AMOUNT))} ${this.t('regenIn').replace('{time}', timeStr)}`;
+  }
 
-    const gains: string[] = [];
-    if (energyNeedsRegen) {
-      gains.push(this.t('regenEnergyGain').replace('{amount}', String(REGEN_ENERGY_AMOUNT)));
-    }
-    if (shakesNeedRegen) {
-      gains.push(this.t('regenShakeGain').replace('{amount}', String(REGEN_SHAKES_AMOUNT)));
-    }
-
-    el.textContent = `${gains.join(' ')} ${this.t('regenIn').replace('{time}', timeStr)}`.trim();
+  private isAdReady(): boolean {
+    return false;
   }
 
   private isDailyRewardAvailable(): boolean {

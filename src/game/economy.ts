@@ -7,8 +7,6 @@ export const LEVEL_COMPLETE_ENERGY_REWARD = 100;
 export const REGEN_INTERVAL_MS = 15 * 60 * 1000;
 export const REGEN_ENERGY_AMOUNT = 20;
 export const REGEN_ENERGY_CAP = 100;
-export const REGEN_SHAKES_AMOUNT = 1;
-export const REGEN_SHAKES_CAP = 5;
 const MAX_REGEN_TICKS = 24;
 
 export function applyOfflineRegen(
@@ -27,9 +25,7 @@ export function applyOfflineRegen(
   if (ticks === 0) return { energy, shakes, lastRegenAt, energyGained: 0, shakesGained: 0 };
 
   let e = energy;
-  let s = shakes;
   let eg = 0;
-  let sg = 0;
 
   for (let i = 0; i < ticks; i++) {
     if (e < REGEN_ENERGY_CAP) {
@@ -37,18 +33,14 @@ export function applyOfflineRegen(
       e += gain;
       eg += gain;
     }
-    if (s < REGEN_SHAKES_CAP) {
-      s = Math.min(s + REGEN_SHAKES_AMOUNT, REGEN_SHAKES_CAP);
-      sg++;
-    }
   }
 
   return {
     energy: e,
-    shakes: s,
+    shakes,
     lastRegenAt: new Date(lastMs + ticks * REGEN_INTERVAL_MS).toISOString(),
     energyGained: eg,
-    shakesGained: sg
+    shakesGained: 0
   };
 }
 
