@@ -15,7 +15,8 @@ export const CANDIES: CandyDefinition[] = [
   { type: 'yellowStar', color: 0xffd94f, accent: 0xfff5b8, label: 'S', weight: 22 },
   { type: 'blueRound', color: 0x4f9cff, accent: 0xd5e8ff, label: 'B', weight: 22 },
   { type: 'orangeBean', color: 0xff9c3f, accent: 0xffe3c4, label: 'O', weight: 22 },
-  { type: 'energyStar', color: 0x7ff8ff, accent: 0xffffff, label: 'E', weight: 2 }
+  { type: 'energyStar', color: 0x7ff8ff, accent: 0xffffff, label: 'E', weight: 2 },
+  { type: 'colorBomb', color: 0xff66cc, accent: 0xffe0f5, label: 'C', weight: 0 }
 ];
 
 export function getCandyDefinition(type: CandyType): CandyDefinition {

@@ -28,7 +28,7 @@ export const CANDY_ASSET_PACK: CandyAssetPreviewItem[] = [
   { name: 'pembe_lollipop', path: 'src/assets/candies/pembe_lollipop.png', src: pembeLollipop, textureKey: 'candy-pink-lollipop' },
   { name: 'gokkusagi_seker', path: 'src/assets/candies/gokkusagi_seker.png', src: gokkusagiSeker, textureKey: 'candy-rainbow' },
   { name: 'enerji_yildizi', path: 'src/assets/candies/special/enerji_yildizi.png', src: enerjiYildizi, textureKey: 'candy-energy-star', candyType: 'energyStar' },
-  { name: 'renk_bombasi', path: 'src/assets/candies/special/renk_bombasi.png', src: renkBombasi, textureKey: 'candy-color-bomb' }
+  { name: 'renk_bombasi', path: 'src/assets/candies/special/renk_bombasi.png', src: renkBombasi, textureKey: 'candy-color-bomb', candyType: 'colorBomb' }
 ];
 
 export const CANDY_TEXTURE_KEY_BY_TYPE = CANDY_ASSET_PACK.reduce<Partial<Record<CandyType, string>>>((mapping, asset) => {

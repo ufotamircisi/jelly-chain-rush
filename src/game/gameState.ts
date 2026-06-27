@@ -17,6 +17,8 @@ export function createGameState(save: SaveData): GameState {
     continued: false,
     adContinueUsedForAttempt: false,
     adEnergyUsedForAttempt: false,
+    energyStarEventFired: false,
+    colorBombEventFired: false,
     status: 'playing',
     board: createBoard()
   };

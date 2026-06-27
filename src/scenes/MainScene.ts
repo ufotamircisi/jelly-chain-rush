@@ -33,6 +33,20 @@ import {
   SHAKE_ENERGY_COST
 } from '../game/economy';
 import { createGameState } from '../game/gameState';
+import {
+  COLOR_BOMB_REWARD_DIAMONDS,
+  COLOR_BOMB_REWARD_ENERGY,
+  consumeCandyFromBoard,
+  countCandyOnBoard,
+  ENERGY_STAR_REWARD,
+  ENERGY_STAR_THRESHOLD,
+  injectSpecialTilesIntoBoard,
+  onColorBombEventFired,
+  onEnergyStarEventFired,
+  onFirstTimeLevelCompleted,
+  shouldInjectColorBomb,
+  shouldInjectEnergyStar
+} from '../game/specialTiles';
 import { areGoalsComplete, getGoalProgress } from '../game/levels';
 import { calculateRewardSummary } from '../game/rewards';
 import { createTranslator, LOCALE_NATIVE_NAMES, SUPPORTED_LOCALES, type TranslationKey } from '../locales';
@@ -1188,14 +1202,18 @@ export class MainScene extends Phaser.Scene {
     return true;
   }
 
-  private startDropSequence(options: { playChime?: boolean } = {}): void {
+  private startDropSequence(options: { playChime?: boolean; injectAfterRegen?: (board: BoardGrid) => BoardGrid } = {}): void {
     if (this.isDropping || this.isResolving || this.state.status !== 'playing') return;
 
     if (options.playChime) {
       this.sfx.playStartChime();
     }
 
-    this.state.board = regenerateCandies(this.state.board);
+    let freshBoard = regenerateCandies(this.state.board);
+    if (options.injectAfterRegen) {
+      freshBoard = options.injectAfterRegen(freshBoard);
+    }
+    this.state.board = freshBoard;
     this.sfx.playDropShimmer();
     this.isDropping = true;
     this.dragStart = undefined;
@@ -1210,7 +1228,11 @@ export class MainScene extends Phaser.Scene {
 
   private startInitialDrop(): void {
     if (this.isDropping || this.isResolving || this.state.status !== 'playing') return;
-    this.startDropSequence();
+    const injectES = shouldInjectEnergyStar(this.save, this.state.level);
+    const injectCB = shouldInjectColorBomb(this.save, this.state.level);
+    this.startDropSequence({
+      injectAfterRegen: (board) => injectSpecialTilesIntoBoard(board, injectES ? ENERGY_STAR_THRESHOLD : 0, injectCB)
+    });
   }
 
   private handleSwipe(first: BoardPosition, second: BoardPosition): void {
@@ -1361,6 +1383,7 @@ export class MainScene extends Phaser.Scene {
       this.state.board = multiplierUpgrade.board;
       this.drawBoard();
       this.animateBoardSettle();
+      this.checkSpecialTileEvents();
 
       if (areGoalsComplete(this.state)) {
         this.triggerLevelWin();
@@ -1435,6 +1458,9 @@ export class MainScene extends Phaser.Scene {
         highestMultiplierEver: Math.max(this.save.stats.highestMultiplierEver, this.getHighestMultiplierValue())
       }
     };
+    if (!alreadyCompleted) {
+      onFirstTimeLevelCompleted(this.save);
+    }
     this.save = markLevelCompleted(this.save, this.state.level, this.state.score);
     this.renderOverlay();
   }
@@ -2263,7 +2289,8 @@ export class MainScene extends Phaser.Scene {
       yellowStar: 'candyYellowStar',
       blueRound: 'candyBlueRound',
       orangeBean: 'candyOrangeBean',
-      energyStar: 'candyEnergyStar'
+      energyStar: 'candyEnergyStar',
+      colorBomb: 'candyColorBomb'
     };
     return this.t(keys[candy]);
   }
@@ -2279,6 +2306,72 @@ export class MainScene extends Phaser.Scene {
     this.save.diamonds = this.state.diamonds;
     this.save.currentLevel = this.state.level;
     saveData(this.save);
+  }
+
+  private checkSpecialTileEvents(): void {
+    if (this.state.status !== 'playing') return;
+
+    if (!this.state.energyStarEventFired) {
+      const count = countCandyOnBoard(this.state.board, 'energyStar');
+      if (count >= ENERGY_STAR_THRESHOLD) {
+        this.triggerEnergyStarEvent();
+      }
+    }
+
+    if (!this.state.colorBombEventFired) {
+      const count = countCandyOnBoard(this.state.board, 'colorBomb');
+      if (count >= 1) {
+        this.triggerColorBombEvent();
+      }
+    }
+  }
+
+  private triggerEnergyStarEvent(): void {
+    this.state.energyStarEventFired = true;
+    this.state.board = consumeCandyFromBoard(this.state.board, 'energyStar');
+    this.drawBoard();
+
+    const isFirstTime = !this.save.completedLevels.includes(this.state.level)
+      && this.save.energyStarClaimedLevel !== this.state.level;
+
+    if (isFirstTime) {
+      this.state.energy = Math.min(this.state.energy + ENERGY_STAR_REWARD, 999);
+      onEnergyStarEventFired(this.save, this.state.level);
+      this.save.energy = this.state.energy;
+      saveData(this.save);
+      this.sfx.playLevelComplete();
+      this.showSpecialEventFeedback(this.t('energyStarEvent'));
+      this.renderOverlay();
+    }
+  }
+
+  private triggerColorBombEvent(): void {
+    this.state.colorBombEventFired = true;
+    this.state.board = consumeCandyFromBoard(this.state.board, 'colorBomb');
+    this.drawBoard();
+
+    const isFirstTime = !this.save.completedLevels.includes(this.state.level)
+      && this.save.colorBombClaimedLevel !== this.state.level;
+
+    if (isFirstTime) {
+      this.state.energy = Math.min(this.state.energy + COLOR_BOMB_REWARD_ENERGY, 999);
+      this.state.diamonds = Math.min(this.state.diamonds + COLOR_BOMB_REWARD_DIAMONDS, 999999);
+      onColorBombEventFired(this.save, this.state.level);
+      this.save.energy = this.state.energy;
+      this.save.diamonds = this.state.diamonds;
+      saveData(this.save);
+      this.sfx.playLevelComplete();
+      this.showSpecialEventFeedback(this.t('colorBombEvent'));
+      this.renderOverlay();
+    }
+  }
+
+  private showSpecialEventFeedback(message: string): void {
+    const cx = BOARD_X + BOARD_SIZE / 2;
+    const cy = BOARD_Y + BOARD_SIZE / 2;
+    this.emitSparkles(cx, cy, 12, false, true);
+    this.showBlastRing(cx, cy, 12, true);
+    this.showBurstLabel(message, cx, cy - 30, true);
   }
 
   private tickRegen(): void {

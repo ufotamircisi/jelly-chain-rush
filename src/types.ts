@@ -11,7 +11,8 @@ export type CandyType =
   | 'yellowStar'
   | 'blueRound'
   | 'orangeBean'
-  | 'energyStar';
+  | 'energyStar'
+  | 'colorBomb';
 
 export interface BoardPosition {
   row: number;
@@ -71,6 +72,12 @@ export interface SaveData {
   energy: number;
   shakes: number;
   lastRegenAt: string;
+  energyStarLevelsSince: number;
+  colorBombLevelsSince: number;
+  energyStarDiscovered: boolean;
+  colorBombDiscovered: boolean;
+  energyStarClaimedLevel: number;
+  colorBombClaimedLevel: number;
   diamonds: number;
   superChests: number;
   chests: number;
@@ -98,6 +105,8 @@ export interface GameState {
   continued: boolean;
   adContinueUsedForAttempt: boolean;
   adEnergyUsedForAttempt: boolean;
+  energyStarEventFired: boolean;
+  colorBombEventFired: boolean;
   status: LevelStatus;
   board: BoardGrid;
 }
