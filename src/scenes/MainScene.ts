@@ -175,6 +175,10 @@ export class MainScene extends Phaser.Scene {
   private pendingAdFlow?: AdFlowPlan & { forcedHandled: boolean; rewardedHandled: boolean };
   private completedLevelWasReplay = false;
   private goalsCompletedEarly = false;
+  private challengeTimerSeconds = 0;
+  private challengeTimerRunning = false;
+  private challengeBoardLocked = false;
+  private challengeTimerWarningFired = false;
 
   constructor() {
     super('MainScene');
@@ -367,6 +371,7 @@ export class MainScene extends Phaser.Scene {
     this.renderUiIcons();
     this.renderModalForStatus();
     this.renderRegenCountdown();
+    this.renderChallengeTimer();
   }
 
   private renderLogo(): void {
@@ -1176,6 +1181,8 @@ export class MainScene extends Phaser.Scene {
     if (this.isShaking || this.isDropping || this.isResolving || this.state.status !== 'playing') return;
     if (!this.consumeShakeCost()) return;
 
+    this.challengeBoardLocked = false;
+    this.startChallengeTimer();
     this.isShaking = true;
     this.dragStart = undefined;
     this.renderOverlay();
@@ -1426,7 +1433,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private canUseBoardInput(): boolean {
-    return this.playMode === 'game' && this.state.status === 'playing' && !this.isShaking && !this.isDropping && !this.isResolving;
+    return this.playMode === 'game' && this.state.status === 'playing' && !this.isShaking && !this.isDropping && !this.isResolving && !this.challengeBoardLocked;
   }
 
   private canUseShake(): boolean {
@@ -1442,6 +1449,7 @@ export class MainScene extends Phaser.Scene {
   private getHelperText(): string {
     if (this.isShaking || this.isDropping) return this.t('shakeDropHelper');
     if (this.isResolving) return this.t('chainInProgress');
+    if (this.challengeBoardLocked) return this.t('challengeTimeLocked');
     if (this.state.energy < SHAKE_ENERGY_COST) return this.t('noEnergy');
     if (hasValidSwipeMove(this.state.board)) return this.t('swipeHelper');
     return this.t('shakeHelper');
@@ -1449,6 +1457,8 @@ export class MainScene extends Phaser.Scene {
 
   private triggerLevelWin(): void {
     if (this.state.status === 'won') return;
+    this.challengeTimerRunning = false;
+    this.challengeBoardLocked = false;
     this.state.status = 'won';
     this.sfx.playLevelComplete();
     this.vibrate([18, 32, 28]);
@@ -1507,6 +1517,8 @@ export class MainScene extends Phaser.Scene {
   }
 
   private triggerLevelFail(): void {
+    this.challengeTimerRunning = false;
+    this.challengeBoardLocked = false;
     this.state.status = 'failed';
     this.sfx.playLevelFailed();
     this.renderOverlay();
@@ -1552,6 +1564,7 @@ export class MainScene extends Phaser.Scene {
     this.syncSaveCurrency();
     this.closeModal();
     this.sfx.playPurchaseSuccess();
+    this.startChallengeTimer();
     this.renderOverlay();
     return true;
   }
@@ -1571,12 +1584,20 @@ export class MainScene extends Phaser.Scene {
     this.rewardSummary = undefined;
     this.completedLevelWasReplay = false;
     this.goalsCompletedEarly = false;
+    this.challengeTimerSeconds = 0;
+    this.challengeTimerRunning = false;
+    this.challengeBoardLocked = false;
+    this.challengeTimerWarningFired = false;
     this.screen = 'play';
     this.playMode = 'game';
     this.closeModal();
     this.drawBoard();
     this.renderOverlay();
     this.sfx.playLevelStart();
+    if (this.isChallengeLevel()) {
+      this.showChallengeIntro();
+      this.time.delayedCall(1400, () => this.startChallengeTimer());
+    }
     this.time.delayedCall(1, () => this.startInitialDrop());
   }
 
@@ -1586,12 +1607,19 @@ export class MainScene extends Phaser.Scene {
     this.rewardSummary = undefined;
     this.completedLevelWasReplay = false;
     this.goalsCompletedEarly = false;
+    this.challengeTimerSeconds = 0;
+    this.challengeTimerRunning = false;
+    this.challengeBoardLocked = false;
+    this.challengeTimerWarningFired = false;
     this.screen = 'play';
     this.playMode = 'game';
     this.closeModal();
     this.drawBoard();
     this.renderOverlay();
     this.sfx.playLevelStart();
+    if (this.isChallengeLevel()) {
+      this.time.delayedCall(800, () => this.startChallengeTimer());
+    }
     this.time.delayedCall(1, () => this.startInitialDrop());
   }
 
@@ -2464,6 +2492,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private tickRegen(): void {
+    this.tickChallenge();
     const result = applyOfflineRegen(this.save.energy, this.save.shakes, this.save.lastRegenAt);
     if (result.energyGained > 0 || result.lastRegenAt !== this.save.lastRegenAt) {
       this.save.energy = result.energy;
@@ -2489,6 +2518,106 @@ export class MainScene extends Phaser.Scene {
     const seconds = Math.floor((ms % 60_000) / 1_000);
     const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     el.textContent = `${this.t('regenEnergyGain').replace('{amount}', String(REGEN_ENERGY_AMOUNT))} ${this.t('regenIn').replace('{time}', timeStr)}`;
+  }
+
+  private isChallengeLevel(): boolean {
+    return this.state.level % 10 === 0;
+  }
+
+  private getChallengeTimerDuration(): number {
+    return this.state.level === 10 ? 120 : 90;
+  }
+
+  private startChallengeTimer(): void {
+    if (!this.isChallengeLevel()) {
+      this.challengeTimerRunning = false;
+      return;
+    }
+    this.challengeTimerSeconds = this.getChallengeTimerDuration();
+    this.challengeTimerRunning = true;
+    this.challengeTimerWarningFired = false;
+    this.challengeBoardLocked = false;
+    this.renderChallengeTimer();
+  }
+
+  private tickChallenge(): void {
+    if (!this.challengeTimerRunning) return;
+    if (!this.isChallengeLevel()) return;
+    if (this.state.status !== 'playing') return;
+    if (this.screen !== 'play' || this.playMode !== 'game') return;
+
+    this.challengeTimerSeconds = Math.max(0, this.challengeTimerSeconds - 1);
+
+    if (this.challengeTimerSeconds <= 10 && this.challengeTimerSeconds > 0 && !this.challengeTimerWarningFired) {
+      this.challengeTimerWarningFired = true;
+      this.sfx.playWarning();
+      this.vibrate([15, 10, 15]);
+    }
+
+    if (this.challengeTimerSeconds <= 0) {
+      this.challengeTimerRunning = false;
+      this.onChallengeTimerExpired();
+      return;
+    }
+
+    this.renderChallengeTimer();
+  }
+
+  private onChallengeTimerExpired(): void {
+    if (areGoalsComplete(this.state)) {
+      this.triggerLevelWin();
+    } else {
+      this.challengeBoardLocked = true;
+      this.renderOverlay();
+    }
+  }
+
+  private renderChallengeTimer(): void {
+    const timerEl = document.getElementById('challenge-timer');
+    const boardStage = document.querySelector<HTMLElement>('.board-stage');
+    const phoneFrame = document.getElementById('phone-frame');
+
+    const show = this.isChallengeLevel()
+      && this.playMode === 'game'
+      && (this.state.status === 'playing' || this.state.status === 'won');
+
+    if (!show || (!this.challengeTimerRunning && !this.challengeBoardLocked)) {
+      if (timerEl) timerEl.hidden = true;
+      boardStage?.classList.remove('is-challenge-warning', 'is-challenge-locked');
+      phoneFrame?.classList.remove('has-challenge-lock');
+      return;
+    }
+
+    if (timerEl) {
+      timerEl.hidden = false;
+      if (this.challengeBoardLocked) {
+        timerEl.textContent = '⏰';
+        timerEl.classList.add('is-warning');
+      } else {
+        const minutes = Math.floor(this.challengeTimerSeconds / 60);
+        const seconds = this.challengeTimerSeconds % 60;
+        timerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        timerEl.classList.toggle('is-warning', this.challengeTimerSeconds <= 10);
+      }
+    }
+
+    const isWarning = this.challengeTimerRunning && this.challengeTimerSeconds <= 10 && this.challengeTimerSeconds > 0;
+    boardStage?.classList.toggle('is-challenge-warning', isWarning);
+    boardStage?.classList.toggle('is-challenge-locked', this.challengeBoardLocked);
+    phoneFrame?.classList.toggle('has-challenge-lock', this.challengeBoardLocked);
+  }
+
+  private showChallengeIntro(): void {
+    const el = document.getElementById('challenge-intro');
+    if (!el) return;
+    el.innerHTML = `<strong>${this.t('challengeTitle')}</strong><p>${this.t('challengeIntroShake')}<br>${this.t('challengeIntroMoves')}</p>`;
+    el.classList.remove('is-visible');
+    void (el as HTMLElement).offsetWidth;
+    el.classList.add('is-visible');
+    this.time.delayedCall(3200, () => {
+      el.classList.remove('is-visible');
+      this.time.delayedCall(400, () => { el.innerHTML = ''; });
+    });
   }
 
   private isAdReady(): boolean {

@@ -208,7 +208,11 @@ export const es: typeof en = {
   mapCandyHarbor: 'Puerto',
   mapGrandCandySquare: 'Plaza',
   mapMultiplierTower: 'x1000',
-  mapMegaCandyPalace: 'Palacio'
+  mapMegaCandyPalace: 'Palacio',
+  challengeTitle: '¡Reto cronometrado!',
+  challengeIntroShake: 'El temporizador se reinicia en cada sacudida.',
+  challengeIntroMoves: 'Haz tus movimientos antes de que se acabe el tiempo.',
+  challengeTimeLocked: 'Tablero bloqueado — Sacude para un nuevo tablero.'
 };
 
 export const pt: typeof en = {
@@ -363,7 +367,11 @@ export const pt: typeof en = {
   mapChocolateBridge: 'Ponte',
   mapCandyHarbor: 'Porto',
   mapGrandCandySquare: 'Praca',
-  mapMegaCandyPalace: 'Palacio'
+  mapMegaCandyPalace: 'Palacio',
+  challengeTitle: 'Desafio cronometrado!',
+  challengeIntroShake: 'O temporizador reinicia a cada sacudida.',
+  challengeIntroMoves: 'Faca seus movimentos antes do tempo acabar.',
+  challengeTimeLocked: 'Tabuleiro bloqueado — Sacuda para um novo tabuleiro.'
 };
 
 export const fr: typeof en = {
@@ -518,7 +526,11 @@ export const fr: typeof en = {
   mapChocolateBridge: 'Pont',
   mapCandyHarbor: 'Port',
   mapGrandCandySquare: 'Place',
-  mapMegaCandyPalace: 'Palais'
+  mapMegaCandyPalace: 'Palais',
+  challengeTitle: 'Defi chronometre !',
+  challengeIntroShake: 'Le minuteur se reinitialise a chaque secousse.',
+  challengeIntroMoves: 'Faites vos mouvements avant la fin du temps.',
+  challengeTimeLocked: 'Plateau bloque — Secouez pour un nouveau plateau.'
 };
 
 export const de: typeof en = {
@@ -671,7 +683,11 @@ export const de: typeof en = {
   mapChocolateBridge: 'Brucke',
   mapCandyHarbor: 'Hafen',
   mapGrandCandySquare: 'Platz',
-  mapMegaCandyPalace: 'Palast'
+  mapMegaCandyPalace: 'Palast',
+  challengeTitle: 'Zeitliche Herausforderung!',
+  challengeIntroShake: 'Timer wird bei jedem Schutteln zuruckgesetzt.',
+  challengeIntroMoves: 'Mache Zuge bevor die Zeit ablauft.',
+  challengeTimeLocked: 'Brett gesperrt — Schutteln fur neues Brett.'
 };
 
 export const it: typeof en = {
@@ -788,7 +804,11 @@ export const it: typeof en = {
   mapChocolateBridge: 'Ponte',
   mapCandyHarbor: 'Porto',
   mapGrandCandySquare: 'Piazza',
-  mapMegaCandyPalace: 'Palazzo'
+  mapMegaCandyPalace: 'Palazzo',
+  challengeTitle: 'Sfida a tempo!',
+  challengeIntroShake: 'Il timer si azzera ad ogni scossa.',
+  challengeIntroMoves: 'Fai le tue mosse prima che il tempo scada.',
+  challengeTimeLocked: 'Tavola bloccata — Scuoti per una nuova tavola.'
 };
 
 export const id: typeof en = {
@@ -901,7 +921,11 @@ export const id: typeof en = {
   mapChocolateBridge: 'Jembatan',
   mapCandyHarbor: 'Pelabuhan',
   mapGrandCandySquare: 'Alun',
-  mapMegaCandyPalace: 'Istana'
+  mapMegaCandyPalace: 'Istana',
+  challengeTitle: 'Tantangan Waktu!',
+  challengeIntroShake: 'Timer mengulang di setiap kocok.',
+  challengeIntroMoves: 'Lakukan gerakan sebelum waktu habis.',
+  challengeTimeLocked: 'Papan terkunci — Kocok untuk papan baru.'
 };
 
 export const vi: typeof en = {
@@ -1005,7 +1029,11 @@ export const vi: typeof en = {
   mapChocolateBridge: 'Cau',
   mapCandyHarbor: 'Cang',
   mapGrandCandySquare: 'Quang truong',
-  mapMegaCandyPalace: 'Cung dien'
+  mapMegaCandyPalace: 'Cung dien',
+  challengeTitle: 'Thach thuc co thoi gian!',
+  challengeIntroShake: 'Bo dem thoi gian dat lai sau moi lan lac.',
+  challengeIntroMoves: 'Thuc hien nuoc di truoc khi het gio.',
+  challengeTimeLocked: 'Bang bi khoa — Lac de co bang moi.'
 };
 
 export const nl: typeof en = {
@@ -1094,7 +1122,11 @@ export const nl: typeof en = {
   mapChocolateBridge: 'Brug',
   mapCandyHarbor: 'Haven',
   mapGrandCandySquare: 'Plein',
-  mapMegaCandyPalace: 'Paleis'
+  mapMegaCandyPalace: 'Paleis',
+  challengeTitle: 'Tijduitdaging!',
+  challengeIntroShake: 'Timer wordt gereset bij elk schudden.',
+  challengeIntroMoves: 'Doe je zetten voor de tijd op is.',
+  challengeTimeLocked: 'Bord vergrendeld — Schud voor een nieuw bord.'
 };
 
 export const pl: typeof en = {
@@ -1190,5 +1222,9 @@ export const pl: typeof en = {
   mapChocolateBridge: 'Most',
   mapCandyHarbor: 'Port',
   mapGrandCandySquare: 'Plac',
-  mapMegaCandyPalace: 'Palac'
+  mapMegaCandyPalace: 'Palac',
+  challengeTitle: 'Wyzwanie czasowe!',
+  challengeIntroShake: 'Timer resetuje sie przy kazdym wstrzasaniu.',
+  challengeIntroMoves: 'Wykonaj ruchy zanim skonczy sie czas.',
+  challengeTimeLocked: 'Plansza zablokowana — Wstrzasnij po nowa plansze.'
 };

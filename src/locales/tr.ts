@@ -207,7 +207,11 @@ const tr: typeof en = {
   mapCandyHarbor: 'Liman',
   mapGrandCandySquare: 'Meydan',
   mapMultiplierTower: 'x1000',
-  mapMegaCandyPalace: 'Saray'
+  mapMegaCandyPalace: 'Saray',
+  challengeTitle: 'Süreli Görev!',
+  challengeIntroShake: 'Her çalkalamada süre yeniden başlar.',
+  challengeIntroMoves: 'Süre bitmeden hamlelerini yap.',
+  challengeTimeLocked: 'Tahta kilitlendi — Yeni tahta için Çalkala.'
 };
 
 export default tr;

@@ -206,7 +206,11 @@ const en = {
   mapCandyHarbor: 'Harbor',
   mapGrandCandySquare: 'Square',
   mapMultiplierTower: 'x1000',
-  mapMegaCandyPalace: 'Palace'
+  mapMegaCandyPalace: 'Palace',
+  challengeTitle: 'Timed Challenge!',
+  challengeIntroShake: 'Timer resets on each shake.',
+  challengeIntroMoves: 'Make moves before time runs out.',
+  challengeTimeLocked: 'Board locked — Shake for a new board.'
 };
 
 export default en;
