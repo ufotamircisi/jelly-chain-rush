@@ -1582,7 +1582,7 @@ export class MainScene extends Phaser.Scene {
     rewardRows.push(`<article><span>${this.t('totalReward')}</span><strong>+${reward.totalEnergy} ${this.t('energy')}${totalDiamondPart}</strong></article>`);
 
     if (reward.superChest) {
-      rewardRows.push(`<article class="result-special-row"><span>${this.t('superChest')}</span><strong>${this.t('superChestUnlocked')}</strong></article>`);
+      rewardRows.push(`<article class="result-special-row"><img class="super-chest-img" src="${UI_ASSETS.rewards.superChest}" alt="" aria-hidden="true"><div class="super-chest-text"><span>${this.t('superChest')}</span><strong>${this.t('superChestUnlocked')}</strong></div></article>`);
     }
 
     this.openModal(`

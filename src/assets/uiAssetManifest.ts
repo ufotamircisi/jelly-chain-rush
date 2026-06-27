@@ -9,6 +9,7 @@ import levelRoadMap from './ui/level-road/level_road_map.png';
 import levelNodeDefault from './ui/level-road/level_node_default.png';
 import levelNodeCompleted from './ui/level-road/level_node_completed.png';
 import levelNodeLocked from './ui/level-road/level_node_locked.png';
+import superChest from './rewards/super-chest.png';
 
 export const UI_ASSETS = {
   logo,
@@ -27,5 +28,8 @@ export const UI_ASSETS = {
     nodeDefault: levelNodeDefault,
     nodeCompleted: levelNodeCompleted,
     nodeLocked: levelNodeLocked
+  },
+  rewards: {
+    superChest
   }
 } as const;

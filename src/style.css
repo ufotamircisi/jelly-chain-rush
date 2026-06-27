@@ -1730,8 +1730,26 @@ button {
 }
 
 .result-special-row {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
   background: linear-gradient(180deg, rgba(255, 247, 172, 0.94), rgba(255, 213, 71, 0.72)) !important;
   box-shadow: 0 0 18px rgba(255, 211, 63, 0.48), inset 0 2px 0 rgba(255, 255, 255, 0.72) !important;
+}
+
+.super-chest-img {
+  height: clamp(54px, 10vw, 72px);
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.super-chest-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .result-primary-button {
