@@ -327,7 +327,11 @@ export class MainScene extends Phaser.Scene {
     const gameplayActive = this.screen === 'play' && this.playMode === 'game';
     this.el('phone-frame').classList.toggle('is-gameplay-active', gameplayActive);
     this.el('phone-frame').classList.toggle('has-top-banner', gameplayActive);
-    this.el('shake-button').toggleAttribute('disabled', !this.canUseShake());
+    const shakeGestureEnabled = this.playMode === 'game' && this.state.status === 'playing'
+      && !this.isShaking && !this.isDropping && !this.isResolving && this.state.shakesRemaining > 0;
+    this.el('shake-button').toggleAttribute('disabled', !shakeGestureEnabled);
+    this.el('shake-button').classList.toggle('is-low-energy',
+      shakeGestureEnabled && this.state.energy < SHAKE_ENERGY_COST);
     this.el('phone-frame').classList.toggle('is-island-active', this.screen === 'island');
     this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
     this.setText('game-title', this.t('title'));
@@ -355,7 +359,6 @@ export class MainScene extends Phaser.Scene {
     this.setText('multiplier-rewards-button', this.t('viewRewards'));
     this.setText('shake-button', this.t('shakeButton'));
     this.setText('get-energy-button', this.t('getEnergy'));
-    this.el('get-energy-button').classList.toggle('is-visible', gameplayActive && this.state.status === 'playing' && this.state.energy < SHAKE_ENERGY_COST);
     this.setText('island-title', this.t('islandTitle'));
     this.setText('collect-all-button', this.t('collectAll'));
     this.setText('market-title', this.t('market'));
@@ -1250,8 +1253,32 @@ export class MainScene extends Phaser.Scene {
     if (this.isDropping || this.isResolving || this.state.status !== 'playing') return;
     const injectES = shouldInjectEnergyStar(this.save, this.state.level);
     const injectCB = shouldInjectColorBomb(this.save, this.state.level);
+    const isChallenge = this.isChallengeLevel();
+    const isCompleted = this.save.completedLevels.includes(this.state.level);
+
+    let esCount: number;
+    let cbCount: number;
+
+    if (injectES) {
+      esCount = ENERGY_STAR_THRESHOLD;
+    } else if (isCompleted) {
+      esCount = 0;
+    } else {
+      const r = Math.random();
+      esCount = isChallenge ? (r < 0.4 ? 2 : r < 0.75 ? 1 : 0) : (r < 0.18 ? 1 : 0);
+    }
+
+    if (injectCB) {
+      cbCount = COLOR_BOMB_THRESHOLD;
+    } else if (isCompleted) {
+      cbCount = 0;
+    } else {
+      const r = Math.random();
+      cbCount = isChallenge ? (r < 0.28 ? 2 : r < 0.62 ? 1 : 0) : (r < 0.09 ? 1 : 0);
+    }
+
     this.startDropSequence({
-      injectAfterRegen: (board) => injectSpecialTilesIntoBoard(board, injectES ? ENERGY_STAR_THRESHOLD : 0, injectCB)
+      injectAfterRegen: (board) => injectSpecialTilesIntoBoard(board, esCount, cbCount)
     });
   }
 
@@ -1385,11 +1412,6 @@ export class MainScene extends Phaser.Scene {
       this.save.stats.highestMultiplierEver = Math.max(this.save.stats.highestMultiplierEver, this.getHighestMultiplierValue());
       saveData(this.save);
       this.playCascadeFeedback(result.steps);
-      this.sfx.playGameplayCallout(
-        result.steps.length,
-        Math.max(...result.steps.map((step) => step.matched.length)),
-        this.getHighestUpgradedMultiplierIndex(multiplierUpgrade.board, multiplierUpgrade.upgraded)
-      );
       if (multiplierUpgrade.upgraded.length > 0) {
         this.time.delayedCall(Math.max(180, result.steps.length * CASCADE_SETTLE_DELAY_MS), () => {
           this.showMultiplierUpgradeFeedback(multiplierUpgrade.upgraded);
@@ -1404,6 +1426,13 @@ export class MainScene extends Phaser.Scene {
       this.drawBoard();
       this.animateBoardSettle();
       this.checkSpecialTileEvents();
+      if (result.steps.length > 0) {
+        this.sfx.playGameplayCallout(
+          result.steps.length,
+          Math.max(...result.steps.map((step) => step.matched.length)),
+          this.getHighestUpgradedMultiplierIndex(multiplierUpgrade.board, multiplierUpgrade.upgraded)
+        );
+      }
 
       if (areGoalsComplete(this.state)) {
         if (!this.goalsCompletedEarly && this.state.shakesRemaining > 0) {
@@ -2549,10 +2578,12 @@ export class MainScene extends Phaser.Scene {
 
     this.challengeTimerSeconds = Math.max(0, this.challengeTimerSeconds - 1);
 
-    if (this.challengeTimerSeconds <= 10 && this.challengeTimerSeconds > 0 && !this.challengeTimerWarningFired) {
-      this.challengeTimerWarningFired = true;
-      this.sfx.playWarning();
-      this.vibrate([15, 10, 15]);
+    if (this.challengeTimerSeconds <= 10 && this.challengeTimerSeconds > 0) {
+      if (!this.challengeTimerWarningFired) {
+        this.challengeTimerWarningFired = true;
+        this.vibrate([15, 10, 15]);
+      }
+      this.sfx.playCountdownTick(this.challengeTimerSeconds);
     }
 
     if (this.challengeTimerSeconds <= 0) {

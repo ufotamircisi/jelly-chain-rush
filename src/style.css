@@ -950,6 +950,11 @@ button {
   display: block;
 }
 
+.shake-button.is-low-energy {
+  filter: saturate(0.5) brightness(0.88);
+  opacity: 0.82;
+}
+
 .shake-button.is-blocked {
   animation: blocked-button 260ms ease;
 }

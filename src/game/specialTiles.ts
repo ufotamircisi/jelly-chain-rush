@@ -50,9 +50,9 @@ export function shouldInjectColorBomb(save: SaveData, level: number): boolean {
 export function injectSpecialTilesIntoBoard(
   board: BoardGrid,
   energyStarCount: number,
-  includeColorBomb: boolean
+  colorBombCount: number
 ): BoardGrid {
-  if (energyStarCount === 0 && !includeColorBomb) return board;
+  if (energyStarCount === 0 && colorBombCount === 0) return board;
   const next = board.map((row) => row.map((cell) => ({ ...cell })));
 
   const energyStarPositions = [
@@ -74,10 +74,9 @@ export function injectSpecialTilesIntoBoard(
     { row: 4, col: 4 }
   ];
 
-  if (includeColorBomb) {
-    for (const pos of colorBombPositions) {
-      next[pos.row][pos.col].candy = 'colorBomb';
-    }
+  for (let i = 0; i < colorBombCount && i < colorBombPositions.length; i++) {
+    const pos = colorBombPositions[i];
+    next[pos.row][pos.col].candy = 'colorBomb';
   }
 
   return next;

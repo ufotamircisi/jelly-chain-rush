@@ -166,6 +166,11 @@ export class CandySfx {
     ]));
   }
 
+  playCountdownTick(second: number): void {
+    // Pitch rises slightly as countdown reaches 0 for urgency (600Hz at 10s → 1050Hz at 1s)
+    this.safePlay(() => this.playTone(600 + (10 - second) * 50, 0.055, 0.038, 0, 'sine'));
+  }
+
   playLevelComplete(): void {
     this.safePlay(() => this.playChord([
       { frequency: 660, duration: 0.12, delay: 0, volume: VOLUME.level },
