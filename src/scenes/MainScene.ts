@@ -91,7 +91,7 @@ const BOARD_SIZE = 370;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
-const CANDY_IMAGE_SIZE = CELL_SIZE * 0.84;
+const CANDY_IMAGE_SIZE = CELL_SIZE * 0.87;
 const CANDY_IMAGE_OFFSET_Y = -2;
 const MULTIPLIER_LABEL_OFFSET_Y = 14;
 const CASCADE_SETTLE_DELAY_MS = 1000;
@@ -179,6 +179,7 @@ export class MainScene extends Phaser.Scene {
   private challengeTimerRunning = false;
   private challengeBoardLocked = false;
   private challengeTimerWarningFired = false;
+  private wakeLock: WakeLockSentinel | null = null;
 
   constructor() {
     super('MainScene');
@@ -213,6 +214,17 @@ export class MainScene extends Phaser.Scene {
     this.bindOverlay();
     this.bindBoardInput();
     this.renderOverlay();
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible'
+        && this.screen === 'play'
+        && this.playMode === 'game'
+        && this.state.status === 'playing') {
+        this.acquireWakeLock();
+      } else if (document.visibilityState === 'hidden') {
+        this.releaseWakeLock();
+      }
+    });
 
     // Countdown display: update every second; regen check every minute
     this.time.addEvent({ delay: 1_000, loop: true, callback: this.tickRegen, callbackScope: this });
@@ -256,9 +268,16 @@ export class MainScene extends Phaser.Scene {
     for (const key of ['play', 'island', 'market'] as ScreenKey[]) {
       this.el(`nav-${key}`).addEventListener('click', () => {
         this.playButtonTap();
+        const wasInActiveGame = this.playMode === 'game' && this.state.status === 'playing';
         this.screen = key;
         if (key === 'play') {
-          this.playMode = 'road';
+          if (!wasInActiveGame) {
+            this.playMode = 'road';
+          } else {
+            this.acquireWakeLock();
+          }
+        } else {
+          this.releaseWakeLock();
         }
         this.renderOverlay();
       });
@@ -325,7 +344,9 @@ export class MainScene extends Phaser.Scene {
 
   private renderOverlay(): void {
     const gameplayActive = this.screen === 'play' && this.playMode === 'game';
+    const roadActive = this.screen === 'play' && this.playMode === 'road';
     this.el('phone-frame').classList.toggle('is-gameplay-active', gameplayActive);
+    this.el('phone-frame').classList.toggle('is-road-active', roadActive);
     this.el('phone-frame').classList.toggle('has-top-banner', gameplayActive);
     const shakeGestureEnabled = this.playMode === 'game' && this.state.status === 'playing'
       && !this.isShaking && !this.isDropping && !this.isResolving && this.state.shakesRemaining > 0;
@@ -1038,7 +1059,7 @@ export class MainScene extends Phaser.Scene {
   private drawMultiplierFloor(container: Phaser.GameObjects.Container, multiplierIndex: number): void {
     const color = MULTIPLIER_TINTS[multiplierIndex] ?? 0xdff8ff;
     const g = this.add.graphics();
-    const size = CELL_SIZE - 8;
+    const size = CELL_SIZE - 5;
     const x = -size / 2;
     const y = -size / 2;
     const alpha = multiplierIndex >= 10 ? 0.86 : multiplierIndex >= 9 ? 0.78 : multiplierIndex >= 7 ? 0.68 : multiplierIndex >= 4 ? 0.56 : multiplierIndex > 0 ? 0.42 : 0.26;
@@ -1495,6 +1516,7 @@ export class MainScene extends Phaser.Scene {
     this.challengeTimerRunning = false;
     this.challengeBoardLocked = false;
     this.state.status = 'won';
+    this.releaseWakeLock();
     this.sfx.playLevelComplete();
     this.vibrate([18, 32, 28]);
     const reward = calculateRewardSummary(this.state);
@@ -1556,6 +1578,7 @@ export class MainScene extends Phaser.Scene {
     this.challengeTimerRunning = false;
     this.challengeBoardLocked = false;
     this.state.status = 'failed';
+    this.releaseWakeLock();
     this.sfx.playLevelFailed();
     this.renderOverlay();
   }
@@ -1630,6 +1653,7 @@ export class MainScene extends Phaser.Scene {
     this.drawBoard();
     this.renderOverlay();
     this.sfx.playLevelStart();
+    this.acquireWakeLock();
     if (this.isChallengeLevel()) {
       this.showChallengeIntro();
       this.time.delayedCall(1400, () => this.startChallengeTimer());
@@ -1653,6 +1677,7 @@ export class MainScene extends Phaser.Scene {
     this.drawBoard();
     this.renderOverlay();
     this.sfx.playLevelStart();
+    this.acquireWakeLock();
     if (this.isChallengeLevel()) {
       this.time.delayedCall(800, () => this.startChallengeTimer());
     }
@@ -2556,6 +2581,23 @@ export class MainScene extends Phaser.Scene {
     const seconds = Math.floor((ms % 60_000) / 1_000);
     const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     el.textContent = `${this.t('regenEnergyGain').replace('{amount}', String(REGEN_ENERGY_AMOUNT))} ${this.t('regenIn').replace('{time}', timeStr)}`;
+  }
+
+  private acquireWakeLock(): void {
+    if (!('wakeLock' in navigator) || this.wakeLock) return;
+    void (navigator as Navigator & { wakeLock: { request: (t: string) => Promise<WakeLockSentinel> } })
+      .wakeLock.request('screen')
+      .then((lock) => {
+        this.wakeLock = lock;
+        lock.addEventListener('release', () => { this.wakeLock = null; });
+      })
+      .catch(() => {});
+  }
+
+  private releaseWakeLock(): void {
+    if (!this.wakeLock) return;
+    void this.wakeLock.release().catch(() => {});
+    this.wakeLock = null;
   }
 
   private isChallengeLevel(): boolean {
