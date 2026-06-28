@@ -204,6 +204,32 @@ export class CandySfx {
     });
   }
 
+  playEnergyStar(): void {
+    this.safePlay(() => {
+      // Playful ascending arpeggio: dıt-dıı-rıt-dırıttt
+      this.playTone(740, 0.065, VOLUME.reward, 0, 'sine', 880);
+      this.playTone(1108, 0.085, VOLUME.reward * 0.88, 0.085, 'sine');
+      this.playTone(1318, 0.075, VOLUME.reward * 0.78, 0.185, 'sine');
+      this.playTone(1760, 0.14, VOLUME.reward * 0.64, 0.27, 'sine', 1980);
+      this.playNoise(0.28, 0.022, 2000, 6000, 0.38, 'bandpass');
+      this.playTone(2640, 0.09, 0.016, 0.46, 'sine', 1980);
+    });
+  }
+
+  playColorBomb(): void {
+    this.safePlay(() => {
+      // Bigger, more premium: bass thump + ascending arpeggio + golden shimmer
+      this.playTone(260, 0.14, 0.032, 0, 'sine', 200);
+      this.playTone(620, 0.08, VOLUME.premium * 0.52, 0, 'sine', 740);
+      this.playTone(880, 0.09, VOLUME.premium * 0.62, 0.08, 'sine');
+      this.playTone(1108, 0.10, VOLUME.premium * 0.58, 0.18, 'sine');
+      this.playTone(1480, 0.11, VOLUME.premium * 0.52, 0.29, 'sine');
+      this.playTone(1980, 0.15, VOLUME.premium * 0.44, 0.41, 'sine', 2200);
+      this.playNoise(0.38, 0.034, 1600, 5200, 0.06, 'bandpass');
+      this.playTone(2640, 0.13, 0.024, 0.56, 'sine', 2200);
+    });
+  }
+
   playGameplayCallout(cascadeWaves: number, largestPop: number, newlyReachedMultiplierIndex = 0): void {
     const callout = this.getGameplayCallout(cascadeWaves, largestPop, newlyReachedMultiplierIndex);
     if (callout) {

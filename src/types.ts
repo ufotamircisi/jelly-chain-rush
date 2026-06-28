@@ -58,6 +58,7 @@ export interface PlayerSettings {
   language: LocaleCode;
   soundEnabled: boolean;
   vibrationEnabled: boolean;
+  musicEnabled: boolean;
 }
 
 export interface SaveData {
@@ -90,6 +91,9 @@ export interface SaveData {
   language: LocaleCode;
   soundEnabled: boolean;
   vibrationEnabled: boolean;
+  musicEnabled: boolean;
+  feedbackGiftClaimed: boolean;
+  feedbackNextPromptLevel: number;
 }
 
 export type LevelStatus = 'playing' | 'won' | 'failed';

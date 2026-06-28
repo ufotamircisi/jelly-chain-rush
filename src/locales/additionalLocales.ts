@@ -127,6 +127,9 @@ export const es: typeof en = {
   sound: 'Sonido',
   soundOn: 'Sonido activado',
   soundOff: 'Sonido desactivado',
+  music: 'Musica',
+  musicOn: 'Musica activada',
+  musicOff: 'Musica desactivada',
   settings: 'Ajustes',
   vibration: 'Vibracion',
   playerProgress: 'Progreso del jugador',
@@ -212,7 +215,15 @@ export const es: typeof en = {
   challengeTitle: '¡Reto cronometrado!',
   challengeIntroShake: 'El temporizador se reinicia en cada sacudida.',
   challengeIntroMoves: 'Haz tus movimientos antes de que se acabe el tiempo.',
-  challengeTimeLocked: 'Tablero bloqueado — Sacude para un nuevo tablero.'
+  challengeTimeLocked: 'Tablero bloqueado — Sacude para un nuevo tablero.',
+  feedbackTitle: '¿Te gusta Jelly Chain Rush?',
+  feedbackBody: 'Gracias por llegar al Nivel 8. Tu apoyo nos alegra mucho.',
+  feedbackReward: 'Regalo de agradecimiento: +100 Energia +100 Diamantes',
+  feedbackClaim: 'Reclamar tu regalo',
+  feedbackDismiss: 'Mas tarde',
+  feedbackThanks: 'Gracias! +100 Energia y +100 Diamantes anadidos.',
+  feedbackRateOptional: 'Si quieres, puedes valorarnos en la tienda.',
+  feedbackRateButton: 'Valorar en la tienda'
 };
 
 export const pt: typeof en = {
@@ -371,7 +382,15 @@ export const pt: typeof en = {
   challengeTitle: 'Desafio cronometrado!',
   challengeIntroShake: 'O temporizador reinicia a cada sacudida.',
   challengeIntroMoves: 'Faca seus movimentos antes do tempo acabar.',
-  challengeTimeLocked: 'Tabuleiro bloqueado — Sacuda para um novo tabuleiro.'
+  challengeTimeLocked: 'Tabuleiro bloqueado — Sacuda para um novo tabuleiro.',
+  feedbackTitle: 'Gostando do Jelly Chain Rush?',
+  feedbackBody: 'Obrigado por chegar ao Nivel 8. Seu apoio significa muito para nos.',
+  feedbackReward: 'Presente de agradecimento: +100 Energia +100 Diamantes',
+  feedbackClaim: 'Resgatar seu presente',
+  feedbackDismiss: 'Depois',
+  feedbackThanks: 'Obrigado! +100 Energia e +100 Diamantes adicionados.',
+  feedbackRateOptional: 'Se quiser, avalie-nos na loja.',
+  feedbackRateButton: 'Avaliar na loja'
 };
 
 export const fr: typeof en = {
@@ -530,7 +549,15 @@ export const fr: typeof en = {
   challengeTitle: 'Defi chronometre !',
   challengeIntroShake: 'Le minuteur se reinitialise a chaque secousse.',
   challengeIntroMoves: 'Faites vos mouvements avant la fin du temps.',
-  challengeTimeLocked: 'Plateau bloque — Secouez pour un nouveau plateau.'
+  challengeTimeLocked: 'Plateau bloque — Secouez pour un nouveau plateau.',
+  feedbackTitle: 'Vous aimez Jelly Chain Rush ?',
+  feedbackBody: 'Merci d\'avoir atteint le Niveau 8. Votre soutien nous touche beaucoup.',
+  feedbackReward: 'Cadeau de remerciement : +100 Energie +100 Diamants',
+  feedbackClaim: 'Recuperer votre cadeau',
+  feedbackDismiss: 'Plus tard',
+  feedbackThanks: 'Merci ! +100 Energie et +100 Diamants ajoutes.',
+  feedbackRateOptional: 'Si vous le souhaitez, vous pouvez nous noter sur la boutique.',
+  feedbackRateButton: 'Noter sur la boutique'
 };
 
 export const de: typeof en = {
@@ -687,7 +714,15 @@ export const de: typeof en = {
   challengeTitle: 'Zeitliche Herausforderung!',
   challengeIntroShake: 'Timer wird bei jedem Schutteln zuruckgesetzt.',
   challengeIntroMoves: 'Mache Zuge bevor die Zeit ablauft.',
-  challengeTimeLocked: 'Brett gesperrt — Schutteln fur neues Brett.'
+  challengeTimeLocked: 'Brett gesperrt — Schutteln fur neues Brett.',
+  feedbackTitle: 'Gefallt dir Jelly Chain Rush?',
+  feedbackBody: 'Danke, dass du Level 8 erreicht hast. Deine Unterstutzung bedeutet uns viel.',
+  feedbackReward: 'Dankeschon-Geschenk: +100 Energie +100 Diamanten',
+  feedbackClaim: 'Dein Geschenk abholen',
+  feedbackDismiss: 'Spater',
+  feedbackThanks: 'Danke! +100 Energie und +100 Diamanten hinzugefugt.',
+  feedbackRateOptional: 'Du kannst uns gerne im Store bewerten.',
+  feedbackRateButton: 'Im Store bewerten'
 };
 
 export const it: typeof en = {
@@ -808,7 +843,15 @@ export const it: typeof en = {
   challengeTitle: 'Sfida a tempo!',
   challengeIntroShake: 'Il timer si azzera ad ogni scossa.',
   challengeIntroMoves: 'Fai le tue mosse prima che il tempo scada.',
-  challengeTimeLocked: 'Tavola bloccata — Scuoti per una nuova tavola.'
+  challengeTimeLocked: 'Tavola bloccata — Scuoti per una nuova tavola.',
+  feedbackTitle: 'Ti piace Jelly Chain Rush?',
+  feedbackBody: 'Grazie per aver raggiunto il Livello 8. Il tuo supporto ci rende felici.',
+  feedbackReward: 'Regalo di ringraziamento: +100 Energia +100 Diamanti',
+  feedbackClaim: 'Riscatta il tuo regalo',
+  feedbackDismiss: 'Dopo',
+  feedbackThanks: 'Grazie! +100 Energia e +100 Diamanti aggiunti.',
+  feedbackRateOptional: 'Se vuoi, puoi valutarci sullo store.',
+  feedbackRateButton: 'Valuta sullo store'
 };
 
 export const id: typeof en = {
@@ -925,7 +968,15 @@ export const id: typeof en = {
   challengeTitle: 'Tantangan Waktu!',
   challengeIntroShake: 'Timer mengulang di setiap kocok.',
   challengeIntroMoves: 'Lakukan gerakan sebelum waktu habis.',
-  challengeTimeLocked: 'Papan terkunci — Kocok untuk papan baru.'
+  challengeTimeLocked: 'Papan terkunci — Kocok untuk papan baru.',
+  feedbackTitle: 'Suka Jelly Chain Rush?',
+  feedbackBody: 'Terima kasih telah mencapai Level 8. Dukunganmu sangat berarti bagi kami.',
+  feedbackReward: 'Hadiah terima kasih: +100 Energi +100 Berlian',
+  feedbackClaim: 'Ambil hadiahmu',
+  feedbackDismiss: 'Nanti',
+  feedbackThanks: 'Terima kasih! +100 Energi dan +100 Berlian ditambahkan.',
+  feedbackRateOptional: 'Kamu bisa memberi nilai di toko jika mau.',
+  feedbackRateButton: 'Nilai di toko'
 };
 
 export const vi: typeof en = {
@@ -1033,7 +1084,15 @@ export const vi: typeof en = {
   challengeTitle: 'Thach thuc co thoi gian!',
   challengeIntroShake: 'Bo dem thoi gian dat lai sau moi lan lac.',
   challengeIntroMoves: 'Thuc hien nuoc di truoc khi het gio.',
-  challengeTimeLocked: 'Bang bi khoa — Lac de co bang moi.'
+  challengeTimeLocked: 'Bang bi khoa — Lac de co bang moi.',
+  feedbackTitle: 'Ban co thich Jelly Chain Rush khong?',
+  feedbackBody: 'Cam on ban da dat Cap do 8. Su ung ho cua ban rat co y nghia voi chung toi.',
+  feedbackReward: 'Qua cam on: +100 Nang luong +100 Kim cuong',
+  feedbackClaim: 'Nhan qua cam on',
+  feedbackDismiss: 'Sau',
+  feedbackThanks: 'Cam on! Da them +100 Nang luong va +100 Kim cuong.',
+  feedbackRateOptional: 'Ban co the danh gia chung toi tren cua hang neu muon.',
+  feedbackRateButton: 'Danh gia tren cua hang'
 };
 
 export const nl: typeof en = {
@@ -1126,7 +1185,15 @@ export const nl: typeof en = {
   challengeTitle: 'Tijduitdaging!',
   challengeIntroShake: 'Timer wordt gereset bij elk schudden.',
   challengeIntroMoves: 'Doe je zetten voor de tijd op is.',
-  challengeTimeLocked: 'Bord vergrendeld — Schud voor een nieuw bord.'
+  challengeTimeLocked: 'Bord vergrendeld — Schud voor een nieuw bord.',
+  feedbackTitle: 'Vind je Jelly Chain Rush leuk?',
+  feedbackBody: 'Bedankt voor het bereiken van Level 8. Jouw steun betekent veel voor ons.',
+  feedbackReward: 'Dankjewel-cadeau: +100 Energie +100 Diamanten',
+  feedbackClaim: 'Haal je cadeau op',
+  feedbackDismiss: 'Later',
+  feedbackThanks: 'Bedankt! +100 Energie en +100 Diamanten toegevoegd.',
+  feedbackRateOptional: 'Je kunt ons beoordelen in de winkel als je wilt.',
+  feedbackRateButton: 'Beoordelen in de winkel'
 };
 
 export const pl: typeof en = {
@@ -1226,5 +1293,13 @@ export const pl: typeof en = {
   challengeTitle: 'Wyzwanie czasowe!',
   challengeIntroShake: 'Timer resetuje sie przy kazdym wstrzasaniu.',
   challengeIntroMoves: 'Wykonaj ruchy zanim skonczy sie czas.',
-  challengeTimeLocked: 'Plansza zablokowana — Wstrzasnij po nowa plansze.'
+  challengeTimeLocked: 'Plansza zablokowana — Wstrzasnij po nowa plansze.',
+  feedbackTitle: 'Podoba ci sie Jelly Chain Rush?',
+  feedbackBody: 'Dziekujemy za dotarcie do Poziomu 8. Twoje wsparcie wiele dla nas znaczy.',
+  feedbackReward: 'Prezent z podziekowaniem: +100 Energii +100 Diamentow',
+  feedbackClaim: 'Odbierz swoj prezent',
+  feedbackDismiss: 'Pozniej',
+  feedbackThanks: 'Dziekujemy! Dodano +100 Energii i +100 Diamentow.',
+  feedbackRateOptional: 'Mozesz nas ocenic w sklepie, jesli chcesz.',
+  feedbackRateButton: 'Ocen w sklepie'
 };

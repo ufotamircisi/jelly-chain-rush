@@ -3,6 +3,7 @@ import { getBuildingAsset } from '../assets/buildingAssetManifest';
 import { CANDY_ASSET_PACK, CANDY_TEXTURE_KEY_BY_TYPE } from '../assets/candyAssetManifest';
 import { ISLAND_BASE_ASSET } from '../assets/islandAssetManifest';
 import { UI_ASSETS } from '../assets/uiAssetManifest';
+import { CandyMusic } from '../audio/music';
 import { CandySfx } from '../audio/sfx';
 import { BUILDINGS } from '../data/buildings';
 import { getCandyDefinition } from '../data/candies';
@@ -68,6 +69,7 @@ import {
   markLevelCompleted,
   saveData,
   updateLanguage,
+  updateMusicEnabled,
   updateSoundEnabled,
   updateVibrationEnabled
 } from '../save/saveData';
@@ -171,9 +173,11 @@ export class MainScene extends Phaser.Scene {
   private isResolving = false;
   private dragStart?: BoardPosition;
   private sfx!: CandySfx;
+  private music!: CandyMusic;
   private selectedBuildingId?: number;
   private pendingAdFlow?: AdFlowPlan & { forcedHandled: boolean; rewardedHandled: boolean };
   private completedLevelWasReplay = false;
+  private pendingFeedbackForLevel = 0;
   private goalsCompletedEarly = false;
   private challengeTimerSeconds = 0;
   private challengeTimerRunning = false;
@@ -181,6 +185,7 @@ export class MainScene extends Phaser.Scene {
   private challengeTimerWarningFired = false;
   private wakeLock: WakeLockSentinel | null = null;
   private boardSyncPending = false;
+  private lastCascadeVibrateMs = 0;
 
   constructor() {
     super('MainScene');
@@ -195,6 +200,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   create(): void {
+    const splash = document.getElementById('app-splash');
+    if (splash) {
+      clearTimeout((window as typeof window & { __appSplashTid?: ReturnType<typeof setTimeout> }).__appSplashTid);
+      splash.style.opacity = '0';
+      this.time.delayedCall(460, () => { if (splash.isConnected) splash.remove(); });
+    }
     this.save = loadSave();
     // Apply offline regen before creating game state so shakes/energy are up to date
     const regenOnLoad = applyOfflineRegen(this.save.energy, this.save.shakes, this.save.lastRegenAt);
@@ -210,6 +221,7 @@ export class MainScene extends Phaser.Scene {
     this.locale = this.save.language;
     this.t = createTranslator(this.locale);
     this.sfx = new CandySfx(this.save.soundEnabled);
+    this.music = new CandyMusic(this.save.musicEnabled);
     this.state = createGameState(this.save);
     this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
     this.bindOverlay();
@@ -223,12 +235,14 @@ export class MainScene extends Phaser.Scene {
     }, { passive: true });
 
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible'
+      const visible = document.visibilityState === 'visible';
+      this.music.handleVisibility(visible);
+      if (visible
         && this.screen === 'play'
         && this.playMode === 'game'
         && this.state.status === 'playing') {
         this.acquireWakeLock();
-      } else if (document.visibilityState === 'hidden') {
+      } else if (!visible) {
         this.releaseWakeLock();
       }
     });
@@ -308,6 +322,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.music.unlock();
       if (!this.canUseBoardInput()) return;
       const cell = this.worldToCell(pointer.x, pointer.y);
       if (cell) this.dragStart = cell;
@@ -582,6 +597,10 @@ export class MainScene extends Phaser.Scene {
             <input id="settings-sound-toggle" type="checkbox"${this.save.soundEnabled ? ' checked' : ''} />
           </label>
           <label>
+            <span>${this.t('music')}</span>
+            <input id="settings-music-toggle" type="checkbox"${this.save.musicEnabled ? ' checked' : ''} />
+          </label>
+          <label>
             <span>${this.t('vibration')}</span>
             <input id="settings-vibration-toggle" type="checkbox"${this.save.vibrationEnabled ? ' checked' : ''} />
           </label>
@@ -630,6 +649,13 @@ export class MainScene extends Phaser.Scene {
       this.sfx.setMuted(!soundEnabled);
       if (soundEnabled) this.sfx.unlock();
       this.renderOverlay();
+      this.renderSettingsModal();
+    });
+
+    this.el('settings-music-toggle').addEventListener('change', (event) => {
+      const musicEnabled = (event.currentTarget as HTMLInputElement).checked;
+      this.save = updateMusicEnabled(this.save, musicEnabled);
+      this.music.setEnabled(musicEnabled);
       this.renderSettingsModal();
     });
 
@@ -710,6 +736,7 @@ export class MainScene extends Phaser.Scene {
       this.locale = this.save.language;
       this.t = createTranslator(this.locale);
       this.sfx.setMuted(!this.save.soundEnabled);
+      this.music.setEnabled(this.save.musicEnabled);
       this.state = createGameState(this.save);
       this.rewardSummary = undefined;
       this.playMode = 'road';
@@ -1586,6 +1613,7 @@ export class MainScene extends Phaser.Scene {
     this.challengeBoardLocked = false;
     this.state.status = 'failed';
     this.releaseWakeLock();
+    this.vibrate([10, 12, 10]);
     this.sfx.playLevelFailed();
     this.renderOverlay();
   }
@@ -1722,6 +1750,71 @@ export class MainScene extends Phaser.Scene {
     this.cellContainers.clear();
     this.candyContainers.clear();
     this.renderOverlay();
+    if (this.pendingFeedbackForLevel > 0) {
+      const level = this.pendingFeedbackForLevel;
+      this.pendingFeedbackForLevel = 0;
+      this.time.delayedCall(380, () => this.renderFeedbackCard(level));
+    }
+  }
+
+  private renderFeedbackCard(level: number): void {
+    this.openModal(`
+      <div class="modal-card feedback-card">
+        <div class="feedback-stars" aria-hidden="true">★★★★★</div>
+        <h2>${this.t('feedbackTitle')}</h2>
+        <p class="feedback-body">${this.t('feedbackBody')}</p>
+        <p class="feedback-reward-line">${this.t('feedbackReward')}</p>
+        <button class="result-primary-button" type="button" data-action="claim">${this.t('feedbackClaim')}</button>
+        <button class="btn-secondary" type="button" data-action="dismiss">${this.t('feedbackDismiss')}</button>
+      </div>
+    `);
+    this.modalButton('claim', (button) => {
+      this.disableModalButtons(button);
+      this.claimFeedbackGift();
+    });
+    this.modalButton('dismiss', (button) => {
+      this.disableModalButtons(button);
+      this.dismissFeedbackCard(level);
+    });
+  }
+
+  private claimFeedbackGift(): void {
+    if (this.save.feedbackGiftClaimed) { this.closeModal(); return; }
+    this.save.feedbackGiftClaimed = true;
+    this.state.energy = Math.min(this.state.energy + 100, 999);
+    this.state.diamonds = Math.min(this.state.diamonds + 100, 999999);
+    this.save.energy = this.state.energy;
+    this.save.diamonds = this.state.diamonds;
+    saveData(this.save);
+    this.sfx.playPurchaseSuccess();
+    this.vibrate([12, 8, 22]);
+    this.renderOverlay();
+    this.renderFeedbackThanksModal();
+  }
+
+  private dismissFeedbackCard(level: number): void {
+    const nextMap: Record<number, number> = { 8: 15, 15: 25, 25: 999 };
+    this.save.feedbackNextPromptLevel = nextMap[level] ?? 999;
+    saveData(this.save);
+    this.closeModal();
+  }
+
+  private renderFeedbackThanksModal(): void {
+    const storeUrl = 'https://play.google.com/store/apps/details?id=com.lumisoft.jellychainrush';
+    this.openModal(`
+      <div class="modal-card feedback-card">
+        <div class="feedback-stars" aria-hidden="true">★★★★★</div>
+        <h2>${this.t('feedbackThanks')}</h2>
+        <p class="feedback-body">${this.t('feedbackRateOptional')}</p>
+        <button class="result-primary-button" type="button" data-action="rate">${this.t('feedbackRateButton')}</button>
+        <button class="btn-secondary" type="button" data-action="close-thanks">${this.t('close')}</button>
+      </div>
+    `);
+    this.modalButton('rate', () => {
+      window.open(storeUrl, '_blank', 'noopener,noreferrer');
+      this.closeModal();
+    });
+    this.modalButton('close-thanks', () => this.closeModal());
   }
 
   private renderWinModal(): void {
@@ -1769,6 +1862,13 @@ export class MainScene extends Phaser.Scene {
 
   private beginNextLevelFlow(): void {
     const completedLevel = this.state.level;
+    const FEEDBACK_TRIGGER_LEVELS = [8, 15, 25];
+    if (!this.completedLevelWasReplay
+        && !this.save.feedbackGiftClaimed
+        && this.save.feedbackNextPromptLevel === completedLevel
+        && FEEDBACK_TRIGGER_LEVELS.includes(completedLevel)) {
+      this.pendingFeedbackForLevel = completedLevel;
+    }
     const plan = createAdFlowPlan(this.save, completedLevel, this.completedLevelWasReplay);
 
     if (!plan.showForcedBreak && !plan.showRewardedOffer) {
@@ -2278,7 +2378,13 @@ export class MainScene extends Phaser.Scene {
     this.sfx.playBlast(size, step.highestMultiplierIndex);
 
     if (powerful && this.boardContainer) {
-      if (size >= 5) this.vibrate(size >= 10 ? [12, 18, 18] : 16);
+      if (size >= 5) {
+        const now = Date.now();
+        if (now - this.lastCascadeVibrateMs >= 500) {
+          this.vibrate(size >= 10 ? [12, 18, 18] : 16);
+          this.lastCascadeVibrateMs = now;
+        }
+      }
       this.tweens.killTweensOf(this.boardContainer);
       this.boardContainer.setPosition(BOARD_X, BOARD_Y);
       this.tweens.add({
@@ -2447,6 +2553,7 @@ export class MainScene extends Phaser.Scene {
 
   private playButtonTap(): void {
     this.sfx.unlock();
+    this.music.unlock();
     this.sfx.playButtonTap();
   }
 
@@ -2529,8 +2636,9 @@ export class MainScene extends Phaser.Scene {
       onEnergyStarEventFired(this.save, this.state.level);
       this.save.energy = this.state.energy;
       saveData(this.save);
-      this.sfx.playLevelComplete();
-      this.showSpecialEventFeedback(this.t('energyStarEvent'));
+      this.sfx.playEnergyStar();
+      this.vibrate([12, 8, 18, 8, 12]);
+      this.showEnergyStarCelebration();
       this.renderOverlay();
     }
   }
@@ -2551,18 +2659,32 @@ export class MainScene extends Phaser.Scene {
       this.save.energy = this.state.energy;
       this.save.diamonds = this.state.diamonds;
       saveData(this.save);
-      this.sfx.playLevelComplete();
-      this.showSpecialEventFeedback(this.t('colorBombEvent'));
+      this.sfx.playColorBomb();
+      this.vibrate([15, 10, 25, 10, 15, 10, 25]);
+      this.showColorBombCelebration();
       this.renderOverlay();
     }
   }
 
-  private showSpecialEventFeedback(message: string): void {
+  private showEnergyStarCelebration(): void {
     const cx = BOARD_X + BOARD_SIZE / 2;
     const cy = BOARD_Y + BOARD_SIZE / 2;
-    this.emitSparkles(cx, cy, 12, false, true);
+    this.showBlastRing(cx, cy, 12, false);
+    this.time.delayedCall(90, () => this.showBlastRing(cx, cy, 10, false));
+    this.emitSparkles(cx, cy, 10, true, false);
+    this.showBurstLabel(this.t('energyStarEvent'), cx, cy - 22, true);
+  }
+
+  private showColorBombCelebration(): void {
+    const cx = BOARD_X + BOARD_SIZE / 2;
+    const cy = BOARD_Y + BOARD_SIZE / 2;
+    this.showGoldenPulse(cx, cy, true);
     this.showBlastRing(cx, cy, 12, true);
-    this.showBurstLabel(message, cx, cy - 30, true);
+    this.time.delayedCall(75, () => this.showBlastRing(cx, cy, 10, true));
+    this.time.delayedCall(150, () => this.showBlastRing(cx, cy, 8, true));
+    this.emitSparkles(cx, cy, 10, false, true);
+    this.time.delayedCall(110, () => this.emitSparkles(cx, cy, 7, false, true));
+    this.showBurstLabel(this.t('colorBombEvent'), cx, cy - 22, true);
   }
 
   private tickRegen(): void {

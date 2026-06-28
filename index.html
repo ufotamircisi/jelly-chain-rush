@@ -6,6 +6,8 @@
     <title>Jelly Chain Rush</title>
   </head>
   <body>
+    <div id="app-splash" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#3d0e82 0%,#6a1fa5 55%,#b83a8a 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;transition:opacity 0.45s ease;"></div>
+    <script>(function(){function h(){var s=document.getElementById('app-splash');if(!s)return;s.style.opacity='0';setTimeout(function(){s.remove();},460);}window.__appSplashTid=setTimeout(h,5500);}());</script>
     <main id="app-shell" class="app-shell">
       <section id="phone-frame" class="phone-frame">
         <div class="sky-decor sky-decor-a"></div>

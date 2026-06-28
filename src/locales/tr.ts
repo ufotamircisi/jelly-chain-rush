@@ -126,6 +126,9 @@ const tr: typeof en = {
   sound: 'Ses',
   soundOn: 'Ses Açık',
   soundOff: 'Ses Kapalı',
+  music: 'Müzik',
+  musicOn: 'Müzik Açık',
+  musicOff: 'Müzik Kapalı',
   settings: 'Ayarlar',
   vibration: 'Titreşim',
   playerProgress: 'Oyuncu İlerlemesi',
@@ -211,7 +214,15 @@ const tr: typeof en = {
   challengeTitle: 'Süreli Görev!',
   challengeIntroShake: 'Her çalkalamada süre yeniden başlar.',
   challengeIntroMoves: 'Süre bitmeden hamlelerini yap.',
-  challengeTimeLocked: 'Tahta kilitlendi — Yeni tahta için Çalkala.'
+  challengeTimeLocked: 'Tahta kilitlendi — Yeni tahta için Çalkala.',
+  feedbackTitle: 'Jelly Chain Rush\'ı beğendin mi?',
+  feedbackBody: 'Bölüm 8\'e ulaştığın için teşekkürler. Desteğin bizi çok mutlu eder.',
+  feedbackReward: 'Teşekkür hediyesi: +100 Enerji +100 Elmas',
+  feedbackClaim: 'Teşekkür Hediyeni Al',
+  feedbackDismiss: 'Sonra',
+  feedbackThanks: 'Teşekkürler! +100 Enerji ve +100 Elmas eklendi.',
+  feedbackRateOptional: 'Dilersen mağazada puan verebilirsin.',
+  feedbackRateButton: 'Mağazada Değerlendir'
 };
 
 export default tr;

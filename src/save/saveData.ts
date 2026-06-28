@@ -50,11 +50,15 @@ export function createDefaultSave(): SaveData {
     settings: {
       language,
       soundEnabled: true,
-      vibrationEnabled: true
+      vibrationEnabled: true,
+      musicEnabled: true
     },
     language,
     soundEnabled: true,
-    vibrationEnabled: true
+    vibrationEnabled: true,
+    musicEnabled: true,
+    feedbackGiftClaimed: false,
+    feedbackNextPromptLevel: 8
   });
 }
 
@@ -138,6 +142,16 @@ export function updateVibrationEnabled(data: SaveData, vibrationEnabled: boolean
   return loadSave();
 }
 
+export function updateMusicEnabled(data: SaveData, musicEnabled: boolean): SaveData {
+  const next = normalizeSave({
+    ...data,
+    musicEnabled,
+    settings: { ...data.settings, musicEnabled }
+  });
+  saveData(next);
+  return loadSave();
+}
+
 export function exportBackupCode(data: SaveData): string {
   const normalized = stampSave(normalizeSave(data));
   const json = JSON.stringify(normalized);
@@ -159,7 +173,8 @@ function normalizeSave(input: Partial<SaveData>, fallback = createDefaultSave())
   const settings = {
     language: isLocaleCode(input.settings?.language ?? input.language ?? '') ? (input.settings?.language ?? input.language) as LocaleCode : fallback.language,
     soundEnabled: input.settings?.soundEnabled ?? input.soundEnabled ?? fallback.soundEnabled,
-    vibrationEnabled: input.settings?.vibrationEnabled ?? input.vibrationEnabled ?? fallback.vibrationEnabled
+    vibrationEnabled: input.settings?.vibrationEnabled ?? input.vibrationEnabled ?? fallback.vibrationEnabled,
+    musicEnabled: input.settings?.musicEnabled ?? input.musicEnabled ?? true
   };
   const explicitCompletedLevels = sanitizeNumberArray(input.completedLevels);
   const legacyCompletedCount = clampNumber(input.stats?.levelsCompleted, 0, 999999, 0);
@@ -209,7 +224,19 @@ function normalizeSave(input: Partial<SaveData>, fallback = createDefaultSave())
     settings,
     language: settings.language,
     soundEnabled: settings.soundEnabled,
-    vibrationEnabled: settings.vibrationEnabled
+    vibrationEnabled: settings.vibrationEnabled,
+    musicEnabled: settings.musicEnabled,
+    feedbackGiftClaimed: typeof input.feedbackGiftClaimed === 'boolean' ? input.feedbackGiftClaimed : false,
+    feedbackNextPromptLevel: (function () {
+      if (typeof input.feedbackNextPromptLevel === 'number' && Number.isFinite(input.feedbackNextPromptLevel)) {
+        return Math.max(8, Math.min(999, Math.floor(input.feedbackNextPromptLevel)));
+      }
+      const levels = sanitizeNumberArray(input.completedLevels);
+      if (levels.includes(25)) return 999;
+      if (levels.includes(15)) return 25;
+      if (levels.includes(8)) return 15;
+      return 8;
+    }())
   };
 }
 
@@ -221,7 +248,8 @@ function stampSave(data: SaveData): SaveData {
     settings: {
       language: data.language,
       soundEnabled: data.soundEnabled,
-      vibrationEnabled: data.vibrationEnabled
+      vibrationEnabled: data.vibrationEnabled,
+      musicEnabled: data.musicEnabled
     }
   };
 }

@@ -125,6 +125,9 @@ const en = {
   sound: 'Sound',
   soundOn: 'Sound On',
   soundOff: 'Sound Off',
+  music: 'Music',
+  musicOn: 'Music On',
+  musicOff: 'Music Off',
   settings: 'Settings',
   vibration: 'Vibration',
   playerProgress: 'Player Progress',
@@ -210,7 +213,15 @@ const en = {
   challengeTitle: 'Timed Challenge!',
   challengeIntroShake: 'Timer resets on each shake.',
   challengeIntroMoves: 'Make moves before time runs out.',
-  challengeTimeLocked: 'Board locked — Shake for a new board.'
+  challengeTimeLocked: 'Board locked — Shake for a new board.',
+  feedbackTitle: 'Enjoying Jelly Chain Rush?',
+  feedbackBody: 'Thanks for reaching Level 8! Your support means a lot to us.',
+  feedbackReward: 'Thank-you gift: +100 Energy +100 Diamonds',
+  feedbackClaim: 'Claim Your Thank-You Gift',
+  feedbackDismiss: 'Later',
+  feedbackThanks: 'Thank you! +100 Energy and +100 Diamonds added.',
+  feedbackRateOptional: 'You can rate us on the store if you like.',
+  feedbackRateButton: 'Rate on Store'
 };
 
 export default en;
