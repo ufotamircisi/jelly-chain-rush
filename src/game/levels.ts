@@ -4,16 +4,26 @@ const CANDY_GOAL_ORDER: CandyType[] = ['purpleJelly', 'greenGummy', 'redHeart', 
 const MULTIPLIER_VALUES = [0, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1000];
 const MULTIPLIER_TARGETS = MULTIPLIER_VALUES.slice(1);
 
+// Timed levels occur every 5 levels (5, 10, 15, 20, 25, …)
+export function isTimedLevel(level: number): boolean {
+  return level % 5 === 0;
+}
+
+// Candy target caps for timed levels — achievable within 60 s
+const TIMED_CANDY_CAPS = [35, 40, 45] as const;
+
 export function getLevelConfig(levelNumber: number): LevelDefinition {
   const level = Math.max(1, Math.floor(levelNumber));
-  const targetScore = getTargetScore(level);
+  const timed = isTimedLevel(level);
+  const targetScore = timed ? getTimedTargetScore(level) : getTargetScore(level);
   const goals: LevelGoal[] = [{ type: 'score', target: targetScore }];
 
   for (let index = 0; index < getCandyGoalCount(level); index += 1) {
+    const rawTarget = getCandyTarget(level, index);
     goals.push({
       type: 'candy',
       candy: getGoalCandy(level, index),
-      target: getCandyTarget(level, index)
+      target: timed ? Math.min(rawTarget, TIMED_CANDY_CAPS[index] ?? 45) : rawTarget
     });
   }
 
@@ -46,6 +56,13 @@ export function getGoalProgress(state: GameState, goal: LevelGoal): number {
 
 export function getHighestMultiplierValue(state: GameState): number {
   return MULTIPLIER_VALUES[state.highestMultiplierIndex] ?? 0;
+}
+
+function getTimedTargetScore(level: number): number {
+  const hardCap = level <= 50
+    ? 15000 + Math.floor((level - 5) / 5) * 20000
+    : 175000 + Math.floor((level - 50) / 5) * 15000;
+  return Math.min(Math.round(getTargetScore(level) * 0.5 / 1000) * 1000, hardCap);
 }
 
 function getTargetScore(level: number): number {

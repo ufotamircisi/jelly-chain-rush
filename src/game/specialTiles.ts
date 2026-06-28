@@ -2,9 +2,10 @@ import type { BoardGrid, CandyType, SaveData } from '../types';
 
 export const ENERGY_STAR_THRESHOLD = 4;
 export const COLOR_BOMB_THRESHOLD = 4;
-export const ENERGY_STAR_REWARD = 100;
-export const COLOR_BOMB_REWARD_ENERGY = 100;
-export const COLOR_BOMB_REWARD_DIAMONDS = 100;
+export const ENERGY_STAR_REWARD = 50;
+export const COLOR_BOMB_REWARD_ENERGY = 50;
+export const COLOR_BOMB_REWARD_DIAMONDS = 25;
+export const COLOR_BOMB_REWARD_SHAKES = 1;
 
 const ENERGY_STAR_DISCOVERY_LEVEL = 4;
 const COLOR_BOMB_DISCOVERY_LEVEL = 8;

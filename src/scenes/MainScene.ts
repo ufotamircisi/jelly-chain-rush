@@ -39,6 +39,7 @@ import { createGameState } from '../game/gameState';
 import {
   COLOR_BOMB_REWARD_DIAMONDS,
   COLOR_BOMB_REWARD_ENERGY,
+  COLOR_BOMB_REWARD_SHAKES,
   COLOR_BOMB_THRESHOLD,
   consumeCandyFromBoard,
   countCandyOnBoard,
@@ -52,7 +53,7 @@ import {
   shouldInjectEnergyStar
 } from '../game/specialTiles';
 import { areGoalsComplete, getGoalProgress } from '../game/levels';
-import { calculateRewardSummary, getStarDiamondsCumulative } from '../game/rewards';
+import { calculateRewardSummary, getStarEnergyCumulative } from '../game/rewards';
 import { createTranslator, LOCALE_NATIVE_NAMES, SUPPORTED_LOCALES, type TranslationKey } from '../locales';
 import {
   claimRewardedMilestone,
@@ -97,6 +98,7 @@ const CANDY_IMAGE_SIZE = CELL_SIZE * 0.93;
 const CANDY_IMAGE_OFFSET_Y = -2;
 const MULTIPLIER_LABEL_OFFSET_Y = 14;
 const CASCADE_SETTLE_DELAY_MS = 360;
+const MOVES_PER_ATTEMPT = 10;
 const APP_VERSION = '0.1.0';
 const SHOW_BANNER_PLACEHOLDER = false;
 const LEVEL_ROAD_SEGMENT_SIZE = 50;
@@ -179,6 +181,7 @@ export class MainScene extends Phaser.Scene {
   private completedLevelWasReplay = false;
   private pendingFeedbackForLevel = 0;
   private goalsCompletedEarly = false;
+  private movesRemaining = 0;
   private challengeTimerSeconds = 0;
   private challengeTimerRunning = false;
   private challengeBoardLocked = false;
@@ -443,6 +446,7 @@ export class MainScene extends Phaser.Scene {
     this.renderModalForStatus();
     this.renderRegenCountdown();
     this.renderChallengeTimer();
+    this.renderMovesCounter();
   }
 
   private renderLogo(): void {
@@ -1262,6 +1266,9 @@ export class MainScene extends Phaser.Scene {
     if (this.isShaking || this.isDropping || this.isResolving || this.state.status !== 'playing') return;
     if (!this.consumeShakeCost()) return;
 
+    if (!this.isChallengeLevel()) {
+      this.movesRemaining = Math.min(this.movesRemaining + 5, 99);
+    }
     this.challengeBoardLocked = false;
     this.startChallengeTimer();
     this.isShaking = true;
@@ -1383,6 +1390,10 @@ export class MainScene extends Phaser.Scene {
         this.renderOverlay();
       });
       return;
+    }
+
+    if (!this.isChallengeLevel()) {
+      this.movesRemaining = Math.max(0, this.movesRemaining - 1);
     }
 
     this.animateSwap(first, second, false, () => {
@@ -1519,32 +1530,47 @@ export class MainScene extends Phaser.Scene {
       }
 
       if (areGoalsComplete(this.state)) {
-        if (!this.goalsCompletedEarly && this.state.shakesRemaining > 0) {
+        const canContinueForBonus = this.isChallengeLevel()
+          ? this.state.shakesRemaining > 0
+          : (this.state.shakesRemaining > 0 || this.movesRemaining > 0);
+
+        if (!this.goalsCompletedEarly && canContinueForBonus) {
           this.goalsCompletedEarly = true;
-          this.renderOverlay(); // sync HUD/goal chips to final state before modal
+          this.renderOverlay();
           this.renderGoalCompleteModal();
           return;
         }
         if (!this.goalsCompletedEarly) {
-          // Goals complete with 0 shakes on first trigger — immediate win
           this.triggerLevelWin();
           return;
         }
-        // goalsCompletedEarly=true: player chose to continue; let remaining shakes exhaust naturally
+        // goalsCompletedEarly=true: player continuing for bonus
       }
 
-      // During multiplier-reward continuation: auto-win when max multiplier (x1000) is reached
+      // Auto-win when x1000 multiplier is reached during bonus chase
       if (this.goalsCompletedEarly && this.state.highestMultiplierIndex >= 10) {
         this.triggerLevelWin();
         return;
       }
 
-      if (this.state.shakesRemaining <= 0) {
-        if (this.goalsCompletedEarly) {
+      // Non-timed levels: moves exhausted
+      if (!this.isChallengeLevel() && this.movesRemaining <= 0) {
+        if (this.state.shakesRemaining > 0) {
+          // Board locked — player must shake for +5 moves
+          this.renderOverlay();
+        } else if (this.goalsCompletedEarly) {
           this.triggerLevelWin();
         } else {
           this.triggerLevelFail();
         }
+        return;
+      }
+
+      // Timed levels: shakes depleted triggers fail path (timer still runs, but no way to extend)
+      // For non-timed: shakes=0 with moves remaining is fine — moves will run out eventually
+      if (this.isChallengeLevel() && this.state.shakesRemaining <= 0) {
+        // No more time extensions available; timer continues until expiry
+        this.renderOverlay();
         return;
       }
 
@@ -1553,7 +1579,13 @@ export class MainScene extends Phaser.Scene {
   }
 
   private canUseBoardInput(): boolean {
-    return this.playMode === 'game' && this.state.status === 'playing' && !this.isShaking && !this.isDropping && !this.isResolving && !this.challengeBoardLocked;
+    return this.playMode === 'game'
+      && this.state.status === 'playing'
+      && !this.isShaking
+      && !this.isDropping
+      && !this.isResolving
+      && !this.challengeBoardLocked
+      && (this.isChallengeLevel() || this.movesRemaining > 0);
   }
 
   private canUseShake(): boolean {
@@ -1570,6 +1602,7 @@ export class MainScene extends Phaser.Scene {
     if (this.isShaking || this.isDropping) return this.t('shakeDropHelper');
     if (this.isResolving) return this.t('chainInProgress');
     if (this.challengeBoardLocked) return this.t('challengeTimeLocked');
+    if (!this.isChallengeLevel() && this.movesRemaining <= 0) return this.t('shakeHelper');
     if (this.state.energy < SHAKE_ENERGY_COST) return this.t('noEnergy');
     if (hasValidSwipeMove(this.state.board)) return this.t('swipeHelper');
     return this.t('shakeHelper');
@@ -1587,9 +1620,9 @@ export class MainScene extends Phaser.Scene {
     const alreadyCompleted = this.save.completedLevels.includes(this.state.level);
     this.completedLevelWasReplay = alreadyCompleted;
 
-    // Star diamonds: only reward the delta between new and previous tier (anti-farming)
+    // Star energy: only reward the delta between new and previous tier (anti-farming)
     const previousStars = (this.save.levelStars ?? {})[this.state.level] ?? 0;
-    const newStarDiamonds = getStarDiamondsCumulative(reward.stars) - getStarDiamondsCumulative(previousStars);
+    const newStarEnergy = getStarEnergyCumulative(reward.stars) - getStarEnergyCumulative(previousStars);
     if (reward.stars > previousStars) {
       this.save.levelStars = { ...(this.save.levelStars ?? {}), [this.state.level]: reward.stars };
     }
@@ -1597,15 +1630,15 @@ export class MainScene extends Phaser.Scene {
     const finalLevelEnergy = alreadyCompleted ? 0 : reward.levelEnergy;
     const finalMultiplierEnergy = alreadyCompleted ? 0 : reward.multiplierEnergy;
     const finalMultiplierDiamonds = alreadyCompleted ? 0 : reward.multiplierDiamonds;
-    const finalTotalEnergy = finalLevelEnergy + finalMultiplierEnergy;
-    const finalTotalDiamonds = finalMultiplierDiamonds + newStarDiamonds;
+    const finalStarEnergy = alreadyCompleted ? 0 : newStarEnergy;
+    const finalTotalEnergy = finalLevelEnergy + finalMultiplierEnergy + finalStarEnergy;
+    const finalTotalDiamonds = finalMultiplierDiamonds;
     const energyResult = applyFreeEnergy(this.state.energy, finalTotalEnergy);
 
     this.rewardSummary = {
       ...reward,
       levelEnergy: finalLevelEnergy,
-      starEnergy: 0,
-      starDiamonds: newStarDiamonds,
+      starEnergy: finalStarEnergy,
       multiplierEnergy: finalMultiplierEnergy,
       multiplierDiamonds: finalMultiplierDiamonds,
       totalEnergy: finalTotalEnergy,
@@ -1618,7 +1651,6 @@ export class MainScene extends Phaser.Scene {
       this.state.energy = energyResult.energy;
       this.state.diamonds += finalMultiplierDiamonds;
     }
-    this.state.diamonds += newStarDiamonds;
     this.save = {
       ...this.save,
       energy: this.state.energy,
@@ -1685,6 +1717,9 @@ export class MainScene extends Phaser.Scene {
       this.state.energy = adEnergyResult.energy;
     }
     this.state.status = 'playing';
+    if (!this.isChallengeLevel() && this.movesRemaining <= 0) {
+      this.movesRemaining = 5;
+    }
     this.syncSaveCurrency();
     this.closeModal();
     this.sfx.playPurchaseSuccess();
@@ -1700,11 +1735,19 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
+    if (this.save.energy < RESTART_COST) {
+      this.sfx.playWarning();
+      this.renderEnergyEmptyModal();
+      return;
+    }
+
+    this.save.energy -= RESTART_COST;
     this.save.currentLevel = Math.max(1, Math.floor(level));
     this.save.shakes = SHAKES_PER_LEVEL;
     this.save.hasStartedGame = true;
     saveData(this.save);
     this.state = createGameState(this.save);
+    this.movesRemaining = this.isChallengeLevel() ? 0 : MOVES_PER_ATTEMPT;
     this.rewardSummary = undefined;
     this.completedLevelWasReplay = false;
     this.goalsCompletedEarly = false;
@@ -1729,6 +1772,7 @@ export class MainScene extends Phaser.Scene {
   private restartLevel(): void {
     this.save.shakes = SHAKES_PER_LEVEL;
     this.state = createGameState(this.save);
+    this.movesRemaining = this.isChallengeLevel() ? 0 : MOVES_PER_ATTEMPT;
     this.rewardSummary = undefined;
     this.completedLevelWasReplay = false;
     this.goalsCompletedEarly = false;
@@ -1852,8 +1896,8 @@ export class MainScene extends Phaser.Scene {
     const rewardRows = [
       `<article><span>${this.t('levelReward')}</span><strong>+${reward.levelEnergy} ${this.t('energy')}</strong></article>`
     ];
-    if (reward.starDiamonds > 0) {
-      rewardRows.push(`<article><span>${this.t('starReward')}</span><strong>+${reward.starDiamonds} ${this.t('diamonds')}</strong></article>`);
+    if (reward.starEnergy > 0) {
+      rewardRows.push(`<article><span>${this.t('starReward')}</span><strong>+${reward.starEnergy} ${this.t('energy')}</strong></article>`);
     }
 
     if (reward.multiplierEnergy > 0 || reward.multiplierDiamonds > 0) {
@@ -2667,7 +2711,7 @@ export class MainScene extends Phaser.Scene {
   private triggerColorBombEvent(): void {
     this.state.colorBombEventFired = true;
     this.state.board = consumeCandyFromBoard(this.state.board, 'colorBomb');
-    this.state.shakesRemaining = Math.max(this.state.shakesRemaining, SHAKES_PER_LEVEL);
+    this.state.shakesRemaining = Math.min(this.state.shakesRemaining + COLOR_BOMB_REWARD_SHAKES, SHAKES_PER_LEVEL);
     this.drawBoard();
 
     const isFirstTime = !this.save.completedLevels.includes(this.state.level)
@@ -2784,11 +2828,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   private isChallengeLevel(): boolean {
-    return this.state.level % 10 === 0;
+    return this.state.level % 5 === 0;
   }
 
   private getChallengeTimerDuration(): number {
-    return this.state.level === 10 ? 120 : 90;
+    return 60;
   }
 
   private startChallengeTimer(): void {
@@ -2870,6 +2914,21 @@ export class MainScene extends Phaser.Scene {
     boardStage?.classList.toggle('is-challenge-warning', isWarning);
     boardStage?.classList.toggle('is-challenge-locked', this.challengeBoardLocked);
     phoneFrame?.classList.toggle('has-challenge-lock', this.challengeBoardLocked);
+  }
+
+  private renderMovesCounter(): void {
+    const el = document.getElementById('moves-counter');
+    if (!el) return;
+    const show = !this.isChallengeLevel()
+      && this.playMode === 'game'
+      && this.state.status === 'playing';
+    if (!show) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.textContent = `${this.t('moves')}: ${this.movesRemaining}`;
+    el.classList.toggle('is-low', this.movesRemaining <= 3);
   }
 
   private showChallengeIntro(): void {

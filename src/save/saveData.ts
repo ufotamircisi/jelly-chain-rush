@@ -32,7 +32,7 @@ export function createDefaultSave(): SaveData {
     energyStarClaimedLevel: 0,
     colorBombClaimedLevel: 0,
     levelStars: {},
-    diamonds: 300,
+    diamonds: 100,
     superChests: 0,
     chests: 0,
     completedBuildingIds: [1],

@@ -4,8 +4,8 @@ import type { SaveData } from '../types';
 
 export const FORCED_AD_INTERVAL = 5;
 export const REWARDED_AD_INTERVAL = 10;
-export const REWARDED_BONUS_ENERGY = 100;
-export const REWARDED_BONUS_DIAMONDS = 100;
+export const REWARDED_BONUS_ENERGY = 50;
+export const REWARDED_BONUS_DIAMONDS = 50;
 export const CONTINUE_AD_ENERGY_REWARD = 20;
 
 export interface AdFlowPlan {
