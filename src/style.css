@@ -339,6 +339,7 @@ button {
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .level-road-section {
@@ -803,8 +804,8 @@ button {
   margin: 3px auto 6px;
   padding: 3px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 12px 25px rgba(61, 35, 98, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.52);
+  background: rgba(28, 8, 54, 0.58);
+  box-shadow: 0 10px 22px rgba(10, 2, 30, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .board-stage::before {
@@ -1712,6 +1713,24 @@ button {
   filter: grayscale(0.18);
 }
 
+.goal-complete-card {
+  border-color: rgba(255, 210, 60, 0.72);
+  background: linear-gradient(160deg, #fffcf0 0%, #fff4d0 45%, #ffeaf6 100%);
+  box-shadow: 0 20px 44px rgba(61, 35, 98, 0.38), 0 0 0 4px rgba(255, 210, 60, 0.14);
+}
+
+.goal-complete-card .goal-complete-mult {
+  font-size: 15px;
+  color: #4d2382;
+  letter-spacing: 0.2px;
+}
+
+.modal-card .btn-secondary {
+  background: transparent;
+  border: 2px solid rgba(123, 43, 191, 0.38);
+  color: #7b2bbf;
+}
+
 .btn-ad-disabled {
   background: linear-gradient(180deg, #aaa, #888) !important;
   font-size: 12px;
@@ -2151,24 +2170,39 @@ button {
 
 /* ===== SCREEN-SPECIFIC COMPACT HUD ===== */
 
-/* Gameplay: hide goal/score cards → compact 4-card header; logo shows compactly */
+/* Gameplay: hide goal/score cards → compact 4-card header; logo hidden to save vertical space */
 .phone-frame.is-gameplay-active .counter-goal,
 .phone-frame.is-gameplay-active .counter-score {
   display: none;
 }
 
 .phone-frame.is-gameplay-active .game-logo {
-  height: 40px;
-  margin-bottom: 2px;
+  display: none;
 }
 
 .phone-frame.is-gameplay-active .game-header {
-  min-height: 96px;
-  padding-top: 4px;
+  min-height: 50px;
+  padding-top: 2px;
 }
 
 .phone-frame.is-gameplay-active .counter-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.phone-frame.is-gameplay-active .goal-chip {
+  min-height: 36px;
+  padding: 3px 6px;
+}
+
+.phone-frame.is-gameplay-active .reward-panel {
+  min-height: 28px;
+  padding: 2px 8px;
+  margin-top: 2px;
+}
+
+.phone-frame.is-gameplay-active .shake-button {
+  min-height: 44px;
+  margin-top: 4px;
 }
 
 /* Board accounts for compact header + goal panel + helper + reward + shake button.

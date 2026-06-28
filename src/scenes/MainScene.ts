@@ -91,10 +91,10 @@ const BOARD_SIZE = 370;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
-const CANDY_IMAGE_SIZE = CELL_SIZE * 0.87;
+const CANDY_IMAGE_SIZE = CELL_SIZE * 0.90;
 const CANDY_IMAGE_OFFSET_Y = -2;
 const MULTIPLIER_LABEL_OFFSET_Y = 14;
-const CASCADE_SETTLE_DELAY_MS = 1000;
+const CASCADE_SETTLE_DELAY_MS = 680;
 const APP_VERSION = '0.1.0';
 const SHOW_BANNER_PLACEHOLDER = false;
 const LEVEL_ROAD_SEGMENT_SIZE = 50;
@@ -121,7 +121,7 @@ const SUPPORT_URL = 'https://lumisoftstudios.com/contact';
 const TODAY = () => getLocalDateKey();
 
 const MULTIPLIER_TINTS = [
-  0xdff8ff,
+  0x4930a0, // base cell: rich purple (candies pop against dark bg)
   0x8be9ff,
   0xb88cff,
   0xff91c8,
@@ -180,6 +180,7 @@ export class MainScene extends Phaser.Scene {
   private challengeBoardLocked = false;
   private challengeTimerWarningFired = false;
   private wakeLock: WakeLockSentinel | null = null;
+  private boardSyncPending = false;
 
   constructor() {
     super('MainScene');
@@ -214,6 +215,12 @@ export class MainScene extends Phaser.Scene {
     this.bindOverlay();
     this.bindBoardInput();
     this.renderOverlay();
+
+    window.addEventListener('resize', () => {
+      if (this.screen === 'play' && this.playMode === 'game') {
+        this.syncBoardSquare();
+      }
+    }, { passive: true });
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible'
@@ -347,6 +354,7 @@ export class MainScene extends Phaser.Scene {
     const roadActive = this.screen === 'play' && this.playMode === 'road';
     this.el('phone-frame').classList.toggle('is-gameplay-active', gameplayActive);
     this.el('phone-frame').classList.toggle('is-road-active', roadActive);
+    if (gameplayActive) this.syncBoardSquare();
     this.el('phone-frame').classList.toggle('has-top-banner', gameplayActive);
     const shakeGestureEnabled = this.playMode === 'game' && this.state.status === 'playing'
       && !this.isShaking && !this.isDropping && !this.isResolving && this.state.shakesRemaining > 0;
@@ -1041,17 +1049,15 @@ export class MainScene extends Phaser.Scene {
 
   private drawBoardFrame(): void {
     const frame = this.add.graphics();
-    frame.fillStyle(0x4d2382, 0.28);
+    frame.fillStyle(0x2a0d50, 0.55);
     frame.fillRoundedRect(-5, -1, BOARD_SIZE + 10, BOARD_SIZE + 14, 24);
-    frame.fillStyle(0xffffff, 0.38);
+    frame.fillStyle(0xffffff, 0.08);
     frame.fillRoundedRect(-3, -5, BOARD_SIZE + 6, BOARD_SIZE + 8, 23);
-    frame.fillStyle(0xff72bd, 0.22);
+    frame.fillStyle(0xff72bd, 0.06);
     frame.fillRoundedRect(0, 0, BOARD_SIZE, BOARD_SIZE, 20);
-    frame.fillStyle(0x7ad8ff, 0.14);
-    frame.fillRoundedRect(6, 6, BOARD_SIZE - 12, BOARD_SIZE - 12, 17);
-    frame.lineStyle(5, 0xffffff, 0.72);
+    frame.lineStyle(3, 0xffffff, 0.55);
     frame.strokeRoundedRect(-2, -2, BOARD_SIZE + 4, BOARD_SIZE + 4, 22);
-    frame.lineStyle(3, 0x7b2bbf, 0.34);
+    frame.lineStyle(2, 0x9b6aff, 0.28);
     frame.strokeRoundedRect(5, 5, BOARD_SIZE - 10, BOARD_SIZE - 10, 16);
     this.boardContainer?.add(frame);
   }
@@ -1062,12 +1068,12 @@ export class MainScene extends Phaser.Scene {
     const size = CELL_SIZE - 5;
     const x = -size / 2;
     const y = -size / 2;
-    const alpha = multiplierIndex >= 10 ? 0.86 : multiplierIndex >= 9 ? 0.78 : multiplierIndex >= 7 ? 0.68 : multiplierIndex >= 4 ? 0.56 : multiplierIndex > 0 ? 0.42 : 0.26;
-    g.fillStyle(0x2a1754, 0.14);
+    const alpha = multiplierIndex >= 10 ? 0.86 : multiplierIndex >= 9 ? 0.78 : multiplierIndex >= 7 ? 0.68 : multiplierIndex >= 4 ? 0.56 : multiplierIndex > 0 ? 0.42 : 0.50;
+    g.fillStyle(0x1a0a38, 0.22);
     g.fillRoundedRect(x + 2, y + 3, size, size, 10);
     g.fillStyle(color, alpha);
     g.fillRoundedRect(x, y, size, size, 10);
-    g.lineStyle(2, 0xffffff, multiplierIndex > 0 ? 0.62 : 0.34);
+    g.lineStyle(1, 0xffffff, multiplierIndex > 0 ? 0.45 : 0.18);
     g.strokeRoundedRect(x, y, size, size, 10);
     if (multiplierIndex >= 10) {
       g.lineStyle(4, 0xffd33f, 0.9);
@@ -1378,7 +1384,7 @@ export class MainScene extends Phaser.Scene {
 
   private animateCandyDrop(onComplete: () => void): void {
     let remaining = this.candyContainers.size;
-    const totalDuration = 3000;
+    const totalDuration = 2200;
 
     if (remaining === 0) {
       onComplete();
@@ -1389,8 +1395,8 @@ export class MainScene extends Phaser.Scene {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
         const candy = this.candyContainers.get(this.positionKey({ row, col }));
         if (!candy) continue;
-        const columnDelay = col * 42;
-        const rowDelay = row * 36;
+        const columnDelay = col * 30;
+        const rowDelay = row * 26;
         candy.y = -BOARD_SIZE - (BOARD_ROWS - row) * CELL_SIZE;
         candy.alpha = 0.18;
         this.tweens.add({
@@ -1458,6 +1464,7 @@ export class MainScene extends Phaser.Scene {
       if (areGoalsComplete(this.state)) {
         if (!this.goalsCompletedEarly && this.state.shakesRemaining > 0) {
           this.goalsCompletedEarly = true;
+          this.renderOverlay(); // sync HUD/goal chips to final state before modal
           this.renderGoalCompleteModal();
           return;
         }
@@ -1587,11 +1594,11 @@ export class MainScene extends Phaser.Scene {
     const multLabel = getMultiplierLabel(this.state.highestMultiplierIndex) || 'x0';
     const multInfo = this.t('goalCompleteMultiplierInfo').replace('{mult}', multLabel);
     this.openModal(`
-      <div class="modal modal--goal-complete">
+      <div class="modal-card goal-complete-card">
         <h2>${this.t('goalCompleteTitle')}</h2>
         <p class="goal-complete-mult">${multInfo}</p>
-        <button class="btn btn--primary" data-action="goal-continue">${this.t('goalCompleteContinue')}</button>
-        <button class="btn btn--ghost" data-action="goal-finish">${this.t('goalCompleteFinish')}</button>
+        <button data-action="goal-continue">${this.t('goalCompleteContinue')}</button>
+        <button class="btn-secondary" data-action="goal-finish">${this.t('goalCompleteFinish')}</button>
       </div>
     `);
     this.modalButton('goal-continue', () => {
@@ -2179,14 +2186,14 @@ export class MainScene extends Phaser.Scene {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
         const candy = this.candyContainers.get(this.positionKey({ row, col }));
         if (!candy) continue;
-        candy.y = -18 - row * 3;
-        candy.alpha = 0.84;
+        candy.y = -14 - row * 2;
+        candy.alpha = 0.86;
         this.tweens.add({
           targets: candy,
           y: 0,
           alpha: 1,
-          duration: 180 + row * 18,
-          delay: col * 8,
+          duration: 160 + row * 12,
+          delay: col * 6,
           ease: 'Back.easeOut'
         });
       }
@@ -2199,10 +2206,14 @@ export class MainScene extends Phaser.Scene {
         this.playBlastFeedback(step, index);
         this.time.delayedCall(90, () => this.triggerGoalFlyAnimations(step));
         if (index < steps.length - 1) {
-          this.time.delayedCall(260, () => {
+          this.time.delayedCall(380, () => {
             this.state.board = step.boardAfter;
             this.drawBoard();
-            this.animateBoardSettle();
+            // 1 container fade instead of 49 per-candy settle tweens
+            if (this.boardContainer) {
+              this.boardContainer.setAlpha(0.74);
+              this.tweens.add({ targets: this.boardContainer, alpha: 1, duration: 150, ease: 'Sine.easeOut' });
+            }
           });
         }
       });
@@ -2294,7 +2305,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private emitSparkles(x: number, y: number, size: number, highMultiplier: boolean, specialMultiplier: boolean): void {
-    const count = size >= 10 ? 14 : size >= 6 ? 10 : size >= 5 ? 8 : size >= 4 ? 6 : 5;
+    const count = size >= 10 ? 10 : size >= 6 ? 7 : size >= 5 ? 5 : size >= 4 ? 4 : 4;
     const color = specialMultiplier ? 0xffd33f : highMultiplier ? 0xffffff : 0xfff1a6;
 
     for (let index = 0; index < count; index += 1) {
@@ -2583,6 +2594,35 @@ export class MainScene extends Phaser.Scene {
     el.textContent = `${this.t('regenEnergyGain').replace('{amount}', String(REGEN_ENERGY_AMOUNT))} ${this.t('regenIn').replace('{time}', timeStr)}`;
   }
 
+  private syncBoardSquare(): void {
+    if (this.boardSyncPending) return;
+    this.boardSyncPending = true;
+    requestAnimationFrame(() => {
+      this.boardSyncPending = false;
+      const section = this.el('gameplay-section') as HTMLElement;
+      const stage = document.querySelector('.board-stage') as HTMLElement | null;
+      if (!stage || !section.classList.contains('is-active')) return;
+      const sRect = section.getBoundingClientRect();
+      if (sRect.width === 0 || sRect.height === 0) return;
+      let siblingH = 0;
+      for (const child of Array.from(section.children) as HTMLElement[]) {
+        if (child === stage) continue;
+        const pos = window.getComputedStyle(child).position;
+        if (pos === 'absolute' || pos === 'fixed') continue;
+        const h = child.getBoundingClientRect().height;
+        if (h > 0) siblingH += h;
+      }
+      const availW = sRect.width;
+      const stageMargins = 9;
+      const availH = Math.max(0, sRect.height - siblingH - stageMargins);
+      const maxSide = Math.min(374, availW - 4);
+      const side = Math.round(Math.max(40, Math.min(maxSide, availH)));
+      stage.style.setProperty('width', `${side}px`);
+      stage.style.setProperty('height', `${side}px`);
+      stage.style.setProperty('flex', '0 0 auto');
+    });
+  }
+
   private acquireWakeLock(): void {
     if (!('wakeLock' in navigator) || this.wakeLock) return;
     void (navigator as Navigator & { wakeLock: { request: (t: string) => Promise<WakeLockSentinel> } })
@@ -2812,24 +2852,25 @@ export class MainScene extends Phaser.Scene {
     const src = CANDY_ASSET_PACK.find((a) => a.candyType === candyType)?.src;
     if (!src) return;
 
-    const MAX_FLYERS = 5;
+    const MAX_FLYERS = 3;
     const canvas = this.game.canvas;
     const canvasRect = canvas.getBoundingClientRect();
+    const goalRect = goalEl.getBoundingClientRect(); // read once — not inside loop
     const sx = canvasRect.width / GAME_SIZE;
     const sy = canvasRect.height / GAME_SIZE;
+    const tx = goalRect.left + goalRect.width / 2;
+    const ty = goalRect.top + goalRect.height / 2;
 
     positions.slice(0, MAX_FLYERS).forEach((pos, i) => {
       const worldX = BOARD_X + pos.col * CELL_SIZE + CELL_SIZE / 2;
       const worldY = BOARD_Y + pos.row * CELL_SIZE + CELL_SIZE / 2;
       const startX = canvasRect.left + worldX * sx;
       const startY = canvasRect.top + worldY * sy;
-      const goalRect = goalEl.getBoundingClientRect();
-      const tx = goalRect.left + goalRect.width / 2;
-      const ty = goalRect.top + goalRect.height / 2;
       const ctrlX = startX + (tx - startX) * 0.35 + (i % 2 === 0 ? 26 : -26);
       const ctrlY = Math.min(startY, ty) - 52 - i * 6;
 
       const div = document.createElement('div');
+      // left/top are fixed at start — only transform/opacity change during flight
       div.style.cssText =
         `position:fixed;left:${startX - 14}px;top:${startY - 14}px;` +
         `width:28px;height:28px;` +
@@ -2842,17 +2883,17 @@ export class MainScene extends Phaser.Scene {
         targets: flyObj,
         t: 1,
         delay: i * 55,
-        duration: 580,
+        duration: 480,
         ease: 'Cubic.easeIn',
         onUpdate: () => {
           const t = flyObj.t;
           const u = 1 - t;
-          const x = u * u * startX + 2 * u * t * ctrlX + t * t * tx;
-          const y = u * u * startY + 2 * u * t * ctrlY + t * t * ty;
-          div.style.left = `${x - 14}px`;
-          div.style.top = `${y - 14}px`;
-          div.style.transform = `scale(${1 - t * 0.38})`;
-          div.style.opacity = t > 0.78 ? String(Math.max(0, 1 - (t - 0.78) / 0.22)) : '1';
+          const bx = u * u * startX + 2 * u * t * ctrlX + t * t * tx;
+          const by = u * u * startY + 2 * u * t * ctrlY + t * t * ty;
+          const scale = 1 - t * 0.38;
+          const opacity = t > 0.78 ? Math.max(0, 1 - (t - 0.78) / 0.22) : 1;
+          div.style.transform = `translate(${bx - startX}px,${by - startY}px) scale(${scale})`;
+          div.style.opacity = String(opacity);
         },
         onComplete: () => {
           div.remove();
@@ -2893,17 +2934,17 @@ export class MainScene extends Phaser.Scene {
     this.tweens.add({
       targets: flyObj,
       t: 1,
-      duration: 500,
+      duration: 440,
       ease: 'Cubic.easeIn',
       onUpdate: () => {
         const t = flyObj.t;
         const u = 1 - t;
-        const x = u * u * startX + 2 * u * t * ctrlX + t * t * tx;
-        const y = u * u * startY + 2 * u * t * ctrlY + t * t * ty;
-        orb.style.left = `${x - 11}px`;
-        orb.style.top = `${y - 11}px`;
-        orb.style.transform = `scale(${1 - t * 0.48})`;
-        orb.style.opacity = t > 0.8 ? String(Math.max(0, 1 - (t - 0.8) / 0.2)) : '1';
+        const bx = u * u * startX + 2 * u * t * ctrlX + t * t * tx;
+        const by = u * u * startY + 2 * u * t * ctrlY + t * t * ty;
+        const scale = 1 - t * 0.48;
+        const opacity = t > 0.8 ? Math.max(0, 1 - (t - 0.8) / 0.2) : 1;
+        orb.style.transform = `translate(${bx - startX}px,${by - startY}px) scale(${scale})`;
+        orb.style.opacity = String(opacity);
       },
       onComplete: () => {
         orb.remove();
