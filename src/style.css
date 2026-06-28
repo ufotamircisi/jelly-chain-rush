@@ -2226,6 +2226,7 @@ button {
 
 .phone-frame.is-gameplay-active .counter-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-right: 36px; /* reserve slot for settings gear so it never covers Çalkalama chip */
 }
 
 .phone-frame.is-gameplay-active .goal-chip {

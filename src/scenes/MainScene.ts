@@ -93,10 +93,10 @@ const BOARD_SIZE = 370;
 const CELL_SIZE = BOARD_SIZE / BOARD_COLUMNS;
 const BOARD_X = (GAME_SIZE - BOARD_SIZE) / 2;
 const BOARD_Y = (GAME_SIZE - BOARD_SIZE) / 2;
-const CANDY_IMAGE_SIZE = CELL_SIZE * 0.90;
+const CANDY_IMAGE_SIZE = CELL_SIZE * 0.93;
 const CANDY_IMAGE_OFFSET_Y = -2;
 const MULTIPLIER_LABEL_OFFSET_Y = 14;
-const CASCADE_SETTLE_DELAY_MS = 680;
+const CASCADE_SETTLE_DELAY_MS = 360;
 const APP_VERSION = '0.1.0';
 const SHOW_BANNER_PLACEHOLDER = false;
 const LEVEL_ROAD_SEGMENT_SIZE = 50;
@@ -186,6 +186,7 @@ export class MainScene extends Phaser.Scene {
   private wakeLock: WakeLockSentinel | null = null;
   private boardSyncPending = false;
   private lastCascadeVibrateMs = 0;
+  private cascadeToken = 0;
 
   constructor() {
     super('MainScene');
@@ -203,8 +204,12 @@ export class MainScene extends Phaser.Scene {
     const splash = document.getElementById('app-splash');
     if (splash) {
       clearTimeout((window as typeof window & { __appSplashTid?: ReturnType<typeof setTimeout> }).__appSplashTid);
-      splash.style.opacity = '0';
-      this.time.delayedCall(460, () => { if (splash.isConnected) splash.remove(); });
+      const shownAt = (window as typeof window & { __appSplashShownAt?: number }).__appSplashShownAt ?? Date.now();
+      const remaining = Math.max(0, 3000 - (Date.now() - shownAt));
+      this.time.delayedCall(remaining, () => {
+        splash.style.opacity = '0';
+        this.time.delayedCall(460, () => { if (splash.isConnected) splash.remove(); });
+      });
     }
     this.save = loadSave();
     // Apply offline regen before creating game state so shakes/energy are up to date
@@ -290,12 +295,31 @@ export class MainScene extends Phaser.Scene {
       this.el(`nav-${key}`).addEventListener('click', () => {
         this.playButtonTap();
         const wasInActiveGame = this.playMode === 'game' && this.state.status === 'playing';
+
+        if (wasInActiveGame && key !== 'play') {
+          // Leaving active gameplay: cancel pending cascade ops and clean up transient DOM
+          this.cascadeToken++;
+          this.isShaking = false;
+          this.isDropping = false;
+          this.isResolving = false;
+          this.tweens.killAll();
+          document.querySelectorAll<HTMLElement>('[data-jcr-flyer]').forEach((el) => el.remove());
+        }
+
         this.screen = key;
         if (key === 'play') {
           if (!wasInActiveGame) {
             this.playMode = 'road';
           } else {
             this.acquireWakeLock();
+            if (this.state.status === 'playing') {
+              // Returning to active gameplay: invalidate old callbacks and force clean board
+              this.cascadeToken++;
+              this.isShaking = false;
+              this.isDropping = false;
+              this.isResolving = false;
+              this.drawBoard();
+            }
           }
         } else {
           this.releaseWakeLock();
@@ -1092,33 +1116,33 @@ export class MainScene extends Phaser.Scene {
   private drawMultiplierFloor(container: Phaser.GameObjects.Container, multiplierIndex: number): void {
     const color = MULTIPLIER_TINTS[multiplierIndex] ?? 0xdff8ff;
     const g = this.add.graphics();
-    const size = CELL_SIZE - 5;
+    const size = CELL_SIZE - 3; // was -5; tighter gap so candies dominate visually
     const x = -size / 2;
     const y = -size / 2;
     const alpha = multiplierIndex >= 10 ? 0.86 : multiplierIndex >= 9 ? 0.78 : multiplierIndex >= 7 ? 0.68 : multiplierIndex >= 4 ? 0.56 : multiplierIndex > 0 ? 0.42 : 0.50;
-    g.fillStyle(0x1a0a38, 0.22);
-    g.fillRoundedRect(x + 2, y + 3, size, size, 10);
+    g.fillStyle(0x1a0a38, 0.14); // softer shadow
+    g.fillRoundedRect(x + 1, y + 2, size, size, 7);
     g.fillStyle(color, alpha);
-    g.fillRoundedRect(x, y, size, size, 10);
-    g.lineStyle(1, 0xffffff, multiplierIndex > 0 ? 0.45 : 0.18);
-    g.strokeRoundedRect(x, y, size, size, 10);
+    g.fillRoundedRect(x, y, size, size, 7); // radius 7 (was 10) — less heavy box
+    g.lineStyle(1, 0xffffff, multiplierIndex > 0 ? 0.28 : 0.10); // thinner border
+    g.strokeRoundedRect(x, y, size, size, 7);
     if (multiplierIndex >= 10) {
       g.lineStyle(4, 0xffd33f, 0.9);
-      g.strokeRoundedRect(x - 1, y - 1, size + 2, size + 2, 11);
+      g.strokeRoundedRect(x - 1, y - 1, size + 2, size + 2, 8);
       g.lineStyle(2, 0xffb11f, 0.95);
-      g.strokeRoundedRect(x + 3, y + 3, size - 6, size - 6, 6);
+      g.strokeRoundedRect(x + 3, y + 3, size - 6, size - 6, 5);
       g.fillStyle(0xffdd58, 0.28);
       g.fillCircle(0, 0, size * 0.42);
     } else if (multiplierIndex >= 9) {
       g.lineStyle(3, 0xfff1a6, 0.86);
-      g.strokeRoundedRect(x + 2, y + 2, size - 4, size - 4, 8);
+      g.strokeRoundedRect(x + 2, y + 2, size - 4, size - 4, 5);
     } else if (multiplierIndex >= 7) {
       g.lineStyle(3, 0xffffff, 0.58);
-      g.strokeRoundedRect(x + 2, y + 2, size - 4, size - 4, 8);
+      g.strokeRoundedRect(x + 2, y + 2, size - 4, size - 4, 5);
     } else {
-      g.fillStyle(0xffffff, 0.22);
+      g.fillStyle(0xffffff, 0.08); // very subtle top-highlight (was 0.22)
     }
-    g.fillRoundedRect(x + 5, y + 4, size - 10, 10, 6);
+    g.fillRoundedRect(x + 5, y + 4, size - 10, 8, 4); // thinner highlight bar
     container.add(g);
   }
 
@@ -1281,6 +1305,7 @@ export class MainScene extends Phaser.Scene {
 
   private startDropSequence(options: { playChime?: boolean; injectAfterRegen?: (board: BoardGrid) => BoardGrid } = {}): void {
     if (this.isDropping || this.isResolving || this.state.status !== 'playing') return;
+    if (this.screen !== 'play' || this.playMode !== 'game') return;
 
     if (options.playChime) {
       this.sfx.playStartChime();
@@ -1411,7 +1436,8 @@ export class MainScene extends Phaser.Scene {
 
   private animateCandyDrop(onComplete: () => void): void {
     let remaining = this.candyContainers.size;
-    const totalDuration = 2200;
+    const totalDuration = 1100;
+    const myToken = this.cascadeToken;
 
     if (remaining === 0) {
       onComplete();
@@ -1422,8 +1448,8 @@ export class MainScene extends Phaser.Scene {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
         const candy = this.candyContainers.get(this.positionKey({ row, col }));
         if (!candy) continue;
-        const columnDelay = col * 30;
-        const rowDelay = row * 26;
+        const columnDelay = col * 18;
+        const rowDelay = row * 14;
         candy.y = -BOARD_SIZE - (BOARD_ROWS - row) * CELL_SIZE;
         candy.alpha = 0.18;
         this.tweens.add({
@@ -1436,7 +1462,7 @@ export class MainScene extends Phaser.Scene {
           ease: 'Back.easeOut',
           onComplete: () => {
             remaining -= 1;
-            if (remaining === 0) {
+            if (remaining === 0 && this.cascadeToken === myToken) {
               onComplete();
             }
           }
@@ -1447,8 +1473,10 @@ export class MainScene extends Phaser.Scene {
 
   private resolveCurrentCascades(options: { allowMultiplierUpgrade?: boolean } = {}): void {
     if (this.state.status !== 'playing') return;
+    if (this.screen !== 'play' || this.playMode !== 'game') return;
 
     this.isResolving = true;
+    const myToken = this.cascadeToken;
     this.renderOverlay();
     const result = resolveMatchesAndCascades(this.state.board);
     const multiplierUpgrade = options.allowMultiplierUpgrade
@@ -1465,9 +1493,10 @@ export class MainScene extends Phaser.Scene {
       this.save.stats.totalBlasts += result.steps.length;
       this.save.stats.highestMultiplierEver = Math.max(this.save.stats.highestMultiplierEver, this.getHighestMultiplierValue());
       saveData(this.save);
-      this.playCascadeFeedback(result.steps);
+      this.playCascadeFeedback(result.steps, myToken);
       if (multiplierUpgrade.upgraded.length > 0) {
         this.time.delayedCall(Math.max(180, result.steps.length * CASCADE_SETTLE_DELAY_MS), () => {
+          if (this.cascadeToken !== myToken) return;
           this.showMultiplierUpgradeFeedback(multiplierUpgrade.upgraded);
         });
       }
@@ -1475,6 +1504,7 @@ export class MainScene extends Phaser.Scene {
 
     const delay = Math.max(260, result.steps.length * CASCADE_SETTLE_DELAY_MS);
     this.time.delayedCall(delay, () => {
+      if (this.cascadeToken !== myToken) return;
       this.isResolving = false;
       this.state.board = multiplierUpgrade.board;
       this.drawBoard();
@@ -2282,37 +2312,28 @@ export class MainScene extends Phaser.Scene {
   }
 
   private animateBoardSettle(): void {
-    for (let row = 0; row < BOARD_ROWS; row += 1) {
-      for (let col = 0; col < BOARD_COLUMNS; col += 1) {
-        const candy = this.candyContainers.get(this.positionKey({ row, col }));
-        if (!candy) continue;
-        candy.y = -14 - row * 2;
-        candy.alpha = 0.86;
-        this.tweens.add({
-          targets: candy,
-          y: 0,
-          alpha: 1,
-          duration: 160 + row * 12,
-          delay: col * 6,
-          ease: 'Back.easeOut'
-        });
-      }
+    if (this.boardContainer) {
+      this.boardContainer.setAlpha(0.82);
+      this.tweens.add({ targets: this.boardContainer, alpha: 1, duration: 120, ease: 'Sine.easeOut' });
     }
   }
 
-  private playCascadeFeedback(steps: CascadeStep[]): void {
+  private playCascadeFeedback(steps: CascadeStep[], myToken: number): void {
     steps.forEach((step, index) => {
       this.time.delayedCall(index * CASCADE_SETTLE_DELAY_MS, () => {
+        if (this.cascadeToken !== myToken) return;
         this.playBlastFeedback(step, index);
-        this.time.delayedCall(90, () => this.triggerGoalFlyAnimations(step));
+        this.time.delayedCall(90, () => {
+          if (this.cascadeToken === myToken) this.triggerGoalFlyAnimations(step);
+        });
         if (index < steps.length - 1) {
-          this.time.delayedCall(380, () => {
+          this.time.delayedCall(180, () => {
+            if (this.cascadeToken !== myToken) return;
             this.state.board = step.boardAfter;
             this.drawBoard();
-            // 1 container fade instead of 49 per-candy settle tweens
             if (this.boardContainer) {
-              this.boardContainer.setAlpha(0.74);
-              this.tweens.add({ targets: this.boardContainer, alpha: 1, duration: 150, ease: 'Sine.easeOut' });
+              this.boardContainer.setAlpha(0.82);
+              this.tweens.add({ targets: this.boardContainer, alpha: 1, duration: 130, ease: 'Sine.easeOut' });
             }
           });
         }
@@ -2992,6 +3013,7 @@ export class MainScene extends Phaser.Scene {
       const ctrlY = Math.min(startY, ty) - 52 - i * 6;
 
       const div = document.createElement('div');
+      div.setAttribute('data-jcr-flyer', '');
       // left/top are fixed at start — only transform/opacity change during flight
       div.style.cssText =
         `position:fixed;left:${startX - 14}px;top:${startY - 14}px;` +
@@ -3044,6 +3066,7 @@ export class MainScene extends Phaser.Scene {
     const ctrlY = Math.min(startY, ty) - 46;
 
     const orb = document.createElement('div');
+    orb.setAttribute('data-jcr-flyer', '');
     orb.style.cssText =
       `position:fixed;left:${startX - 11}px;top:${startY - 11}px;` +
       `width:22px;height:22px;border-radius:50%;` +
