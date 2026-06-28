@@ -13,6 +13,7 @@ import {
   applyComboMultiplierUpgrade,
   type CascadeStep,
   getHighestMultiplierIndex,
+  hasLineMatches,
   hasValidSwipeMove,
   regenerateCandies,
   resolveMatchesAndCascades,
@@ -190,6 +191,7 @@ export class MainScene extends Phaser.Scene {
   private boardSyncPending = false;
   private lastCascadeVibrateMs = 0;
   private cascadeToken = 0;
+  private stableMatchChecks = 0;
 
   constructor() {
     super('MainScene');
@@ -250,6 +252,7 @@ export class MainScene extends Phaser.Scene {
         && this.playMode === 'game'
         && this.state.status === 'playing') {
         this.acquireWakeLock();
+        this.scheduleStableMatchCheck(120);
       } else if (!visible) {
         this.releaseWakeLock();
       }
@@ -322,6 +325,7 @@ export class MainScene extends Phaser.Scene {
               this.isDropping = false;
               this.isResolving = false;
               this.drawBoard();
+              this.scheduleStableMatchCheck(120);
             }
           }
         } else {
@@ -1264,6 +1268,7 @@ export class MainScene extends Phaser.Scene {
 
   private handleShake(): void {
     if (this.isShaking || this.isDropping || this.isResolving || this.state.status !== 'playing') return;
+    if (this.scheduleStableMatchCheck(0)) return;
     if (!this.consumeShakeCost()) return;
 
     if (!this.isChallengeLevel()) {
@@ -1369,6 +1374,8 @@ export class MainScene extends Phaser.Scene {
   }
 
   private handleSwipe(first: BoardPosition, second: BoardPosition): void {
+    if (this.scheduleStableMatchCheck(0)) return;
+
     if (!areAdjacent(first, second)) {
       this.showInvalidFeedback(first);
       this.sfx.playInvalid();
@@ -1486,6 +1493,7 @@ export class MainScene extends Phaser.Scene {
     if (this.state.status !== 'playing') return;
     if (this.screen !== 'play' || this.playMode !== 'game') return;
 
+    this.stableMatchChecks = 0;
     this.isResolving = true;
     const myToken = this.cascadeToken;
     this.renderOverlay();
@@ -1529,6 +1537,10 @@ export class MainScene extends Phaser.Scene {
         );
       }
 
+      if (this.scheduleStableMatchCheck(160, myToken)) {
+        return;
+      }
+
       if (areGoalsComplete(this.state)) {
         const canContinueForBonus = this.isChallengeLevel()
           ? this.state.shakesRemaining > 0
@@ -1553,11 +1565,21 @@ export class MainScene extends Phaser.Scene {
         return;
       }
 
+      if (this.isChallengeLevel()
+        && !this.challengeTimerRunning
+        && this.challengeTimerSeconds <= 0
+        && this.challengeTimerWarningFired
+        && !this.challengeBoardLocked) {
+        this.challengeBoardLocked = true;
+        this.renderOverlay();
+        return;
+      }
+
       // Non-timed levels: moves exhausted
       if (!this.isChallengeLevel() && this.movesRemaining <= 0) {
         if (this.state.shakesRemaining > 0) {
-          // Board locked — player must shake for +5 moves
           this.renderOverlay();
+          this.scheduleStableMatchCheck(120, myToken);
         } else if (this.goalsCompletedEarly) {
           this.triggerLevelWin();
         } else {
@@ -1569,13 +1591,44 @@ export class MainScene extends Phaser.Scene {
       // Timed levels: shakes depleted triggers fail path (timer still runs, but no way to extend)
       // For non-timed: shakes=0 with moves remaining is fine — moves will run out eventually
       if (this.isChallengeLevel() && this.state.shakesRemaining <= 0) {
-        // No more time extensions available; timer continues until expiry
         this.renderOverlay();
+        this.scheduleStableMatchCheck(120, myToken);
         return;
       }
 
       this.renderOverlay();
+      this.scheduleStableMatchCheck(120, myToken);
     });
+  }
+
+  private scheduleStableMatchCheck(delay = 0, expectedToken = this.cascadeToken): boolean {
+    if (this.state.status !== 'playing') return false;
+    if (this.screen !== 'play' || this.playMode !== 'game') return false;
+    if (this.isShaking || this.isDropping || this.isResolving) return false;
+    if (!hasLineMatches(this.state.board)) {
+      this.stableMatchChecks = 0;
+      return false;
+    }
+
+    this.stableMatchChecks += 1;
+    if (this.stableMatchChecks > 6) {
+      this.stableMatchChecks = 0;
+      return false;
+    }
+
+    this.renderOverlay();
+    this.time.delayedCall(delay, () => {
+      if (this.cascadeToken !== expectedToken) return;
+      if (this.state.status !== 'playing') return;
+      if (this.screen !== 'play' || this.playMode !== 'game') return;
+      if (this.isShaking || this.isDropping || this.isResolving) return;
+      if (!hasLineMatches(this.state.board)) {
+        this.stableMatchChecks = 0;
+        return;
+      }
+      this.resolveCurrentCascades();
+    });
+    return true;
   }
 
   private canUseBoardInput(): boolean {
@@ -1694,6 +1747,7 @@ export class MainScene extends Phaser.Scene {
     this.modalButton('goal-continue', () => {
       this.closeModal();
       this.renderOverlay();
+      this.scheduleStableMatchCheck(120);
     });
     this.modalButton('goal-finish', () => {
       this.closeModal();
@@ -1725,6 +1779,7 @@ export class MainScene extends Phaser.Scene {
     this.sfx.playPurchaseSuccess();
     this.startChallengeTimer();
     this.renderOverlay();
+    this.scheduleStableMatchCheck(120);
     return true;
   }
 
@@ -2420,6 +2475,9 @@ export class MainScene extends Phaser.Scene {
     const specialMultiplier = step.highestMultiplierIndex >= 9;
     const powerful = size >= 5 || highMultiplier;
     const huge = size >= 6 || specialMultiplier;
+    const deepCombo = cascadeIndex >= 2;
+    const epicCombo = cascadeIndex >= 3;
+    const blastToken = this.cascadeToken;
 
     for (const position of step.matched) {
       const candy = this.candyContainers.get(this.positionKey(position));
@@ -2427,26 +2485,44 @@ export class MainScene extends Phaser.Scene {
       this.tweens.killTweensOf(candy);
       this.tweens.add({
         targets: candy,
-        scale: powerful ? 1.28 : 1.12,
+        scale: (powerful || deepCombo) ? 1.28 : 1.12,
         alpha: 0,
-        duration: powerful ? 220 : 160,
+        duration: (powerful || deepCombo) ? 220 : 160,
         ease: 'Back.easeIn'
       });
     }
 
-    this.emitSparkles(center.x, center.y, size, highMultiplier, specialMultiplier);
+    const sparkleSize = Math.min(size + (epicCombo ? 2 : deepCombo ? 1 : 0), 10);
+    this.emitSparkles(center.x, center.y, sparkleSize, highMultiplier || deepCombo, specialMultiplier);
     this.showBlastRing(center.x, center.y, size, specialMultiplier);
-    if (step.highestMultiplierIndex >= 9) {
-      this.showGoldenPulse(center.x, center.y, step.highestMultiplierIndex >= 10);
+
+    if (deepCombo) {
+      this.time.delayedCall(75, () => {
+        if (this.cascadeToken !== blastToken) return;
+        this.showBlastRing(center.x, center.y, epicCombo ? Math.max(size, 7) : Math.max(size, 5), epicCombo);
+      });
     }
-    this.showScorePopup(`+${this.formatScore(step.scoreDelta)}`, center.x, center.y - 8, size, highMultiplier, specialMultiplier);
+
+    if (step.highestMultiplierIndex >= 9 || deepCombo) {
+      this.showGoldenPulse(center.x, center.y, step.highestMultiplierIndex >= 10 || epicCombo);
+    }
+
+    if (epicCombo && cascadeIndex <= 5) {
+      this.showComboBoardPulse(cascadeIndex >= 4);
+    }
+
+    this.showScorePopup(
+      `+${this.formatScore(step.scoreDelta)}`,
+      center.x, center.y - 8,
+      size, highMultiplier || deepCombo, specialMultiplier
+    );
     this.sfx.playBlast(size, step.highestMultiplierIndex);
 
-    if (powerful && this.boardContainer) {
-      if (size >= 5) {
+    if ((powerful || deepCombo) && this.boardContainer) {
+      if (size >= 5 || deepCombo) {
         const now = Date.now();
         if (now - this.lastCascadeVibrateMs >= 500) {
-          this.vibrate(size >= 10 ? [12, 18, 18] : 16);
+          this.vibrate(epicCombo ? [14, 22, 18] : size >= 10 ? [12, 18, 18] : 16);
           this.lastCascadeVibrateMs = now;
         }
       }
@@ -2454,11 +2530,11 @@ export class MainScene extends Phaser.Scene {
       this.boardContainer.setPosition(BOARD_X, BOARD_Y);
       this.tweens.add({
         targets: this.boardContainer,
-        x: BOARD_X + (huge ? 6 : 4),
-        y: BOARD_Y + (huge ? 4 : 2),
+        x: BOARD_X + (huge || epicCombo ? 6 : deepCombo ? 5 : 4),
+        y: BOARD_Y + (huge || epicCombo ? 4 : deepCombo ? 3 : 2),
         duration: 45,
         yoyo: true,
-        repeat: huge ? 3 : 1,
+        repeat: epicCombo ? 4 : huge ? 3 : deepCombo ? 2 : 1,
         onComplete: () => this.boardContainer?.setPosition(BOARD_X, BOARD_Y)
       });
     }
@@ -2470,7 +2546,14 @@ export class MainScene extends Phaser.Scene {
     }
 
     if (cascadeIndex >= 1) {
-      this.showBurstLabel(this.t(cascadeIndex >= 2 ? 'megaChain' : 'chain'), GAME_SIZE / 2, 42, cascadeIndex >= 2);
+      const labelY = epicCombo ? 34 : 42;
+      this.showBurstLabel(
+        this.t(cascadeIndex >= 2 ? 'megaChain' : 'chain'),
+        GAME_SIZE / 2,
+        labelY,
+        cascadeIndex >= 2,
+        epicCombo
+      );
       this.sfx.playChain(cascadeIndex);
     }
   }
@@ -2524,6 +2607,27 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  private showComboBoardPulse(maxed: boolean): void {
+    const glow = this.add.rectangle(
+      BOARD_X + BOARD_SIZE / 2,
+      BOARD_Y + BOARD_SIZE / 2,
+      BOARD_SIZE - 10,
+      BOARD_SIZE - 10,
+      0xffd33f,
+      maxed ? 0.1 : 0.07
+    );
+    glow.setStrokeStyle(maxed ? 6 : 4, maxed ? 0xfff1a6 : 0xffffff, maxed ? 0.68 : 0.48);
+    glow.setDepth(8);
+    this.tweens.add({
+      targets: glow,
+      scale: maxed ? 1.035 : 1.02,
+      alpha: 0,
+      duration: maxed ? 560 : 420,
+      ease: 'Cubic.easeOut',
+      onComplete: () => glow.destroy()
+    });
+  }
+
   private showScorePopup(label: string, x: number, y: number, size: number, highMultiplier: boolean, specialMultiplier: boolean): void {
     const fontSize = specialMultiplier || size >= 10 ? 34 : highMultiplier || size >= 5 ? 30 : size >= 4 ? 25 : 21;
     const safeX = Phaser.Math.Clamp(x, 52, GAME_SIZE - 52);
@@ -2549,23 +2653,23 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private showBurstLabel(label: string, x: number, y: number, intense: boolean): void {
+  private showBurstLabel(label: string, x: number, y: number, intense: boolean, epic = false): void {
     const text = this.add.text(x, y, label, {
       fontFamily: 'Arial',
-      fontSize: intense ? '26px' : '21px',
-      color: intense ? '#fff1a6' : '#ffffff',
+      fontSize: epic ? '30px' : intense ? '26px' : '21px',
+      color: epic ? '#ffd33f' : intense ? '#fff1a6' : '#ffffff',
       fontStyle: 'bold',
-      stroke: '#7b2bbf',
-      strokeThickness: intense ? 6 : 4
+      stroke: epic ? '#b04a00' : '#7b2bbf',
+      strokeThickness: epic ? 7 : intense ? 6 : 4
     }).setOrigin(0.5);
 
-    text.setScale(0.7);
+    text.setScale(0.62);
     this.tweens.add({
       targets: text,
-      y: y - 36,
-      scale: intense ? 1.18 : 1,
+      y: y - (epic ? 44 : 36),
+      scale: epic ? 1.28 : intense ? 1.18 : 1,
       alpha: 0,
-      duration: 860,
+      duration: epic ? 1050 : 860,
       ease: 'Back.easeOut',
       onComplete: () => text.destroy()
     });
@@ -2873,6 +2977,10 @@ export class MainScene extends Phaser.Scene {
   }
 
   private onChallengeTimerExpired(): void {
+    if (this.scheduleStableMatchCheck(80)) {
+      return;
+    }
+
     if (areGoalsComplete(this.state)) {
       this.triggerLevelWin();
     } else {
