@@ -187,6 +187,11 @@ export class MainScene extends Phaser.Scene {
   private wakeLock: WakeLockSentinel | null = null;
   private boardSyncPending = false;
   private lastCascadeVibrateMs = 0;
+  private comboBoardPulseFired = false;
+  private comboGoldenPulseFired = false;
+  private comboDoubleRingFired = false;
+  private comboVibratedThisChain = false;
+  private comboChainSparkleCount = 0;
   private cascadeToken = 0;
   private stableMatchChecks = 0;
   private stuckBoardAutoRefreshCount = 0;
@@ -2464,6 +2469,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   private playCascadeFeedback(steps: CascadeStep[], myToken: number): void {
+    this.comboBoardPulseFired = false;
+    this.comboGoldenPulseFired = false;
+    this.comboDoubleRingFired = false;
+    this.comboVibratedThisChain = false;
+    this.comboChainSparkleCount = 0;
     steps.forEach((step, index) => {
       this.time.delayedCall(index * CASCADE_SETTLE_DELAY_MS, () => {
         if (this.cascadeToken !== myToken) return;
@@ -2538,23 +2548,34 @@ export class MainScene extends Phaser.Scene {
       });
     }
 
-    const sparkleSize = Math.min(size + (epicCombo ? 2 : deepCombo ? 1 : 0), 10);
-    this.emitSparkles(center.x, center.y, sparkleSize, highMultiplier || deepCombo, specialMultiplier);
+    // Sparkle budget: cap per-step at 6, per-chain total at 20
+    const sparkleStep = Math.min(size + (deepCombo ? 1 : 0), 6);
+    const allowedSparkles = Math.max(0, Math.min(sparkleStep, 20 - this.comboChainSparkleCount));
+    if (allowedSparkles > 0) {
+      this.emitSparkles(center.x, center.y, allowedSparkles, highMultiplier || deepCombo, specialMultiplier);
+      this.comboChainSparkleCount += allowedSparkles;
+    }
     this.showBlastRing(center.x, center.y, size, specialMultiplier);
 
-    if (deepCombo) {
+    // Second ring: at most once per combo chain
+    if (deepCombo && !this.comboDoubleRingFired) {
+      this.comboDoubleRingFired = true;
       this.time.delayedCall(75, () => {
         if (this.cascadeToken !== blastToken) return;
         this.showBlastRing(center.x, center.y, epicCombo ? Math.max(size, 7) : Math.max(size, 5), epicCombo);
       });
     }
 
-    if (step.highestMultiplierIndex >= 9 || deepCombo) {
+    // Golden pulse: at most once per combo chain
+    if ((step.highestMultiplierIndex >= 9 || deepCombo) && !this.comboGoldenPulseFired) {
+      this.comboGoldenPulseFired = true;
       this.showGoldenPulse(center.x, center.y, step.highestMultiplierIndex >= 10 || epicCombo);
     }
 
-    if (epicCombo && cascadeIndex <= 5) {
-      this.showComboBoardPulse(cascadeIndex >= 4);
+    // Board pulse: at most once per combo chain, from deepCombo onward
+    if (deepCombo && !this.comboBoardPulseFired) {
+      this.comboBoardPulseFired = true;
+      this.showComboBoardPulse(epicCombo);
     }
 
     this.showScorePopup(
@@ -2565,12 +2586,11 @@ export class MainScene extends Phaser.Scene {
     this.sfx.playBlast(size, step.highestMultiplierIndex);
 
     if ((powerful || deepCombo) && this.boardContainer) {
-      if (size >= 5 || deepCombo) {
-        const now = Date.now();
-        if (now - this.lastCascadeVibrateMs >= 500) {
-          this.vibrate(epicCombo ? [14, 22, 18] : size >= 10 ? [12, 18, 18] : 16);
-          this.lastCascadeVibrateMs = now;
-        }
+      // Vibration: at most once per combo chain
+      if ((size >= 5 || deepCombo) && !this.comboVibratedThisChain) {
+        this.comboVibratedThisChain = true;
+        this.vibrate(epicCombo ? [14, 22, 18] : deepCombo ? [12, 18, 18] : 16);
+        this.lastCascadeVibrateMs = Date.now();
       }
       this.tweens.killTweensOf(this.boardContainer);
       this.boardContainer.setPosition(BOARD_X, BOARD_Y);
@@ -2580,7 +2600,7 @@ export class MainScene extends Phaser.Scene {
         y: BOARD_Y + (huge || epicCombo ? 4 : deepCombo ? 3 : 2),
         duration: 45,
         yoyo: true,
-        repeat: epicCombo ? 4 : huge ? 3 : deepCombo ? 2 : 1,
+        repeat: huge ? 3 : deepCombo ? 2 : 1,
         onComplete: () => this.boardContainer?.setPosition(BOARD_X, BOARD_Y)
       });
     }
