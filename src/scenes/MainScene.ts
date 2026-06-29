@@ -147,14 +147,14 @@ const ISLAND_BUILDING_LAYOUT: Record<number, { x: number; y: number; size: 'smal
   8: { x: 74, y: 307, size: 'medium' },
   9: { x: 25, y: 336, size: 'medium' },
   10: { x: 46, y: 285, size: 'medium' },
-  11: { x: 74, y: 212, size: 'large' },
-  12: { x: 26, y: 215, size: 'medium' },
+  11: { x: 74, y: 228, size: 'large' },
+  12: { x: 26, y: 232, size: 'medium' },
   13: { x: 51, y: 165, size: 'large' },
-  14: { x: 78, y: 129, size: 'large' },
-  15: { x: 61, y: 107, size: 'large' },
-  16: { x: 29, y: 120, size: 'large' },
-  17: { x: 31, y: 41, size: 'large' },
-  18: { x: 66, y: 22, size: 'large' }
+  14: { x: 81, y: 166, size: 'large' },
+  15: { x: 55, y: 143, size: 'large' },
+  16: { x: 29, y: 137, size: 'large' },
+  17: { x: 31, y: 58, size: 'large' },
+  18: { x: 66, y: 62, size: 'large' }
 };
 
 export class MainScene extends Phaser.Scene {
