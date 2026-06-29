@@ -189,6 +189,7 @@ export class MainScene extends Phaser.Scene {
   private lastCascadeVibrateMs = 0;
   private cascadeToken = 0;
   private stableMatchChecks = 0;
+  private stuckBoardAutoRefreshCount = 0;
 
   constructor() {
     super('MainScene');
@@ -277,7 +278,24 @@ export class MainScene extends Phaser.Scene {
 
     this.el('continue-level-button').addEventListener('click', () => {
       this.playButtonTap();
-      this.startLevel(this.getCurrentPlayableLevel());
+      if (this.state.status === 'playing') {
+        this.returnToActiveGame();
+      } else {
+        this.startLevel(this.getCurrentPlayableLevel());
+      }
+    });
+
+    this.el('road-button').addEventListener('click', () => {
+      this.playButtonTap();
+      if (this.playMode !== 'game') return;
+      this.cascadeToken++;
+      this.isShaking = false;
+      this.isDropping = false;
+      this.isResolving = false;
+      this.tweens.killAll();
+      document.querySelectorAll<HTMLElement>('[data-jcr-flyer]').forEach((el) => el.remove());
+      this.playMode = 'road';
+      this.renderOverlay();
     });
 
     this.el('collect-all-button').addEventListener('click', () => {
@@ -425,9 +443,8 @@ export class MainScene extends Phaser.Scene {
     this.setText('shake-value', `${this.state.shakesRemaining}/${SHAKES_PER_LEVEL}`);
     this.setText('goal-panel-title', this.t('goal'));
     this.setText('helper-text', this.getHelperText());
-    this.setText('multiplier-rewards-title', this.t('multiplierRewards'));
-    this.setText('multiplier-next-reward', this.t('nextMultiplierReward'));
     this.setText('multiplier-rewards-button', this.t('viewRewards'));
+    this.setText('road-button', this.t('levelRoad'));
     this.setText('shake-button', this.t('shakeButton'));
     this.setText('get-energy-button', this.t('getEnergy'));
     this.setText('island-title', this.t('islandTitle'));
@@ -540,7 +557,11 @@ export class MainScene extends Phaser.Scene {
     this.setText('road-completed-value', String(this.save.completedLevels.length));
     this.setText('road-unlocked-label', this.t('highestUnlockedLevel'));
     this.setText('road-unlocked-value', String(this.save.highestUnlockedLevel));
-    this.setText('continue-level-button', this.t(continueKey).replace('{level}', String(currentPlayableLevel)));
+    if (this.state.status === 'playing') {
+      this.setText('continue-level-button', `↩ ${this.t('level')} ${this.state.level}`);
+    } else {
+      this.setText('continue-level-button', this.t(continueKey).replace('{level}', String(currentPlayableLevel)));
+    }
 
     const road = this.el('level-road-list');
     const tileHeight = this.getLevelRoadTileHeight(road);
@@ -575,7 +596,11 @@ export class MainScene extends Phaser.Scene {
       if (playable) {
         button.addEventListener('click', () => {
           this.playButtonTap();
-          this.startLevel(level);
+          if (this.state.status === 'playing' && level === this.state.level) {
+            this.returnToActiveGame();
+          } else {
+            this.startLevel(level);
+          }
         });
       }
       road.appendChild(button);
@@ -1268,7 +1293,7 @@ export class MainScene extends Phaser.Scene {
     if (!this.consumeShakeCost()) return;
 
     if (!this.isChallengeLevel()) {
-      this.movesRemaining = Math.min(this.movesRemaining + 5, 99);
+      this.movesRemaining = 5;
     }
     this.challengeBoardLocked = false;
     this.startChallengeTimer();
@@ -1583,6 +1608,19 @@ export class MainScene extends Phaser.Scene {
         return;
       }
 
+      // Stuck board: moves remain, all shakes used, no valid adjacent swap possible
+      if (!this.isChallengeLevel()
+        && this.movesRemaining > 0
+        && this.state.shakesRemaining === 0
+        && this.state.status === 'playing'
+        && !hasValidSwipeMove(this.state.board)) {
+        this.stuckBoardAutoRefreshCount += 1;
+        if (this.stuckBoardAutoRefreshCount <= 3) {
+          this.startDropSequence({ playChime: true });
+          return;
+        }
+      }
+
       this.renderOverlay();
       this.scheduleStableMatchCheck(120, myToken);
     });
@@ -1788,6 +1826,7 @@ export class MainScene extends Phaser.Scene {
     saveData(this.save);
     this.state = createGameState(this.save);
     this.movesRemaining = this.isChallengeLevel() ? 0 : MOVES_PER_ATTEMPT;
+    this.stuckBoardAutoRefreshCount = 0;
     this.rewardSummary = undefined;
     this.completedLevelWasReplay = false;
     this.goalsCompletedEarly = false;
@@ -1813,6 +1852,7 @@ export class MainScene extends Phaser.Scene {
     this.save.shakes = SHAKES_PER_LEVEL;
     this.state = createGameState(this.save);
     this.movesRemaining = this.isChallengeLevel() ? 0 : MOVES_PER_ATTEMPT;
+    this.stuckBoardAutoRefreshCount = 0;
     this.rewardSummary = undefined;
     this.completedLevelWasReplay = false;
     this.goalsCompletedEarly = false;
@@ -1869,6 +1909,18 @@ export class MainScene extends Phaser.Scene {
       this.pendingFeedbackForLevel = 0;
       this.time.delayedCall(380, () => this.renderFeedbackCard(level));
     }
+  }
+
+  private returnToActiveGame(): void {
+    this.playMode = 'game';
+    this.cascadeToken++;
+    this.isShaking = false;
+    this.isDropping = false;
+    this.isResolving = false;
+    this.drawBoard();
+    this.acquireWakeLock();
+    this.scheduleStableMatchCheck(120);
+    this.renderOverlay();
   }
 
   private renderFeedbackCard(level: number): void {
@@ -2390,10 +2442,25 @@ export class MainScene extends Phaser.Scene {
   }
 
   private animateBoardSettle(): void {
-    if (this.boardContainer) {
-      this.boardContainer.setAlpha(0.82);
-      this.tweens.add({ targets: this.boardContainer, alpha: 1, duration: 120, ease: 'Sine.easeOut' });
-    }
+    if (!this.boardContainer) return;
+    this.tweens.killTweensOf(this.boardContainer);
+    this.boardContainer.setPosition(BOARD_X, BOARD_Y);
+    this.boardContainer.setAlpha(0.84);
+    this.boardContainer.setScale(0.975);
+    this.tweens.add({
+      targets: this.boardContainer,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 200,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        if (this.boardContainer) {
+          this.boardContainer.setScale(1);
+          this.boardContainer.setPosition(BOARD_X, BOARD_Y);
+        }
+      }
+    });
   }
 
   private playCascadeFeedback(steps: CascadeStep[], myToken: number): void {

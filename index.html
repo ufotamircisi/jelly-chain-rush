@@ -76,6 +76,7 @@
           <section id="gameplay-section" class="gameplay-section">
             <section class="goal-panel">
               <div class="goal-panel-header">
+                <button id="road-button" class="road-back-button" type="button"></button>
                 <h2 id="goal-panel-title"></h2>
                 <div id="moves-counter" class="moves-counter" hidden></div>
                 <div id="challenge-timer" class="challenge-timer" hidden></div>
@@ -89,14 +90,11 @@
               <div id="game" class="board-canvas"></div>
             </section>
 
-            <p id="helper-text" class="helper-text"></p>
+            <div class="helper-row">
+              <p id="helper-text" class="helper-text"></p>
+              <button id="multiplier-rewards-button" class="reward-view-button-compact" type="button"></button>
+            </div>
             <div id="warning-text" class="warning-text" aria-live="polite"></div>
-
-            <section class="reward-panel">
-              <h2 id="multiplier-rewards-title"></h2>
-              <p id="multiplier-next-reward" class="reward-next"></p>
-              <button id="multiplier-rewards-button" class="reward-view-button" type="button"></button>
-            </section>
 
             <button id="shake-button" class="shake-button" type="button"></button>
             <button id="get-energy-button" class="get-energy-button" type="button"></button>
