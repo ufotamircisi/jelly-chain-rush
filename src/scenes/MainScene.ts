@@ -33,8 +33,7 @@ import {
   REGEN_ENERGY_AMOUNT,
   REGEN_ENERGY_CAP,
   REGEN_START_THRESHOLD,
-  RESTART_COST,
-  SHAKE_ENERGY_COST
+  RESTART_COST
 } from '../game/economy';
 import { createGameState } from '../game/gameState';
 import {
@@ -405,8 +404,7 @@ export class MainScene extends Phaser.Scene {
     const shakeGestureEnabled = this.playMode === 'game' && this.state.status === 'playing'
       && !this.isShaking && !this.isDropping && !this.isResolving && this.state.shakesRemaining > 0;
     this.el('shake-button').toggleAttribute('disabled', !shakeGestureEnabled);
-    this.el('shake-button').classList.toggle('is-low-energy',
-      shakeGestureEnabled && this.state.energy < SHAKE_ENERGY_COST);
+    this.el('shake-button').classList.remove('is-low-energy');
     this.el('phone-frame').classList.toggle('is-island-active', this.screen === 'island');
     this.el('phone-frame').classList.toggle('is-market-active', this.screen === 'market');
     this.setText('game-title', this.t('title'));
@@ -1301,16 +1299,7 @@ export class MainScene extends Phaser.Scene {
       return false;
     }
 
-    if (this.state.energy < SHAKE_ENERGY_COST) {
-      this.sfx.playWarning();
-      this.blockShakeButton();
-      this.renderOverlay();
-      this.renderEnergyEmptyModal();
-      return false;
-    }
-
     this.state.shakesRemaining -= 1;
-    this.state.energy -= SHAKE_ENERGY_COST;
     this.syncSaveCurrency();
     return true;
   }
@@ -1647,8 +1636,7 @@ export class MainScene extends Phaser.Scene {
       && !this.isShaking
       && !this.isDropping
       && !this.isResolving
-      && this.state.shakesRemaining > 0
-      && this.state.energy >= SHAKE_ENERGY_COST;
+      && this.state.shakesRemaining > 0;
   }
 
   private getHelperText(): string {
@@ -1656,7 +1644,6 @@ export class MainScene extends Phaser.Scene {
     if (this.isResolving) return this.t('chainInProgress');
     if (this.challengeBoardLocked) return this.t('challengeTimeLocked');
     if (!this.isChallengeLevel() && this.movesRemaining <= 0) return this.t('shakeHelper');
-    if (this.state.energy < SHAKE_ENERGY_COST) return this.t('noEnergy');
     if (hasValidSwipeMove(this.state.board)) return this.t('swipeHelper');
     return this.t('shakeHelper');
   }
@@ -1686,7 +1673,7 @@ export class MainScene extends Phaser.Scene {
     const finalStarEnergy = alreadyCompleted ? 0 : newStarEnergy;
     const finalTotalEnergy = finalLevelEnergy + finalMultiplierEnergy + finalStarEnergy;
     const finalTotalDiamonds = finalMultiplierDiamonds;
-    const energyResult = applyFreeEnergy(this.state.energy, finalTotalEnergy);
+    const energyResult = applyMarketEnergy(this.state.energy, finalTotalEnergy);
 
     this.rewardSummary = {
       ...reward,
