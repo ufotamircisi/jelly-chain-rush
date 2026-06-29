@@ -26,13 +26,11 @@ import {
   applyMarketEnergy,
   applyOfflineRegen,
   getRegenMsUntilNext,
-  HARD_ENERGY_CAP,
   MARKET_DIAMOND_PACKS,
   MARKET_ENERGY_ITEMS,
   MARKET_SHAKE_ITEMS,
   REGEN_ENERGY_AMOUNT,
   REGEN_ENERGY_CAP,
-  REGEN_START_THRESHOLD,
   RESTART_COST
 } from '../game/economy';
 import { createGameState } from '../game/gameState';
@@ -418,11 +416,11 @@ export class MainScene extends Phaser.Scene {
     this.setText('goal-label', this.t('goal'));
     this.setText('goal-value', this.state.definition.targetScore.toLocaleString());
     this.setText('energy-label', this.t('energy'));
-    this.setText('energy-value', String(this.state.energy));
+    this.setText('energy-value', this.formatCompact(this.state.energy));
     this.setText('score-label', this.t('score'));
     this.setText('score-value', this.state.score.toLocaleString());
     this.setText('diamonds-label', this.t('diamonds'));
-    this.setText('diamonds-value', String(this.state.diamonds));
+    this.setText('diamonds-value', this.formatCompact(this.state.diamonds));
     this.setText('shake-label', this.t('shake'));
     this.setText('shake-value', `${this.state.shakesRemaining}/${SHAKES_PER_LEVEL}`);
     this.setText('goal-panel-title', this.t('goal'));
@@ -1897,7 +1895,7 @@ export class MainScene extends Phaser.Scene {
   private claimFeedbackGift(): void {
     if (this.save.feedbackGiftClaimed) { this.closeModal(); return; }
     this.save.feedbackGiftClaimed = true;
-    this.state.energy = Math.min(this.state.energy + 100, 999);
+    this.state.energy = this.state.energy + 100;
     this.state.diamonds = Math.min(this.state.diamonds + 100, 999999);
     this.save.energy = this.state.energy;
     this.save.diamonds = this.state.diamonds;
@@ -2320,12 +2318,6 @@ export class MainScene extends Phaser.Scene {
   }
 
   private buyMarketEnergy(energy: number, cost: number): void {
-    if (this.state.energy >= HARD_ENERGY_CAP) {
-      this.sfx.playWarning();
-      this.showWarning(this.t('energyFull'));
-      return;
-    }
-
     if (this.state.diamonds < cost) {
       this.sfx.playWarning();
       this.showWarning(this.t('notEnoughDiamonds'));
@@ -2719,6 +2711,13 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  private formatCompact(n: number): string {
+    if (n < 1000) return String(n);
+    const tenths = Math.floor(n / 100);
+    const k = tenths / 10;
+    return (k % 1 === 0 ? String(Math.round(k)) : k.toFixed(1)) + 'K';
+  }
+
   private formatScore(score: number): string {
     return score.toLocaleString(this.locale === 'tr' ? 'tr-TR' : 'en-US');
   }
@@ -2788,7 +2787,7 @@ export class MainScene extends Phaser.Scene {
       && this.save.energyStarClaimedLevel !== this.state.level;
 
     if (isFirstTime) {
-      this.state.energy = Math.min(this.state.energy + ENERGY_STAR_REWARD, 999);
+      this.state.energy = this.state.energy + ENERGY_STAR_REWARD;
       onEnergyStarEventFired(this.save, this.state.level);
       this.save.energy = this.state.energy;
       saveData(this.save);
@@ -2809,7 +2808,7 @@ export class MainScene extends Phaser.Scene {
       && this.save.colorBombClaimedLevel !== this.state.level;
 
     if (isFirstTime) {
-      this.state.energy = Math.min(this.state.energy + COLOR_BOMB_REWARD_ENERGY, 999);
+      this.state.energy = this.state.energy + COLOR_BOMB_REWARD_ENERGY;
       this.state.diamonds = Math.min(this.state.diamonds + COLOR_BOMB_REWARD_DIAMONDS, 999999);
       onColorBombEventFired(this.save, this.state.level);
       this.save.energy = this.state.energy;
